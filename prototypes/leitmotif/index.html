@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Лейтмотив — рождает ли фазовая сеть порядок ударов, или побеждает спам?</title>
+<style>
+  html,body{margin:0;padding:0;background:#0d0a12;height:100%;display:flex;align-items:center;justify-content:center;}
+  canvas{border:1px solid #2a2338;border-radius:6px;}
+</style>
+</head>
+<body>
+<canvas id="cv" width="960" height="640"></canvas>
+<script>
+'use strict';
+/* ============================================================
+   ЛЕЙТМОТИВ — прототип механики «перебить × лейтмотив» (v1)
+   Вопрос прототипа: рождает ли видимая фазовая сеть решения про
+   ПОРЯДОК и ПАРЫ ударов — или побеждает спам ударов по всем петлям?
+   Спека: mechanics/leitmotif/spec.md. Ассеты: assets.svg (Codex).
+   ============================================================ */
+
+const CONFIG = {
+  W: 960, H: 640,
+  PLAYER_SPEED: 140, STRIKE_R: 48,
+  PATROLS: [
+    {id:'P1', ax:250, ay:320, route:{x:250, y0:180, y1:460}, T:10},
+    {id:'P2', ax:450, ay:320, route:{x:450, y0:160, y1:480}, T:13},
+    {id:'P3', ax:690, ay:320, route:{x0:615, x1:765, y:320}, T:11},
+  ],
+  GATES: [
+    {id:'A', x:140, T:14},
+    {id:'B', x:580, T:16},
+    {id:'C', x:800, T:12},
+  ],
+  GATE_GAP:{y0:260, y1:380}, OPEN_FRAC:[0.5, 0.33, 0.25],
+  VISION: 100, ALARM_SEEN: 6,
+  WIN_DUR:[5, 3, 1.8],
+  BIT_FRAC: 0.25, TACT_FRAC: 0.125,
+  DMIN: 0.2, DMAX: 0.35,
+  CASCADE_DELAY: 0.4, CASCADE_DEPTH: 2, CASCADE_DECAY: 0.6,
+  REPAIR_AFTER: 10, H_MAX: 2, PATROL_SPEEDUP: 0.85,
+  ALARM_HIT: 10, ALARM_C1: 5, ALARM_C2: 3, ALARM_SYNC: -8,
+  OVERLAP_NEED: 1.5,
+  PARTY: 180,
+};
+
+const EDGES = [[0,3],[0,4],[1,4],[1,5],[2,5]];
+const GATES_IDX = [3,4,5];
+
+const SPRITES = { player:[0,0], patrol:[128,0], anchor_patrol:[256,0], anchor_gate:[384,0],
+                  pulse:[0,128], gate_icon:[128,128], patrol_icon:[256,128] };
+
+// ---------- утилиты ----------
+const TAU=Math.PI*2;
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const wrapPhase=(p,T)=>((p%T)+T)%T;
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+// ---------- состояние ----------
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let mode='start', G=null; // mode: start | play | end
+
+function newGame(){
+  const loops=[];
+  for(const p of CONFIG.PATROLS)
+    loops.push({type:'patrol', id:p.id, ax:p.ax, ay:p.ay, route:p.route, T:p.T,
+                phi:wrapPhase(rnd(-0.1,0.1)*p.T, p.T), h:0, jamT:0, repairIn:null});
+  for(const g of CONFIG.GATES)
+    loops.push({type:'gate', id:g.id, gx:g.x, ax:g.x, ay:225, T:g.T,
+                phi:wrapPhase(rnd(-0.1,0.1)*g.T, g.T), h:0, jamT:0, repairIn:null});
+  return {
+    player:{x:70, y:320},
+    loops, cascadeQ:[],
+    alarm:0, peakAlarm:0,
+    overlapT:0, unlocked:false,
+    strikes:0, cascades:0, chain:[], unlockChain:'',
+    t:CONFIG.PARTY_TIME, win:false,
+    effects:[], lastBits:loops.map(()=>-1),
+  };
+}
+
+// эффективный период: патруль жёстче = быстрее; ворота жёстче = меньше открытая доля
+const Teff = l => l.type==='patrol' ? l.T*Math.pow(CONFIG.PATROL_SPEEDUP,l.h) : l.T;
+
+// ---------- фаза/петли ----------
+const patPos = l => {
+  const T=Teff(l);
+  const u = l.phi < T/2 ? l.phi/(T/2) : 2 - l.phi/(T/2);
+  if(l.route.x!==undefined) return {x:l.route.x, y:l.route.y0 + u*(l.route.y1-l.route.y0)};
+  return {x:l.route.x0 + u*(l.route.x1-l.route.x0), y:l.route.y};
+};
+const gateOpen = l => G.unlocked || l.jamT>0 || wrapPhase(l.phi,l.T) < l.T*CONFIG.OPEN_FRAC[l.h];
+const nearestBitDist = l => {
+  const T=Teff(l), b=T*CONFIG.BIT_FRAC, m=wrapPhase(l.phi,T)%b;
+  return Math.min(m, b-m);
+};
+
+function disrupt(li, depth){
+  const l=G.loops[li], T=Teff(l);
+  l.jamT=CONFIG.WIN_DUR[Math.min(depth,2)];     // патруль: замер; ворота: заклинило открытыми
+  if(depth===0){
+    if(l.type==='gate'){ l.phi=0; }             // переанкор: цикл пойдёт от момента сбоя
+    else{
+      const b=T*CONFIG.BIT_FRAC, m=wrapPhase(l.phi,T)%b, d=Math.min(m,b-m);
+      const sign=m>b/2?1:-1;
+      const D=clamp(d, CONFIG.DMIN*T, CONFIG.DMAX*T);
+      l.phi=wrapPhase(l.phi+sign*D, T);         // сдвиг фазы маршрута
+    }
+    G.strikes++; G.chain.push(l.id);
+  } else G.cascades++;
+  G.alarm=clamp(G.alarm+(depth===0?CONFIG.ALARM_HIT:depth===1?CONFIG.ALARM_C1:CONFIG.ALARM_C2),0,100);
+  G.peakAlarm=Math.max(G.peakAlarm,G.alarm);
+  l.repairIn=CONFIG.REPAIR_AFTER;
+  ring(l.ax,l.ay, depth===0?'#b26bff':'#8a2be2');
+  if(depth<CONFIG.CASCADE_DEPTH)
+    for(const [from,to] of EDGES)
+      if(from===li) G.cascadeQ.push({to, depth:depth+1, wait:CONFIG.CASCADE_DELAY});
+}
+function resync(l){ // подпевание: пересвод к сетке, тревога вниз, окно закрыто
+  const T=Teff(l), b=T*CONFIG.BIT_FRAC;
+  l.phi=wrapPhase(Math.round(wrapPhase(l.phi,T)/b)*b, T);
+  l.jamT=0; l.repairIn=null;
+  G.alarm=clamp(G.alarm+CONFIG.ALARM_SYNC,0,100);
+  ring(l.ax,l.ay,'#7ad0ff');
+}
+function strike(l){
+  const li=G.loops.indexOf(l);
+  if(nearestBitDist(l)<=Teff(l)*CONFIG.TACT_FRAC){ // «в такт» — слабый: без сдвига и каскада
+    l.jamT=CONFIG.WIN_DUR[0]/2; l.repairIn=CONFIG.REPAIR_AFTER;
+    G.strikes++; G.alarm=clamp(G.alarm+CONFIG.ALARM_HIT,0,100); G.peakAlarm=Math.max(G.peakAlarm,G.alarm);
+    ring(l.ax,l.ay,'#55506a'); return;
+  }
+  disrupt(li,0);
+}
+
+// ---------- эффекты/ввод ----------
+function ring(x,y,color){ G.effects.push({type:'ring',x,y,r:8,color,life:.7}); }
+function txt(x,y,s,color){ G.effects.push({type:'txt',x,y,s,color,life:1.4}); }
+function anchorAt(p){ return G.loops.find(l=>Math.hypot(p.x-l.ax,p.y-l.ay)<CONFIG.STRIKE_R)||null; }
+
+const keys={}; let mouse={x:0,y:0};
+addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(mode==='start'&&(e.key==='Enter'||e.key===' ')){G=newGame();mode='play';e.preventDefault();}
+  else if(mode==='end'&&e.code==='KeyR'){G=newGame();mode='play';}
+  else if(mode==='play'&&e.code==='KeyR')G=newGame();
+});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+cv.addEventListener('mousemove',e=>{const r=cv.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;});
+cv.addEventListener('mousedown',e=>{
+  if(mode!=='play')return;
+  const l=anchorAt(mouse);
+  if(!l)return;
+  if(e.button===0)strike(l);
+  if(e.button===2)resync(l);
+  e.preventDefault();
+});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+// ---------- главный апдейт ----------
+let last=0;
+function update(dt){
+  if(mode!=='play')return;
+  const P=G.player;
+  G.t-=dt;
+  if(G.t<=0){G.t=0;mode='end';G.win=false;return;}
+
+  // игрок
+  let ix=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
+  let iy=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0);
+  if(ix||iy){
+    const l=Math.hypot(ix,iy);
+    tryMove(P, ix/l*CONFIG.PLAYER_SPEED*dt, iy/l*CONFIG.PLAYER_SPEED*dt);
+  }
+  if(G.unlocked&&P.x>920&&P.y>CONFIG.GATE_GAP.y0&&P.y<CONFIG.GATE_GAP.y1){mode='end';G.win=true;return;}
+
+  // фазы текут; биты → пульсы
+  G.loops.forEach((l,i)=>{
+    l.phi=wrapPhase(l.phi+dt, Teff(l));
+    const bi=Math.floor(wrapPhase(l.phi,Teff(l))/(Teff(l)*CONFIG.BIT_FRAC));
+    if(bi!==G.lastBits[i]){G.lastBits[i]=bi;ring(l.ax,l.ay,'#e8e6f0');}
+  });
+
+  // каскадная очередь
+  for(const q of G.cascadeQ){ q.wait-=dt; if(q.wait<=0&&!q.done){q.done=true;disrupt(q.to,q.depth);} }
+  G.cascadeQ=G.cascadeQ.filter(q=>!q.done);
+
+  // окна и самопочинка
+  for(const l of G.loops){
+    if(l.jamT>0)l.jamT-=dt;
+    if(l.repairIn!==null){
+      l.repairIn-=dt;
+      if(l.repairIn<=0){
+        const T=Teff(l), b=T*CONFIG.BIT_FRAC;
+        l.phi=wrapPhase(Math.round(wrapPhase(l.phi,T)/b)*b, T);
+        l.h=Math.min(CONFIG.H_MAX,l.h+1);
+        l.phi=wrapPhase(l.phi, Teff(l)); // после смены h период изменился
+        l.repairIn=null; l.jamT=0;
+        ring(l.ax,l.ay,'#ffd166');
+        txt(l.ax,l.ay-30,l.id+' жёстче','#ffd166');
+      }
+    }
+  }
+
+  // зрение патрулей → тревога
+  let seen=false;
+  for(const l of G.loops)if(l.type==='patrol'&&l.jamT<=0){
+    const pos=patPos(l);
+    if(dist(pos,P)<CONFIG.VISION&&sameRoom(pos.x,P.x))seen=true;
+  }
+  if(seen)G.alarm=clamp(G.alarm+CONFIG.ALARM_SEEN*dt,0,100);
+  G.peakAlarm=Math.max(G.peakAlarm,G.alarm);
+
+  // тревога 100 → полный пересвод
+  if(G.alarm>=100){
+    for(const l of G.loops){
+      const T=Teff(l), b=T*CONFIG.BIT_FRAC;
+      l.phi=wrapPhase(Math.round(wrapPhase(l.phi,T)/b)*b, T);
+      l.jamT=0; l.h=Math.min(CONFIG.H_MAX,l.h+1); l.repairIn=null;
+      l.phi=wrapPhase(l.phi, Teff(l));
+    }
+    G.cascadeQ.length=0; G.alarm=60;
+    txt(CONFIG.W/2,200,'ПОЛНЫЙ ПЕРЕСВОД — все петли жёстче','#ff5d5d');
+  }
+
+  // перекрытие трёх ворот → разблокировка
+  if(!G.unlocked){
+    const allOpen=GATES_IDX.every(i=>G.loops[i].jamT>0);
+    G.overlapT=allOpen?G.overlapT+dt:0;
+    if(G.overlapT>=CONFIG.OVERLAP_NEED){
+      G.unlocked=true;
+      G.unlockChain=G.chain.slice(-5).join(' → ');
+      txt(CONFIG.W/2,170,'ВЫХОД РАЗБЛОКИРОВАН — беги!','#7ad0ff');
+    }
+  }
+
+  // эффекты
+  for(const e of G.effects){e.life-=dt;if(e.type==='ring')e.r+=90*dt;}
+  G.effects=G.effects.filter(e=>e.life>0);
+}
+
+function sameRoom(x1,x2){
+  const r=x=>x<140?0:(x<580?1:(x<800?2:3));
+  return r(x1)===r(x2);
+}
+function tryMove(P,dx,dy){
+  P.x+=dx;
+  for(const gi of GATES_IDX){
+    const gx=G.loops[gi].gx, c1=P.x-dx, c2=P.x;
+    if((c1<gx&&c2>=gx)||(c1>gx&&c2<=gx)){
+      const inGap=P.y>CONFIG.GATE_GAP.y0&&P.y<CONFIG.GATE_GAP.y1;
+      if(!(inGap&&gateOpen(G.loops[gi])))P.x=dx>0?gx-8:gx+8;
+    }
+  }
+  P.x=clamp(P.x,10,CONFIG.W-10);
+  P.y=clamp(P.y+dy,10,CONFIG.H-10);
+}
+
+// ---------- спрайты ----------
+const sheet=new Image(); let sheetOK=false;
+sheet.onload=()=>sheetOK=true; sheet.src='assets.svg';
+function drawSprite(cell,x,y,angle,scale){
+  scale=scale||0.42;
+  ctx.save();ctx.translate(x,y);if(angle)ctx.rotate(angle);
+  if(sheetOK)ctx.drawImage(sheet,cell[0],cell[1],128,128,-64*scale,-64*scale,128*scale,128*scale);
+  else{ctx.fillStyle='#e8e6f0';ctx.beginPath();ctx.arc(0,0,14,0,TAU);ctx.fill();}
+  ctx.restore();
+}
+
+// ---------- рендер ----------
+function render(){
+  ctx.fillStyle='#17131f'; ctx.fillRect(0,0,CONFIG.W,CONFIG.H);
+  ctx.fillStyle='#221b2e';
+  for(let x=30;x<CONFIG.W;x+=60)for(let y=90;y<CONFIG.H;y+=60)ctx.fillRect(x,y,2,2);
+  if(!G){renderStart();return;}
+
+  const gy0=CONFIG.GATE_GAP.y0, gy1=CONFIG.GATE_GAP.y1;
+
+  // зоны
+  ctx.fillStyle='#1b1626';ctx.fillRect(0,90,140,CONFIG.H-90);
+  ctx.globalAlpha=G.unlocked?0.2:0.06;ctx.fillStyle='#7ad0ff';
+  ctx.fillRect(920,gy0,40,gy1-gy0);ctx.globalAlpha=1;
+
+  // стены с воротами
+  for(const gi of GATES_IDX){
+    const l=G.loops[gi], x=l.gx, open=gateOpen(l);
+    ctx.fillStyle='#3a3050';
+    ctx.fillRect(x-4,90,8,gy0-90); ctx.fillRect(x-4,gy1,8,CONFIG.H-gy1);
+    if(open){ctx.fillStyle='rgba(122,208,255,0.3)';ctx.fillRect(x-6,gy0,12,gy1-gy0);
+      if(l.jamT>0){ctx.fillStyle='#7ad0ff';ctx.font='11px sans-serif';ctx.textAlign='center';
+        ctx.fillText('окно '+l.jamT.toFixed(1)+'с',x,x===140?gy0-10:gy1+20);ctx.textAlign='left';}}
+    else{ctx.fillStyle='rgba(255,93,93,0.75)';ctx.fillRect(x-4,gy0,8,gy1-gy0);}
+  }
+
+  // анкеры
+  for(const l of G.loops)
+    drawSprite(l.type==='patrol'?SPRITES.anchor_patrol:SPRITES.anchor_gate,l.ax,l.ay,0,0.3);
+
+  // патрули
+  for(const l of G.loops)if(l.type==='patrol'){
+    const pos=patPos(l);
+    if(l.jamT<=0&&sameRoom(pos.x,G.player.x)&&dist(pos,G.player)<CONFIG.VISION){
+      ctx.fillStyle='rgba(255,209,102,0.1)';ctx.beginPath();ctx.arc(pos.x,pos.y,CONFIG.VISION,0,TAU);ctx.fill();
+      ctx.strokeStyle='rgba(255,209,102,0.35)';ctx.beginPath();ctx.arc(pos.x,pos.y,CONFIG.VISION,0,TAU);ctx.stroke();
+    }
+    drawSprite(SPRITES.patrol,pos.x,pos.y,0,0.38);
+    if(l.jamT>0){ctx.strokeStyle='#8a2be2';ctx.lineWidth=2;ctx.beginPath();ctx.arc(pos.x,pos.y,20,0,TAU);ctx.stroke();ctx.lineWidth=1;}
+  }
+
+  // игрок
+  drawSprite(SPRITES.player,G.player.x,G.player.y,-Math.PI/2,0.42);
+
+  // наведение на анкер
+  const hover=anchorAt(mouse);
+  if(hover&&mode==='play'){
+    ctx.strokeStyle='rgba(232,230,240,0.5)';ctx.setLineDash([4,4]);
+    ctx.beginPath();ctx.arc(hover.ax,hover.ay,CONFIG.STRIKE_R,0,TAU);ctx.stroke();ctx.setLineDash([]);
+    const d=nearestBitDist(hover), inTact=d<=Teff(hover)*CONFIG.TACT_FRAC;
+    ctx.fillStyle=inTact?'#8f86a8':'#b26bff';ctx.font='11px sans-serif';ctx.textAlign='center';
+    ctx.fillText(inTact?'в такт — слабый удар':'перебить (сдвиг ~'+(clamp(d,CONFIG.DMIN*Teff(hover),CONFIG.DMAX*Teff(hover))/Teff(hover)).toFixed(2)+'T)',mouse.x,mouse.y-14);
+    ctx.textAlign='left';
+  }
+
+  // эффекты
+  for(const e of G.effects){
+    if(e.type==='ring'){ctx.strokeStyle=e.color;ctx.globalAlpha=Math.min(1,e.life*1.6);ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,TAU);ctx.stroke();ctx.lineWidth=1;ctx.globalAlpha=1;}
+    if(e.type==='txt'){ctx.fillStyle=e.color;ctx.globalAlpha=Math.min(1,e.life);ctx.font='bold 14px sans-serif';
+      ctx.textAlign='center';ctx.fillText(e.s,e.x,e.y);ctx.textAlign='left';ctx.globalAlpha=1;}
+  }
+
+  renderHUD();
+  if(G.alarm>70){ctx.fillStyle=`rgba(255,93,93,${(G.alarm-70)/30*0.12})`;ctx.fillRect(0,0,CONFIG.W,CONFIG.H);}
+  if(mode==='end')renderEnd();
+}
+
+function renderHUD(){
+  const cw=150, gapx=(CONFIG.W-6*cw)/5;
+  G.loops.forEach((l,i)=>{
+    const x=(cw+gapx)*i, y=8, T=Teff(l);
+    ctx.fillStyle='#1d1728';ctx.fillRect(x,y,cw,64);
+    ctx.strokeStyle='#2a2338';ctx.strokeRect(x+.5,y+.5,cw,64);
+    const cx=x+26,cy=y+32,r=18;
+    ctx.strokeStyle='#3a3050';ctx.beginPath();ctx.arc(cx,cy,r,0,TAU);ctx.stroke();
+    for(let k=0;k<4;k++){const a=k*TAU/4-Math.PI/2;
+      ctx.fillStyle='#55506a';ctx.fillRect(cx+Math.cos(a)*(r-3)-1.5,cy+Math.sin(a)*(r-3)-1.5,3,3);}
+    const ph=wrapPhase(l.phi,T)/T*TAU;
+    ctx.strokeStyle=l.jamT>0?'#7ad0ff':'#b26bff';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(ph-Math.PI/2)*(r-2),cy+Math.sin(ph-Math.PI/2)*(r-2));ctx.stroke();ctx.lineWidth=1;
+    for(let k=0;k<CONFIG.H_MAX;k++){ctx.fillStyle=k<l.h?'#ffd166':'#332b45';ctx.fillRect(x+52+k*10,y+12,7,7);}
+    drawSprite(l.type==='gate'?SPRITES.gate_icon:SPRITES.patrol_icon,x+76,y+44,0,0.22);
+    ctx.fillStyle='#e8e6f0';ctx.font='bold 13px sans-serif';ctx.fillText(l.id,x+cw-34,y+20);
+    ctx.font='10px sans-serif';ctx.fillStyle='#8f86a8';
+    ctx.fillText(l.type==='gate'?(gateOpen(l)?'открыто':'закрыто'):(l.jamT>0?'замер':'обход'),x+cw-56,y+34);
+    if(l.jamT>0){ctx.fillStyle='#7ad0ff';ctx.fillText(l.jamT.toFixed(1)+'с',x+cw-32,y+48);}
+    if(l.repairIn!==null){ctx.fillStyle='#ffd166';ctx.fillText('починка '+l.repairIn.toFixed(0)+'с',x+cw-62,y+60);}
+  });
+  ctx.strokeStyle='rgba(178,107,255,0.35)';
+  for(const [a,b] of EDGES){
+    ctx.beginPath();ctx.moveTo((cw+gapx)*a+cw,40);ctx.lineTo((cw+gapx)*b,40);ctx.stroke();
+  }
+  bar(CONFIG.W/2-110,CONFIG.H-34,220,12,G.alarm/100,G.alarm>70?'#ff5d5d':'#ffd166');
+  ctx.fillStyle='#8f86a8';ctx.font='11px sans-serif';ctx.textAlign='center';
+  ctx.fillText('тревога '+Math.round(G.alarm)+' (100 = полный пересвод)',CONFIG.W/2,CONFIG.H-40);
+  ctx.fillText('A+B+C перекрытие: '+G.overlapT.toFixed(1)+'с / '+CONFIG.OVERLAP_NEED+'с',CONFIG.W/2,CONFIG.H-52);
+  ctx.fillText(Math.ceil(G.t)+'с · ударов '+G.strikes+' · каскадов '+G.cascades,CONFIG.W/2,CONFIG.H-64);
+  ctx.textAlign='left';
+  ctx.fillStyle='#5b5372';ctx.font='11px sans-serif';
+  ctx.fillText('WASD — идти · ЛКМ у анкера — перебить не в такт (близко к биту = слабый удар) · ПКМ — подпевать (пересвод, тревога −8)',20,CONFIG.H-16);
+}
+function bar(x,y,w,h,frac,color){
+  ctx.fillStyle='#241d31';ctx.fillRect(x,y,w,h);
+  ctx.fillStyle=color;ctx.fillRect(x,y,w*clamp(frac,0,1),h);
+  ctx.strokeStyle='#3a3050';ctx.strokeRect(x+.5,y+.5,w,h);
+}
+function renderStart(){
+  ctx.textAlign='center';ctx.fillStyle='#e8e6f0';ctx.font='bold 44px sans-serif';
+  ctx.fillText('ЛЕЙТМОТИВ',CONFIG.W/2,220);
+  ctx.font='15px sans-serif';ctx.fillStyle='#b26bff';
+  ctx.fillText('Весь мир живёт петлями: патрули и ворота тикают со своими фазами.',CONFIG.W/2,280);
+  ctx.fillText('Перебей петлю НЕ В ТАКТ — она споткнётся, фаза сдвинется, и сбой покатится',CONFIG.W/2,302);
+  ctx.fillText('по графу каскадом. Сведи окна трёх ворот на ≥1.5 с — и беги к выходу.',CONFIG.W/2,324);
+  ctx.fillStyle='#8f86a8';
+  ctx.fillText('Сбой поднимает тревогу; 100 тревоги = полный пересвод, всё становится жёстче.',CONFIG.W/2,362);
+  ctx.fillText('Подпевание (ПКМ) гасит тревогу, но закрывает окно этой петли.',CONFIG.W/2,384);
+  ctx.fillStyle='#5b5372';
+  ctx.fillText('ЛКМ у анкера — перебить · ПКМ — подпевать · циферблаты и рёбра графа — сверху',CONFIG.W/2,424);
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('нажми Enter',CONFIG.W/2,470);
+  ctx.textAlign='left';
+}
+function renderEnd(){
+  ctx.fillStyle='rgba(13,10,18,0.78)';ctx.fillRect(0,0,CONFIG.W,CONFIG.H);
+  ctx.textAlign='center';
+  ctx.fillStyle=G.win?'#7ad0ff':'#ff5d5d';ctx.font='bold 40px sans-serif';
+  ctx.fillText(G.win?'ПОБЕДА':'ПРОИГРЫШ',CONFIG.W/2,270);
+  ctx.fillStyle='#e8e6f0';ctx.font='15px sans-serif';
+  const share=G.strikes?Math.round(G.cascades/G.strikes*100):0;
+  ctx.fillText(`итог: ${G.win?'победа':'проигрыш'} · время ${Math.round(CONFIG.PARTY_TIME-G.t)}с · ударов ${G.strikes}, каскадов ${G.cascades} (${share}%) · пик тревоги ${Math.round(G.peakAlarm)}`,CONFIG.W/2,320);
+  ctx.fillStyle='#b26bff';ctx.font='13px sans-serif';
+  ctx.fillText(G.win?('unlock: ворота A+B+C · последние удары: '+(G.unlockChain||'—')):'Ворота не сведены — нужна хореография ударов по графу.',CONFIG.W/2,352);
+  ctx.fillStyle='#8f86a8';
+  ctx.fillText('Если победа достигается спамом ударов без чтения графа — вопрос прототипа закрыт против механики.',CONFIG.W/2,380);
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('R — заново',CONFIG.W/2,424);
+  ctx.textAlign='left';
+}
+
+// ---------- цикл ----------
+function loop(ts){
+  const dt=Math.min(0.05,(ts-last)/1000||0); last=ts;
+  update(dt); render(); requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
