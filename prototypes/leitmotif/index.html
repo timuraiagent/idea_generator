@@ -147,7 +147,7 @@ function strike(l){
 }
 
 // ---------- эффекты/ввод ----------
-function ring(x,y,color){ G.effects.push({type:'ring',x,y,r:22,color,life:.9}); }
+function ring(x,y,color){ G.effects.push({type:'ring',x,y,r:10,color,life:.55}); }
 function txt(x,y,s,color){ G.effects.push({type:'txt',x,y,s,color,life:1.4}); }
 function anchorAt(p){ return G.loops.find(l=>Math.hypot(p.x-l.ax,p.y-l.ay)<CONFIG.STRIKE_R)||null; }
 
@@ -229,8 +229,10 @@ if(isTouch){
 let last=0;
 function update(dt){
   if(mode!=='play')return;
+  if(!isFinite(dt))dt=0.016;          // страховка от битого кадра
   const P=G.player;
   G.t-=dt;
+  if(!isFinite(G.t))G.t=CONFIG.PARTY_TIME;
   if(G.t<=0){G.t=0;mode='end';G.win=false;return;}
 
   // игрок
@@ -243,11 +245,15 @@ function update(dt){
   }
   if(G.unlocked&&P.x>920&&P.y>CONFIG.GATE_GAP.y0&&P.y<CONFIG.GATE_GAP.y1){mode='end';G.win=true;return;}
 
-  // фазы текут; биты → пульсы
+  // фазы текут; биты → пульс только у близкого анкера, у дальних — короткая вспышка
   G.loops.forEach((l,i)=>{
     l.phi=wrapPhase(l.phi+dt, Teff(l));
     const bi=Math.floor(wrapPhase(l.phi,Teff(l))/(Teff(l)*CONFIG.BIT_FRAC));
-    if(bi!==G.lastBits[i]){G.lastBits[i]=bi;ring(l.ax,l.ay,'#e8e6f0');}
+    if(bi!==G.lastBits[i]){
+      G.lastBits[i]=bi;
+      if(dist(l,G.player)<200)ring(l.ax,l.ay,'#e8e6f0');
+      else G.effects.push({type:'glow',x:l.ax,y:l.ay,life:.35});
+    }
   });
 
   // каскадная очередь
@@ -304,7 +310,7 @@ function update(dt){
   }
 
   // эффекты
-  for(const e of G.effects){e.life-=dt;if(e.type==='ring')e.r+=110*dt;}
+  for(const e of G.effects){e.life-=dt;if(e.type==='ring')e.r+=150*dt;}
   G.effects=G.effects.filter(e=>e.life>0);
   if(G.alarmFx){G.alarmFx.t-=dt;if(G.alarmFx.t<=0)G.alarmFx=null;}
   if(G.weakFx){G.weakFx-=dt;if(G.weakFx<=0)G.weakFx=null;}
@@ -367,12 +373,16 @@ function render(){
     ctx.fillText(l.id,x,(gy0+gy1)/2+12);ctx.textAlign='left';
   }
 
-  // анкеры: подсветка до первого удара + крупнее
-  if(G.strikes===0&&mode==='play'){const p=0.5+0.5*Math.sin(last/1000*4);
-    for(const l of G.loops){ctx.strokeStyle=`rgba(178,107,255,${0.25+0.3*p})`;ctx.lineWidth=3;
-      ctx.beginPath();ctx.arc(l.ax,l.ay,56+7*p,0,TAU);ctx.stroke();}ctx.lineWidth=1;}
+  // анкеры: ореол только у ближайшего, до первого удара
+  if(G.strikes===0&&mode==='play'){
+    let best=null,bd=1e9;
+    for(const l of G.loops){const d=dist(l,G.player);if(d<bd){bd=d;best=l;}}
+    if(best){const p=0.5+0.5*Math.sin(last/1000*4);
+      ctx.strokeStyle=`rgba(178,107,255,${0.3+0.3*p})`;ctx.lineWidth=3;
+      ctx.beginPath();ctx.arc(best.ax,best.ay,56+7*p,0,TAU);ctx.stroke();ctx.lineWidth=1;}
+  }
   for(const l of G.loops)
-    drawSprite(l.type==='patrol'?SPRITES.anchor_patrol:SPRITES.anchor_gate,l.ax,l.ay,0,0.7);
+    drawSprite(l.type==='patrol'?SPRITES.anchor_patrol:SPRITES.anchor_gate,l.ax,l.ay,0,0.6);
   // подписи анкеров в мире — прямо у ромбиков
   ctx.textAlign='center';
   for(const l of G.loops){
@@ -415,6 +425,8 @@ function render(){
   for(const e of G.effects){
     if(e.type==='ring'){ctx.strokeStyle=e.color;ctx.globalAlpha=Math.min(1,e.life*1.6);ctx.lineWidth=2;
       ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,TAU);ctx.stroke();ctx.lineWidth=1;ctx.globalAlpha=1;}
+    if(e.type==='glow'){ctx.fillStyle=`rgba(232,230,240,${e.life*1.4})`;
+      ctx.beginPath();ctx.arc(e.x,e.y,26,0,TAU);ctx.fill();}
     if(e.type==='txt'){ctx.fillStyle=e.color;ctx.globalAlpha=Math.min(1,e.life);ctx.font='bold 14px sans-serif';
       ctx.textAlign='center';ctx.fillText(e.s,e.x,e.y);ctx.textAlign='left';ctx.globalAlpha=1;}
   }
