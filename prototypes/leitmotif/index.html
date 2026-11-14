@@ -385,7 +385,9 @@ function render(){
       ctx.strokeStyle='rgba(255,209,102,0.35)';ctx.beginPath();ctx.arc(pos.x,pos.y,CONFIG.VISION,0,TAU);ctx.stroke();
     }
     drawSprite(SPRITES.patrol,pos.x,pos.y,0,0.42);
-    if(l.jamT>0){ctx.strokeStyle='#8a2be2';ctx.lineWidth=3;ctx.beginPath();ctx.arc(pos.x,pos.y,22,0,TAU);ctx.stroke();ctx.lineWidth=1;}
+    if(l.jamT>0){ctx.strokeStyle='#8a2be2';ctx.lineWidth=3;ctx.beginPath();ctx.arc(pos.x,pos.y,22,0,TAU);ctx.stroke();ctx.lineWidth=1;
+      ctx.fillStyle='#b26bff';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
+      ctx.fillText(l.label+' · ЗАМЕР',pos.x,pos.y-28);ctx.textAlign='left';}
   }
 
   // игрок
