@@ -47,6 +47,7 @@ const CONFIG = {
   REPAIR_AFTER: 10, H_MAX: 2, PATROL_SPEEDUP: 0.85,
   ALARM_HIT: 10, ALARM_C1: 5, ALARM_C2: 3, ALARM_SYNC: -8,
   OVERLAP_NEED: 1.5,
+  EXIT_X: 920,
   PARTY: 180,
 };
 
@@ -243,7 +244,7 @@ function update(dt){
     const l=Math.hypot(ix,iy);
     tryMove(P, ix/l*CONFIG.PLAYER_SPEED*dt, iy/l*CONFIG.PLAYER_SPEED*dt);
   }
-  if(G.unlocked&&P.x>920&&P.y>CONFIG.GATE_GAP.y0&&P.y<CONFIG.GATE_GAP.y1){mode='end';G.win=true;return;}
+  if(G.unlocked&&P.x>CONFIG.EXIT_X+10&&P.y>CONFIG.GATE_GAP.y0&&P.y<CONFIG.GATE_GAP.y1){mode='end';G.win=true;return;}
 
   // фазы текут; биты → пульс только у близкого анкера, у дальних — короткая вспышка
   G.loops.forEach((l,i)=>{
@@ -329,6 +330,12 @@ function tryMove(P,dx,dy){
       if(!(inGap&&gateOpen(G.loops[gi])))P.x=dx>0?gx-8:gx+8;
     }
   }
+  // финальная дверь выхода: запечатана, пока не сведены окна всех ворот
+  const ex=CONFIG.EXIT_X, c1=P.x-dx, c2=P.x;
+  if((c1<ex&&c2>=ex)||(c1>ex&&c2<=ex)){
+    const inGap=P.y>CONFIG.GATE_GAP.y0&&P.y<CONFIG.GATE_GAP.y1;
+    if(!(inGap&&G.unlocked))P.x=dx>0?ex-8:ex+8;
+  }
   P.x=clamp(P.x,10,CONFIG.W-10);
   P.y=clamp(P.y+dy,10,CONFIG.H-10);
 }
@@ -356,8 +363,16 @@ function render(){
 
   // зоны
   ctx.fillStyle='#1b1626';ctx.fillRect(0,90,140,CONFIG.H-90);
-  ctx.globalAlpha=G.unlocked?0.2:0.06;ctx.fillStyle='#7ad0ff';
-  ctx.fillRect(920,gy0,40,gy1-gy0);ctx.globalAlpha=1;
+  ctx.globalAlpha=G.unlocked?0.25:0.06;ctx.fillStyle='#7ad0ff';
+  ctx.fillRect(CONFIG.EXIT_X,gy0,CONFIG.W-CONFIG.EXIT_X,gy1-gy0);ctx.globalAlpha=1;
+  // финальная дверь выхода
+  const ex=CONFIG.EXIT_X;
+  ctx.fillStyle='#3a3050';
+  ctx.fillRect(ex-4,90,8,gy0-90); ctx.fillRect(ex-4,gy1,8,CONFIG.H-gy1);
+  if(G.unlocked){ctx.fillStyle='rgba(122,208,255,0.45)';ctx.fillRect(ex-6,gy0,12,gy1-gy0);}
+  else{ctx.fillStyle='rgba(255,93,93,0.85)';ctx.fillRect(ex-4,gy0,8,gy1-gy0);
+    ctx.fillStyle='#ffd166';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
+    ctx.fillText('ЗАПЕЧАТАНО / SEALED',ex,gy0-16);ctx.textAlign='left';}
 
   // стены с воротами
   for(const gi of GATES_IDX){
@@ -586,6 +601,7 @@ function renderHUD(){
   // ЖИВАЯ ПОДСКАЗКА (RU + EN)
   let h1,h2;
   if(G.unlocked){h1='БЕГИ ВПРАВО К ВЫХОДУ!';h2='RUN RIGHT TO THE EXIT!';}
+  else if(G.player.x>810){h1='ВЫХОД ЗАПЕЧАТАН: сведи окна A+B+C';h2='EXIT SEALED: overlap the A+B+C windows';}
   else if(G.strikes===0){h1='УДАРЬ по ромбику — МЕЖДУ расходящимися кругами';h2='TAP an anchor BETWEEN the expanding rings (rings = the beat)';}
   else if(G.overlapT>0.3){h1='ДЕРЖИ ПЕРЕКРЫТИЕ! Ещё удар!';h2='KEEP THE OVERLAP GOING!';}
   else if(G.alarm>70){h1='ТРЕВОГА! «Подпевать» гасит её';h2='ALARM HIGH! Resync to calm it';}
