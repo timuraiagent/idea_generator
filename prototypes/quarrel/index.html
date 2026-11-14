@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Раздор — рождает ли парная матрица и рикошеты тактику, или побеждает спам ссор?</title>
+<style>
+  html,body{margin:0;padding:0;background:#0d0a12;height:100%;display:flex;align-items:center;justify-content:center;}
+  canvas{border:1px solid #2a2338;border-radius:6px;}
+</style>
+</head>
+<body>
+<canvas id="cv" width="960" height="640"></canvas>
+<script>
+'use strict';
+/* ============================================================
+   РАЗДОР — прототип механики «ссорить × бильярд» (v1)
+   Вопрос прототипа: рождает ли ПАРНАЯ матрица раздражения + физика
+   рикошетов тактику позиционирования (кого с кем, куда, с какого угла)
+   — или побеждает спам ссор по случайным парам?
+   Спека: mechanics/quarrel/spec.md. Ассеты: assets.svg (Codex).
+   ============================================================ */
+
+const CONFIG = {
+  W: 960, H: 640,
+  PLAYER_SPEED: 220, NERVES_MAX: 100, BURST_HIT_NERVES: 35,
+  WHISPER_R: 150,
+  NPC_COUNT: 10, NPC_R: 14, NPC_SPEED: 60,
+  PROJ_R: 6, PROJ_SPEED: 420, PROJ_BOUNCES: 3, PROJ_LIFE: 4, PROJ_HIT: 40,
+  IRRIT_DECAY: 2, FIGHT_AT: 60, LINE_AT: 40,
+  CLASP: 1.5, BURST_SPEED: 300, BURST_FRICTION: 4,
+  BURST_R: 120, SPREAD_R: 80, SPREAD: 15, POST_FIGHT: 30,
+  HOARSE: 8,
+  COOL_AMOUNT: 30, COOL_CD: 5,
+  PARTY: 90, GOAL_PAIRS: 6,
+};
+
+const SPRITES = { // ячейки 128×128 в assets.svg (таблица в шапке файла)
+  player:[0,0], npc_calm:[128,0], npc_annoyed:[256,0], npc_fighting:[384,0],
+  projectile:[0,128], cool_icon:[128,128],
+};
+
+// ---------- утилиты ----------
+const TAU=Math.PI*2;
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const pkey=(i,j)=>i<j?i+'-'+j:j+'-'+i;
+
+// ---------- состояние ----------
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let phase='start', G=null;
+
+function newGame(){
+  const npcs=[];
+  for(let i=0;i<CONFIG.NPC_COUNT;i++) npcs.push({
+    x:rnd(60,CONFIG.W-60), y:rnd(60,CONFIG.H-60),
+    dir:rnd(0,TAU), tx:rnd(50,CONFIG.W-50), ty:rnd(50,CONFIG.H-50), retarget:rnd(1,4),
+    vx:0, vy:0, hoarse:0, fight:null, flash:0,
+  });
+  return {
+    player:{x:CONFIG.W/2,y:CONFIG.H-80,nerves:CONFIG.NERVES_MAX},
+    npcs, irr:new Float32Array(CONFIG.NPC_COUNT*CONFIG.NPC_COUNT),
+    projs:[], effects:[], fights:[],
+    selA:null, coolCd:0, pairs:new Set(), shots:0,
+    t:CONFIG.PARTY_TIME, win:false,
+  };
+}
+
+// ---------- ввод ----------
+const keys={}; let mouse={x:0,y:0};
+function npcAt(p){
+  return G?G.npcs.find(n=>dist(n,p)<CONFIG.NPC_R+16):null;
+}
+addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(e.code==='Escape'&&phase==='play'&&G)G.selA=null;
+  if(phase==='start'&&(e.key==='Enter'||e.key===' ')){G=newGame();phase='play';e.preventDefault();}
+  else if(phase==='end'&&e.code==='KeyR'){G=newGame();phase='play';}
+  else if(phase==='play'&&e.code==='KeyR')G=newGame();
+});
+addEventListener('keyup',e=>{keys[e.code]=false;});
+cv.addEventListener('mousemove',e=>{const r=cv.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;});
+cv.addEventListener('mousedown',e=>{
+  if(phase!=='play')return;
+  if(e.button===0)clickLeft();
+  if(e.button===2)clickRight();
+  e.preventDefault();
+});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+function clickLeft(){
+  const n=npcAt(mouse); if(!n)return;
+  const idx=G.npcs.indexOf(n);
+  if(G.selA===null){ G.selA=idx; return; }
+  if(G.selA===idx){ G.selA=null; return; } // повторный клик — отмена
+  const A=G.npcs[G.selA];
+  if(dist(A,G.player)>CONFIG.WHISPER_R){ G.selA=null; effectText(A,'ближе — нашёптывание'); return; }
+  if(A.hoarse>0){ G.selA=null; effectText(A,'осип...'); return; }
+  throwQuarrel(G.selA,idx); G.selA=null;
+}
+function clickRight(){
+  const n=npcAt(mouse); if(!n)return;
+  if(G.coolCd>0)return;
+  const idx=G.npcs.indexOf(n);
+  for(let j=0;j<CONFIG.NPC_COUNT;j++)G.irr[idx*CONFIG.NPC_COUNT+j]=Math.max(0,G.irr[idx*CONFIG.NPC_COUNT+j]-CONFIG.COOL_AMOUNT);
+  G.coolCd=CONFIG.COOL_CD;
+  ripple(n.x,n.y,'#7ad0ff');
+}
+function throwQuarrel(ai,bi){
+  const A=G.npcs[ai], B=G.npcs[bi];
+  const a=Math.atan2(B.y-A.y,B.x-A.x);
+  G.projs.push({x:A.x,y:A.y,vx:Math.cos(a)*CONFIG.PROJ_SPEED,vy:Math.sin(a)*CONFIG.PROJ_SPEED,
+                bounces:CONFIG.PROJ_BOUNCES,life:CONFIG.PROJ_LIFE,src:ai});
+  A.hoarse=CONFIG.HOARSE; G.shots++;
+}
+function effectText(n,txt){ G.effects.push({type:'txt',x:n.x,y:n.y-24,txt,life:1}); }
+function ripple(x,y,color){ G.effects.push({type:'ring',x,y,r:10,color,life:.6}); }
+function sparks(x,y,color,n=8){ for(let i=0;i<n;i++)G.effects.push({type:'spark',x,y,vx:rnd(-90,90),vy:rnd(-90,90),color,life:rnd(.2,.5)}); }
+
+// ---------- спрайты ----------
+const sheet=new Image(); let sheetOK=false;
+sheet.onload=()=>sheetOK=true; sheet.src='assets.svg';
+function drawSprite(cell,x,y,angle,scale){
+  scale=scale||0.42;
+  ctx.save(); ctx.translate(x,y); if(angle)ctx.rotate(angle);
+  if(sheetOK)ctx.drawImage(sheet,cell[0],cell[1],128,128,-64*scale,-64*scale,128*scale,128*scale);
+  else{ctx.fillStyle='#e8e6f0';ctx.beginPath();ctx.arc(0,0,15,0,TAU);ctx.fill();}
+  ctx.restore();
+}
+
+// ----------npc-логика ----------
+function npcSprite(n,idx){
+  if(n.fight)return SPRITES.npc_fighting;
+  let maxOut=0; for(let j=0;j<CONFIG.NPC_COUNT;j++)maxOut=Math.max(maxOut,G.irr[idx*CONFIG.NPC_COUNT+j]);
+  return maxOut>=CONFIG.LINE_AT?SPRITES.npc_annoyed:SPRITES.npc_calm;
+}
+
+function updateNpc(n,idx,dt){
+  if(n.fight){ n.flash=Math.max(0,n.flash-dt); return; } // сцеплен — стоит
+  n.hoarse=Math.max(0,n.hoarse-dt); n.flash=Math.max(0,n.flash-dt);
+  // импульс от разлёта
+  n.x+=n.vx*dt; n.y+=n.vy*dt;
+  const f=Math.exp(-CONFIG.BURST_FRICTION*dt); n.vx*=f; n.vy*=f;
+  // блуждание
+  n.retarget-=dt;
+  if(n.retarget<=0||dist(n,{x:n.tx,y:n.ty})<12){n.tx=rnd(50,CONFIG.W-50);n.ty=rnd(50,CONFIG.H-50);n.retarget=rnd(1.5,4);}
+  const a=Math.atan2(n.ty-n.y,n.tx-n.x);
+  n.x+=Math.cos(a)*CONFIG.NPC_SPEED*dt; n.y+=Math.sin(a)*CONFIG.NPC_SPEED*dt; n.dir=a;
+  n.x=clamp(n.x,CONFIG.NPC_R+4,CONFIG.W-CONFIG.NPC_R-4);
+  n.y=clamp(n.y,CONFIG.NPC_R+4,CONFIG.H-CONFIG.NPC_R-4);
+  // мягкое расталкивание
+  for(const m of G.npcs){
+    if(m===n||m.fight)continue;
+    const d=dist(n,m), min=CONFIG.NPC_R*2;
+    if(d>0&&d<min){ const px=(n.x-m.x)/d*(min-d)*0.5, py=(n.y-m.y)/d*(min-d)*0.5;
+      n.x+=px; n.y+=py; m.x-=px; m.y-=py; }
+  }
+}
+
+function startFight(a,b){
+  const A=G.npcs[a], B=G.npcs[b];
+  A.fight=B.fight={a,b,t:CONFIG.CLASP,cx:(A.x+B.x)/2,cy:(A.y+B.y)/2};
+  A.x=A.fight.cx+rnd(-6,6); A.y=A.fight.cy+rnd(-6,6);
+  B.x=A.fight.cx+rnd(-6,6); B.y=A.fight.cy+rnd(-6,6);
+  sparks(A.fight.cx,A.fight.cy,'#ff5d5d',12);
+}
+function endFight(f){
+  const {a,b}=f, A=G.npcs[a], B=G.npcs[b];
+  A.fight=B.fight=null;
+  const ang=Math.atan2(B.y-A.y,B.x-A.x)+rnd(-0.4,0.4);
+  A.vx=Math.cos(ang+Math.PI)*CONFIG.BURST_SPEED; A.vy=Math.sin(ang+Math.PI)*CONFIG.BURST_SPEED;
+  B.vx=Math.cos(ang)*CONFIG.BURST_SPEED;          B.vy=Math.sin(ang)*CONFIG.BURST_SPEED;
+  const N=CONFIG.NPC_COUNT;
+  G.irr[a*N+b]=CONFIG.POST_FIGHT; G.irr[b*N+a]=CONFIG.POST_FIGHT;
+  G.pairs.add(pkey(a,b));
+  // «все против всех» вокруг разлёта
+  for(let o=0;o<N;o++){
+    const O=G.npcs[o];
+    if(o===a||o===b)continue;
+    if(Math.hypot(O.x-f.cx,O.y-f.cy)<CONFIG.BURST_R){
+      for(let x=0;x<N;x++){
+        if(x===o)continue;
+        const X=G.npcs[x];
+        if(Math.hypot(O.x-X.x,O.y-X.y)<CONFIG.SPREAD_R)
+          G.irr[o*N+x]=Math.min(100,G.irr[o*N+x]+CONFIG.SPREAD);
+      }
+      O.flash=.5;
+    }
+  }
+  if(Math.hypot(G.player.x-f.cx,G.player.y-f.cy)<CONFIG.BURST_R){
+    G.player.nerves-=CONFIG.BURST_HIT_NERVES; ripple(G.player.x,G.player.y,'#ff5d5d');
+  }
+  sparks(f.cx,f.cy,'#ff9d5d',14);
+}
+
+// ---------- главный апдейт ----------
+let last=0;
+function update(dt){
+  if(phase!=='play')return;
+  const P=G.player, N=CONFIG.NPC_COUNT;
+  G.t-=dt; G.coolCd=Math.max(0,G.coolCd-dt);
+  if(G.t<=0){G.t=0;phase='end';G.win=G.pairs.size>=CONFIG.GOAL_PAIRS;return;}
+  if(G.player.nerves<=0){phase='end';G.win=false;return;}
+
+  // игрок
+  let ix=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
+  let iy=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0);
+  if(ix||iy){const l=Math.hypot(ix,iy);P.x=clamp(P.x+ix/l*CONFIG.PLAYER_SPEED*dt,16,CONFIG.W-16);P.y=clamp(P.y+iy/l*CONFIG.PLAYER_SPEED*dt,16,CONFIG.H-16);}
+
+  // раздражение затухает
+  for(let k=0;k<G.irr.length;k++)G.irr[k]=Math.max(0,G.irr[k]-CONFIG.IRRIT_DECAY*dt);
+
+  // снаряды
+  for(const pr of G.projs){
+    pr.x+=pr.vx*dt; pr.y+=pr.vy*dt; pr.life-=dt;
+    if(pr.x<CONFIG.PROJ_R||pr.x>CONFIG.W-CONFIG.PROJ_R){pr.vx=-pr.vx;pr.x=clamp(pr.x,CONFIG.PROJ_R,CONFIG.W-CONFIG.PROJ_R);pr.bounces--;sparks(pr.x,pr.y,'#ff5d7d',4);}
+    if(pr.y<CONFIG.PROJ_R||pr.y>CONFIG.H-CONFIG.PROJ_R){pr.vy=-pr.vy;pr.y=clamp(pr.y,CONFIG.PROJ_R,CONFIG.H-CONFIG.PROJ_R);pr.bounces--;sparks(pr.x,pr.y,'#ff5d7d',4);}
+    if(pr.bounces<0||pr.life<=0){pr.dead=true;continue;}
+    const hit=G.npcs.findIndex((n,i)=>i!==pr.src&&!n.fight&&dist(n,pr)<CONFIG.PROJ_R+CONFIG.NPC_R);
+    if(hit>=0){
+      G.irr[hit*N+pr.src]=Math.min(100,G.irr[hit*N+pr.src]+CONFIG.PROJ_HIT);
+      G.npcs[hit].flash=.6; sparks(pr.x,pr.y,'#ff5d7d',10); pr.dead=true;
+    }
+  }
+  G.projs=G.projs.filter(p=>!p.dead);
+
+  // NPC
+  G.npcs.forEach((n,i)=>updateNpc(n,i,dt));
+
+  // драки: сцепление → разлёт
+  for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){
+    const A=G.npcs[i],B=G.npcs[j];
+    if(A.fight||B.fight)continue;
+    if(G.pairs.has(pkey(i,j)))continue;
+    if(G.irr[i*N+j]>=CONFIG.FIGHT_AT&&G.irr[j*N+i]>=CONFIG.FIGHT_AT)startFight(i,j);
+  }
+  for(const f of G.fights)0; // (сцепления живут на npc.fight)
+  for(const n of G.npcs)if(n.fight){
+    const f=n.fight, i=G.npcs.indexOf(n);
+    f.t-=dt;
+    if(f.t<=0&&!f.done){f.done=true;endFight(f);}
+  }
+  G.fights=G.npcs.filter(n=>n.fight&&n.fight.done).map(n=>n.fight);
+  // (endFight вызван выше; список fights только для рендера следов)
+
+  // эффекты
+  for(const e of G.effects){e.life-=dt;if(e.type==='spark'){e.x+=e.vx*dt;e.y+=e.vy*dt;}if(e.type==='ring')e.r+=120*dt;}
+  G.effects=G.effects.filter(e=>e.life>0);
+}
+
+// ---------- рендер ----------
+function render(){
+  ctx.fillStyle='#17131f'; ctx.fillRect(0,0,CONFIG.W,CONFIG.H);
+  ctx.fillStyle='#221b2e';
+  for(let x=30;x<CONFIG.W;x+=60)for(let y=30;y<CONFIG.H;y+=60)ctx.fillRect(x,y,2,2);
+  if(!G){renderStart();return;}
+
+  const N=CONFIG.NPC_COUNT;
+  // линии раздражения ≥40
+  for(let i=0;i<N;i++)for(let j=i+1;j<N;j++){
+    const v=Math.max(G.irr[i*N+j],G.irr[j*N+i]);
+    if(v<CONFIG.LINE_AT)continue;
+    const A=G.npcs[i],B=G.npcs[j], hot=v>=CONFIG.FIGHT_AT;
+    const al=(v-CONFIG.LINE_AT)/(100-CONFIG.LINE_AT)*0.75+0.1;
+    ctx.strokeStyle=hot?`rgba(255,93,93,${al})`:`rgba(255,157,93,${al})`;
+    ctx.lineWidth=hot?2.5:1.5;
+    ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();
+  }
+  ctx.lineWidth=1;
+
+  // эффекты под сущностями
+  for(const e of G.effects){
+    if(e.type==='ring'){ctx.strokeStyle=e.color;ctx.globalAlpha=e.life;ctx.beginPath();ctx.arc(e.x,e.y,e.r,0,TAU);ctx.stroke();ctx.globalAlpha=1;}
+  }
+
+  // снаряды с трейлом
+  for(const pr of G.projs){
+    ctx.strokeStyle='rgba(255,93,125,0.4)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(pr.x-pr.vx*0.05,pr.y-pr.vy*0.05);ctx.lineTo(pr.x,pr.y);ctx.stroke();ctx.lineWidth=1;
+    drawSprite(SPRITES.projectile,pr.x,pr.y,0,0.22);
+  }
+
+  // NPC
+  const hover=npcAt(mouse);
+  G.npcs.forEach((n,i)=>{
+    const cell=n.fight?SPRITES.npc_fighting:npcSprite(n,i);
+    const shx=n.fight?rnd(-2,2):0, shy=n.fight?rnd(-2,2):0;
+    drawSprite(cell,n.x+shx,n.y+shy,n.dir+Math.PI/2,0.4);
+    if(n.flash>0){ctx.fillStyle=`rgba(255,93,125,${n.flash})`;ctx.beginPath();ctx.arc(n.x,n.y,20,0,TAU);ctx.fill();}
+    if(n.hoarse>0){ctx.strokeStyle='rgba(154,160,166,0.5)';ctx.setLineDash([2,3]);ctx.beginPath();ctx.arc(n.x,n.y,22,0,TAU);ctx.stroke();ctx.setLineDash([]);}
+    if(G.selA===i){ctx.strokeStyle='#b26bff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(n.x,n.y,24,0,TAU);ctx.stroke();ctx.lineWidth=1;}
+    if(n===hover&&G.selA!==i){ctx.strokeStyle='rgba(232,230,240,0.45)';ctx.beginPath();ctx.arc(n.x,n.y,22,0,TAU);ctx.stroke();}
+  });
+
+  // прицел: A → курсор с первым отскоком
+  if(G.selA!==null){
+    const A=G.npcs[G.selA];
+    const a=Math.atan2(mouse.y-A.y,mouse.x-A.x);
+    const dx=Math.cos(a),dy=Math.sin(a);
+    // пересечение с границей арены
+    let t=1e9;
+    if(dx>0)t=Math.min(t,(CONFIG.W-8-A.x)/dx); else if(dx<0)t=Math.min(t,(8-A.x)/dx);
+    if(dy>0)t=Math.min(t,(CONFIG.H-8-A.y)/dy); else if(dy<0)t=Math.min(t,(8-A.y)/dy);
+    const ex=A.x+dx*t, ey=A.y+dy*t;
+    ctx.strokeStyle='rgba(255,93,125,0.55)';ctx.setLineDash([6,5]);
+    ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(ex,ey);ctx.stroke();
+    // отражённый сегмент
+    let rx=dx,ry=dy;
+    if(ex<=8+1||ex>=CONFIG.W-8-1)rx=-rx; else ry=-ry;
+    ctx.strokeStyle='rgba(255,93,125,0.25)';
+    ctx.beginPath();ctx.moveTo(ex,ey);ctx.lineTo(ex+rx*170,ey+ry*170);ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // игрок
+  drawSprite(SPRITES.player,G.player.x,G.player.y,-Math.PI/2+0,0.44);
+  if(G.selA!==null){ // кольцо нашёптывания вокруг игрока? нет — вокруг A уже кольцо; радиус покажем от A
+    const A=G.npcs[G.selA];
+    ctx.strokeStyle='rgba(178,107,255,0.25)';ctx.beginPath();ctx.arc(A.x,A.y,CONFIG.WHISPER_R,0,TAU);ctx.stroke();
+  }
+
+  // искры/текст
+  for(const e of G.effects){
+    if(e.type==='spark'){ctx.fillStyle=e.color;ctx.globalAlpha=Math.min(1,e.life*2.5);ctx.fillRect(e.x-1.5,e.y-1.5,3,3);ctx.globalAlpha=1;}
+    if(e.type==='txt'){ctx.fillStyle=`rgba(255,209,102,${Math.min(1,e.life)})`;ctx.font='12px sans-serif';ctx.textAlign='center';ctx.fillText(e.txt,e.x,e.y-(1-e.life)*18);ctx.textAlign='left';}
+  }
+
+  renderHUD();
+  if(phase==='end')renderEnd();
+}
+
+function bar(x,y,w,h,frac,color,label){
+  ctx.fillStyle='#241d31';ctx.fillRect(x,y,w,h);
+  ctx.fillStyle=color;ctx.fillRect(x,y,w*clamp(frac,0,1),h);
+  ctx.strokeStyle='#3a3050';ctx.strokeRect(x+.5,y+.5,w,h);
+  if(label){ctx.fillStyle='#8f86a8';ctx.font='11px sans-serif';ctx.fillText(label,x,y-4);}
+}
+function renderHUD(){
+  const P=G.player;
+  bar(20,100,140,12,P.nerves/CONFIG.NERVES_MAX,P.nerves<40?'#ff5d5d':'#7ad0ff','нервы '+Math.round(P.nerves));
+  bar(20,140,140,12,1-G.coolCd/CONFIG.COOL_CD,'#7ad0ff',G.coolCd>0?'остуда '+G.coolCd.toFixed(1)+'с':'остуда готова (ПКМ по NPC)');
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 22px sans-serif';ctx.textAlign='center';
+  ctx.fillText(Math.ceil(G.t)+'с',CONFIG.W/2,36);ctx.textAlign='left';
+  const pairsTxt=`пары ${G.pairs.size}/${CONFIG.GOAL_PAIRS}`;
+  ctx.font='bold 16px sans-serif';ctx.fillStyle=G.pairs.size>=CONFIG.GOAL_PAIRS?'#9fe8b0':'#ffd166';
+  ctx.fillText(pairsTxt,CONFIG.W-260,36);
+  ctx.font='12px sans-serif';ctx.fillStyle='#8f86a8';
+  ctx.fillText(`ссор брошено: ${G.shots} · на драку: ${G.pairs.size?(G.shots/Math.max(1,G.pairs.size)).toFixed(1):'—'}`,CONFIG.W-260,56);
+  ctx.fillStyle='#5b5372';ctx.font='11px sans-serif';
+  ctx.fillText('WASD — идти · ЛКМ: NPC A → NPC B — ссора (A осип 8с; попадание: +40 к A) · ПКМ по NPC — остуда −30 (кд 5с) · ESC — снять выбор',20,CONFIG.H-16);
+}
+function renderStart(){
+  ctx.textAlign='center';ctx.fillStyle='#e8e6f0';ctx.font='bold 44px sans-serif';
+  ctx.fillText('РАЗДОР',CONFIG.W/2,230);
+  ctx.font='15px sans-serif';ctx.fillStyle='#ff5d7d';
+  ctx.fillText('Ссора — физический снаряд: претензия летит из NPC, рикошетит от стен,',CONFIG.W/2,290);
+  ctx.fillText('и первый, кого заденет, возненавидит ИСТОЧНИКА. Взаимная ненависть 60/60 = драка',CONFIG.W/2,312);
+  ctx.fillText('и разлёт с импульсом, растравляющим всех вокруг.',CONFIG.W/2,334);
+  ctx.fillStyle='#8f86a8';
+  ctx.fillText('Цель: свести 6 разных пар за 90 секунд. Остуда — ПКМ. Драки бьют игрока: запускай у стены.',CONFIG.W/2,372);
+  ctx.fillText('Вопрос: рождает ли матрица и рикошеты тактику — или победит спам по случайным парам?',CONFIG.W/2,396);
+  ctx.fillStyle='#5b5372';
+  ctx.fillText('ЛКМ A → ЛКМ B (в радиусе нашёптывания от A) · пунктир = траектория с первым отскоком',CONFIG.W/2,436);
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('нажми Enter',CONFIG.W/2,486);
+  ctx.textAlign='left';
+}
+function renderEnd(){
+  ctx.fillStyle='rgba(13,10,18,0.75)';ctx.fillRect(0,0,CONFIG.W,CONFIG.H);
+  ctx.textAlign='center';
+  ctx.fillStyle=G.win?'#9fe8b0':'#ff5d5d';ctx.font='bold 40px sans-serif';
+  ctx.fillText(G.win?'ПОБЕДА':'ПРОИГРЫШ',CONFIG.W/2,270);
+  ctx.fillStyle='#e8e6f0';ctx.font='15px sans-serif';
+  const perFight=G.pairs.size?(G.shots/G.pairs.size).toFixed(1):'—';
+  ctx.fillText(`итог: ${G.win?'победа':'проигрыш'} · пар ${G.pairs.size}/${CONFIG.GOAL_PAIRS} · ссор ${G.shots} (${perFight} на драку) · нервы ${Math.max(0,Math.round(G.player.nerves))}`,CONFIG.W/2,320);
+  ctx.fillStyle='#8f86a8';ctx.font='13px sans-serif';
+  ctx.fillText('Много ссор на драку = спам победил, и вопрос прототипа закрыт против механики.',CONFIG.W/2,352);
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('R — заново',CONFIG.W/2,400);
+  ctx.textAlign='left';
+}
+
+// ---------- цикл ----------
+function loop(ts){
+  const dt=Math.min(0.05,(ts-last)/1000||0); last=ts;
+  update(dt); render(); requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
