@@ -115,8 +115,10 @@ function disrupt(li, depth){
     }
     G.strikes++; G.chain.push(l.id);
   } else G.cascades++;
-  G.alarm=clamp(G.alarm+(depth===0?CONFIG.ALARM_HIT:depth===1?CONFIG.ALARM_C1:CONFIG.ALARM_C2),0,100);
+  const gain=depth===0?CONFIG.ALARM_HIT:depth===1?CONFIG.ALARM_C1:CONFIG.ALARM_C2;
+  G.alarm=clamp(G.alarm+gain,0,100);
   G.peakAlarm=Math.max(G.peakAlarm,G.alarm);
+  G.alarmFx={v:'+'+gain,t:1.2,c:'#ff5d5d'};     // явная связь: удар → полоса тревоги
   l.repairIn=CONFIG.REPAIR_AFTER;
   ring(l.ax,l.ay, depth===0?'#b26bff':'#8a2be2');
   if(depth<CONFIG.CASCADE_DEPTH)
@@ -128,6 +130,7 @@ function resync(l){ // подпевание: пересвод к сетке, т�
   l.phi=wrapPhase(Math.round(wrapPhase(l.phi,T)/b)*b, T);
   l.jamT=0; l.repairIn=null;
   G.alarm=clamp(G.alarm+CONFIG.ALARM_SYNC,0,100);
+  G.alarmFx={v:CONFIG.ALARM_SYNC+'',t:1.2,c:'#7ad0ff'};
   ring(l.ax,l.ay,'#7ad0ff');
 }
 function strike(l){
@@ -300,6 +303,7 @@ function update(dt){
   // эффекты
   for(const e of G.effects){e.life-=dt;if(e.type==='ring')e.r+=110*dt;}
   G.effects=G.effects.filter(e=>e.life>0);
+  if(G.alarmFx){G.alarmFx.t-=dt;if(G.alarmFx.t<=0)G.alarmFx=null;}
 }
 
 function sameRoom(x1,x2){
@@ -550,6 +554,12 @@ function renderHUD(){
   ctx.fillStyle='#8f86a8';ctx.font='bold 15px sans-serif';ctx.fillText(h2,CONFIG.W/2,140);
   ctx.textAlign='left';
   bar(CONFIG.W/2-130,CONFIG.H-30,260,14,G.alarm/100,G.alarm>70?'#ff5d5d':'#ffd166');
+  if(G.alarmFx&&G.alarmFx.t>0){ // всплывающее «+10 / −8» над полосой
+    const a=Math.min(1,G.alarmFx.t);
+    ctx.fillStyle=G.alarmFx.c;ctx.globalAlpha=a;ctx.font='bold 20px sans-serif';ctx.textAlign='center';
+    ctx.fillText(G.alarmFx.v+' тревога',CONFIG.W/2,CONFIG.H-42-(1.2-G.alarmFx.t)*30);
+    ctx.globalAlpha=1;ctx.textAlign='left';
+  }
   ctx.fillStyle='#cfcbe0';ctx.font='bold 15px sans-serif';ctx.textAlign='center';
   ctx.fillText('ТРЕВОГА / ALARM '+Math.round(G.alarm)+' — 100 = пересвод / full resync',CONFIG.W/2,CONFIG.H-38);
   ctx.fillStyle=G.overlapT>0?'#7ad0ff':'#8f86a8';ctx.font='bold 16px sans-serif';
