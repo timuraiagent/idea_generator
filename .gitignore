@@ -1,0 +1,20 @@
+# секреты — только в kb; kb сам пишет выданные проекту ключи в .env
+.env
+.env.*
+!.env.example
+
+# зависимости и сборка
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+dist/
+build/
+.next/
+.cache/
+
+# мусор
+.DS_Store
+*.log
+*.tmp
