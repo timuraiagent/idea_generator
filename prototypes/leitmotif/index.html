@@ -27,16 +27,16 @@
 
 const CONFIG = {
   W: 960, H: 640,
-  PLAYER_SPEED: 140, STRIKE_R: 60,
+  PLAYER_SPEED: 140, STRIKE_R: 70,
   PATROLS: [
-    {id:'P1', ax:250, ay:320, route:{x:250, y0:180, y1:460}, T:10},
-    {id:'P2', ax:450, ay:320, route:{x:450, y0:160, y1:480}, T:13},
-    {id:'P3', ax:690, ay:320, route:{x0:615, x1:765, y:320}, T:11},
+    {id:'P1', label:'ОХРАНА-1', labelEn:'GUARD 1', ax:250, ay:320, route:{x:250, y0:180, y1:460}, T:10},
+    {id:'P2', label:'ОХРАНА-2', labelEn:'GUARD 2', ax:450, ay:320, route:{x:450, y0:160, y1:480}, T:13},
+    {id:'P3', label:'ОХРАНА-3', labelEn:'GUARD 3', ax:690, ay:320, route:{x0:615, x1:765, y:320}, T:11},
   ],
   GATES: [
-    {id:'A', x:140, T:14},
-    {id:'B', x:580, T:16},
-    {id:'C', x:800, T:12},
+    {id:'A', label:'ВОРОТА A', labelEn:'GATE A', x:140, T:14},
+    {id:'B', label:'ВОРОТА B', labelEn:'GATE B', x:580, T:16},
+    {id:'C', label:'ВОРОТА C', labelEn:'GATE C', x:800, T:12},
   ],
   GATE_GAP:{y0:260, y1:380}, OPEN_FRAC:[0.5, 0.33, 0.25],
   VISION: 100, ALARM_SEEN: 6,
@@ -70,10 +70,10 @@ let mode='start', G=null; // mode: start | play | end
 function newGame(){
   const loops=[];
   for(const p of CONFIG.PATROLS)
-    loops.push({type:'patrol', id:p.id, ax:p.ax, ay:p.ay, route:p.route, T:p.T,
+    loops.push({type:'patrol', id:p.id, label:p.label, labelEn:p.labelEn, ax:p.ax, ay:p.ay, route:p.route, T:p.T,
                 phi:wrapPhase(rnd(-0.1,0.1)*p.T, p.T), h:0, jamT:0, repairIn:null});
   for(const g of CONFIG.GATES)
-    loops.push({type:'gate', id:g.id, gx:g.x, ax:g.x, ay:225, T:g.T,
+    loops.push({type:'gate', id:g.id, label:g.label, labelEn:g.labelEn, gx:g.x, ax:g.x, ay:225, T:g.T,
                 phi:wrapPhase(rnd(-0.1,0.1)*g.T, g.T), h:0, jamT:0, repairIn:null});
   return {
     player:{x:70, y:320},
@@ -113,7 +113,7 @@ function disrupt(li, depth){
       const D=clamp(d, CONFIG.DMIN*T, CONFIG.DMAX*T);
       l.phi=wrapPhase(l.phi+sign*D, T);         // сдвиг фазы маршрута
     }
-    G.strikes++; G.chain.push(l.id);
+    G.strikes++; G.chain.push(l.label);
   } else G.cascades++;
   const gain=depth===0?CONFIG.ALARM_HIT:depth===1?CONFIG.ALARM_C1:CONFIG.ALARM_C2;
   G.alarm=clamp(G.alarm+gain,0,100);
@@ -144,7 +144,7 @@ function strike(l){
 }
 
 // ---------- эффекты/ввод ----------
-function ring(x,y,color){ G.effects.push({type:'ring',x,y,r:14,color,life:.9}); }
+function ring(x,y,color){ G.effects.push({type:'ring',x,y,r:22,color,life:.9}); }
 function txt(x,y,s,color){ G.effects.push({type:'txt',x,y,s,color,life:1.4}); }
 function anchorAt(p){ return G.loops.find(l=>Math.hypot(p.x-l.ax,p.y-l.ay)<CONFIG.STRIKE_R)||null; }
 
@@ -355,17 +355,27 @@ function render(){
     ctx.fillStyle='#3a3050';
     ctx.fillRect(x-4,90,8,gy0-90); ctx.fillRect(x-4,gy1,8,CONFIG.H-gy1);
     if(open){ctx.fillStyle='rgba(122,208,255,0.3)';ctx.fillRect(x-6,gy0,12,gy1-gy0);
-      if(l.jamT>0){ctx.fillStyle='#7ad0ff';ctx.font='11px sans-serif';ctx.textAlign='center';
-        ctx.fillText('окно '+l.jamT.toFixed(1)+'с',x,x===140?gy0-10:gy1+20);ctx.textAlign='left';}}
+      if(l.jamT>0){ctx.fillStyle='#7ad0ff';ctx.font='bold 13px sans-serif';ctx.textAlign='center';
+        ctx.fillText('окно '+l.jamT.toFixed(1)+'с',x,x===140?gy0-14:gy1+24);ctx.textAlign='left';}}
     else{ctx.fillStyle='rgba(255,93,93,0.75)';ctx.fillRect(x-4,gy0,8,gy1-gy0);}
+    // большая буква на самих воротах
+    ctx.fillStyle='rgba(232,230,240,0.45)';ctx.font='bold 34px sans-serif';ctx.textAlign='center';
+    ctx.fillText(l.id,x,(gy0+gy1)/2+12);ctx.textAlign='left';
   }
 
   // анкеры: подсветка до первого удара + крупнее
   if(G.strikes===0&&mode==='play'){const p=0.5+0.5*Math.sin(last/1000*4);
     for(const l of G.loops){ctx.strokeStyle=`rgba(178,107,255,${0.25+0.3*p})`;ctx.lineWidth=3;
-      ctx.beginPath();ctx.arc(l.ax,l.ay,44+6*p,0,TAU);ctx.stroke();}ctx.lineWidth=1;}
+      ctx.beginPath();ctx.arc(l.ax,l.ay,56+7*p,0,TAU);ctx.stroke();}ctx.lineWidth=1;}
   for(const l of G.loops)
-    drawSprite(l.type==='patrol'?SPRITES.anchor_patrol:SPRITES.anchor_gate,l.ax,l.ay,0,0.5);
+    drawSprite(l.type==='patrol'?SPRITES.anchor_patrol:SPRITES.anchor_gate,l.ax,l.ay,0,0.7);
+  // подписи анкеров в мире — прямо у ромбиков
+  ctx.textAlign='center';
+  for(const l of G.loops){
+    ctx.fillStyle='#e8e6f0';ctx.font='bold 15px sans-serif';ctx.fillText(l.label,l.ax,l.ay+(l.type==='patrol'?44:42));
+    ctx.fillStyle='#8f86a8';ctx.font='11px sans-serif';ctx.fillText(l.labelEn,l.ax,l.ay+(l.type==='patrol'?59:57));
+  }
+  ctx.textAlign='left';
 
   // патрули
   for(const l of G.loops)if(l.type==='patrol'){
@@ -469,23 +479,23 @@ function renderTut(){
             'Tap an anchor OFF its white dot — the loop stumbles, a window opens. On-beat = weak hit; disruption raises the ALARM.');
   }
   else if(tutPage===2){
-    const cards=[{n:'P1',x:190,y:240},{n:'P2',x:480,y:240},{n:'P3',x:770,y:240},
-                 {n:'A',x:300,y:420},{n:'B',x:480,y:420},{n:'C',x:660,y:420}];
+    const cards=[{n:'ОХРАНА-1',x:190,y:240},{n:'ОХРАНА-2',x:480,y:240},{n:'ОХРАНА-3',x:770,y:240},
+                 {n:'ВОРОТА A',x:300,y:420},{n:'ВОРОТА B',x:480,y:420},{n:'ВОРОТА C',x:660,y:420}];
     const edges=[[0,3],[0,4],[1,4],[1,5],[2,5]];
     ctx.strokeStyle='rgba(178,107,255,0.8)';ctx.lineWidth=3;
     for(const [a,b] of edges){
       ctx.beginPath();ctx.moveTo(cards[a].x,cards[a].y+36);ctx.lineTo(cards[b].x,cards[b].y-36);ctx.stroke();
     }
     ctx.lineWidth=1;
-    for(const c of cards){
-      ctx.fillStyle='#1d1728';ctx.fillRect(c.x-50,c.y-32,100,64);
-      ctx.strokeStyle=c.n.startsWith('P')?'#b26bff':'#7ad0ff';ctx.strokeRect(c.x-50,c.y-32,100,64);
-      ctx.fillStyle='#e8e6f0';ctx.font='bold 28px sans-serif';ctx.textAlign='center';
-      ctx.fillText(c.n,c.x,c.y+10);ctx.textAlign='left';
-    }
-    caption('Сбой катится по стрелкам САМ: удар по P1 откроет ворота A и B.',
-            'Хореография: удар по P1, чуть позже по P2 — все трое открыты.',
-            'Disruption cascades along the arrows: hitting P1 opens A and B. Strike P1, then P2 — all three open together.');
+    cards.forEach((c,i)=>{
+      ctx.fillStyle='#1d1728';ctx.fillRect(c.x-62,c.y-32,124,64);
+      ctx.strokeStyle=i<3?'#b26bff':'#7ad0ff';ctx.strokeRect(c.x-62,c.y-32,124,64);
+      ctx.fillStyle='#e8e6f0';ctx.font='bold 18px sans-serif';ctx.textAlign='center';
+      ctx.fillText(c.n,c.x,c.y+6);ctx.textAlign='left';
+    });
+    caption('Сбой катится по стрелкам САМ: удар по ОХРАНЕ-1 откроет ВОРОТА A и B.',
+            'Хореография: удар по ОХРАНЕ-1, чуть позже по ОХРАНЕ-2 — все трое открыты.',
+            'Disruption cascades along the arrows: hitting GUARD 1 opens gates A and B. Then GUARD 2 — all three open together.');
   }
   else{
     ctx.fillStyle='#3a3050';ctx.fillRect(60,280,30,80);
@@ -517,34 +527,38 @@ function renderHUD(){
   const cw=150, gapx=(CONFIG.W-6*cw)/5;
   G.loops.forEach((l,i)=>{
     const x=(cw+gapx)*i, y=8, T=Teff(l);
-    ctx.fillStyle='#1d1728';ctx.fillRect(x,y,cw,80);
-    ctx.strokeStyle='#2a2338';ctx.strokeRect(x+.5,y+.5,cw,80);
-    const cx=x+32,cy=y+40,r=26;
+    ctx.fillStyle='#1d1728';ctx.fillRect(x,y,cw,84);
+    ctx.strokeStyle='#2a2338';ctx.strokeRect(x+.5,y+.5,cw,84);
+    // имя петли по-человечески
+    ctx.textAlign='center';
+    ctx.fillStyle='#e8e6f0';ctx.font='bold 14px sans-serif';ctx.fillText(l.label,x+cw/2,y+16);
+    ctx.fillStyle='#6f6885';ctx.font='10px sans-serif';ctx.fillText(l.labelEn,x+cw/2,y+28);
+    ctx.textAlign='left';
+    const cx=x+34,cy=y+52,r=30;
     ctx.strokeStyle='#3a3050';ctx.beginPath();ctx.arc(cx,cy,r,0,TAU);ctx.stroke();
     for(let k=0;k<4;k++){const a=k*TAU/4-Math.PI/2;
-      ctx.fillStyle='#e8e6f0';ctx.fillRect(cx+Math.cos(a)*(r-7)-3,cy+Math.sin(a)*(r-7)-3,6,6);}
+      ctx.fillStyle='#e8e6f0';ctx.fillRect(cx+Math.cos(a)*(r-8)-3.5,cy+Math.sin(a)*(r-8)-3.5,7,7);}
     const ph=wrapPhase(l.phi,T)/T*TAU;
-    ctx.strokeStyle=l.jamT>0?'#7ad0ff':'#b26bff';ctx.lineWidth=3;
-    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(ph-Math.PI/2)*(r-4),cy+Math.sin(ph-Math.PI/2)*(r-4));ctx.stroke();ctx.lineWidth=1;
-    for(let k=0;k<CONFIG.H_MAX;k++){ctx.fillStyle=k<l.h?'#ffd166':'#332b45';ctx.fillRect(x+62+k*11,y+12,8,8);}
-    drawSprite(l.type==='gate'?SPRITES.gate_icon:SPRITES.patrol_icon,x+88,y+54,0,0.28);
-    ctx.fillStyle='#e8e6f0';ctx.font='bold 17px sans-serif';ctx.fillText(l.id,x+cw-32,y+24);
+    ctx.strokeStyle=l.jamT>0?'#7ad0ff':'#b26bff';ctx.lineWidth=3.5;
+    ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(ph-Math.PI/2)*(r-5),cy+Math.sin(ph-Math.PI/2)*(r-5));ctx.stroke();ctx.lineWidth=1;
+    for(let k=0;k<CONFIG.H_MAX;k++){ctx.fillStyle=k<l.h?'#ffd166':'#332b45';ctx.fillRect(x+72+k*11,y+38,8,8);}
+    drawSprite(l.type==='gate'?SPRITES.gate_icon:SPRITES.patrol_icon,x+86,y+62,0,0.3);
     ctx.font='bold 13px sans-serif';ctx.fillStyle='#8f86a8';
-    ctx.fillText(l.type==='gate'?(gateOpen(l)?'ОТКРЫТО':'закрыто'):(l.jamT>0?'ЗАМЕР':'обход'),x+cw-66,y+44);
-    if(l.jamT>0){ctx.fillStyle='#7ad0ff';ctx.fillText('окно '+l.jamT.toFixed(1)+'с',x+cw-66,y+62);}
-    if(l.repairIn!==null){ctx.fillStyle='#ffd166';ctx.fillText('жёстче '+l.repairIn.toFixed(0)+'с',x+cw-64,y+78);}
+    ctx.fillText(l.type==='gate'?(gateOpen(l)?'ОТКРЫТО':'закрыто'):(l.jamT>0?'ЗАМЕР':'обход'),x+68,y+40);
+    if(l.jamT>0){ctx.fillStyle='#7ad0ff';ctx.fillText('окно '+l.jamT.toFixed(1)+'с',x+68,y+56);}
+    if(l.repairIn!==null){ctx.fillStyle='#ffd166';ctx.fillText('жёстче '+l.repairIn.toFixed(0)+'с',x+68,y+72);}
   });
   ctx.strokeStyle='rgba(178,107,255,0.35)';
   for(const [a,b] of EDGES){
-    ctx.beginPath();ctx.moveTo((cw+gapx)*a+cw,48);ctx.lineTo((cw+gapx)*b,48);ctx.stroke();
+    ctx.beginPath();ctx.moveTo((cw+gapx)*a+cw,50);ctx.lineTo((cw+gapx)*b,50);ctx.stroke();
   }
   // ЖИВАЯ ПОДСКАЗКА (RU + EN)
   let h1,h2;
   if(G.unlocked){h1='БЕГИ ВПРАВО К ВЫХОДУ!';h2='RUN RIGHT TO THE EXIT!';}
-  else if(G.strikes===0){h1='УДАРЬ по ромбику — НЕ по белой точке';h2='TAP a diamond anchor — NOT on a white dot';}
+  else if(G.strikes===0){h1='УДАРЬ по любому ромбику — НЕ по белой точке';h2='TAP any diamond anchor — NOT on a white dot';}
   else if(G.overlapT>0.3){h1='ДЕРЖИ ПЕРЕКРЫТИЕ! Ещё удар!';h2='KEEP THE OVERLAP GOING!';}
   else if(G.alarm>70){h1='ТРЕВОГА! «Подпевать» гасит её';h2='ALARM HIGH! Resync to calm it';}
-  else{h1='Сведи окна A+B+C: бей P1 → P2 → P3';h2='Overlap A+B+C: strike P1 → P2 → P3';}
+  else{h1='БЕЙ ОХРАНУ: 1 → потом 2 → потом 3';h2='Strike GUARD 1 → 2 → 3 to open gates A/B/C';}
   ctx.font='bold 20px sans-serif';const w1=ctx.measureText(h1).width;
   ctx.font='bold 15px sans-serif';const w2=ctx.measureText(h2).width;
   const bw=Math.max(w1,w2)+28;
