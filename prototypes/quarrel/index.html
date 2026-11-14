@@ -2,14 +2,20 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>Раздор — рождает ли парная матрица и рикошеты тактику, или побеждает спам ссор?</title>
 <style>
   html,body{margin:0;padding:0;background:#0d0a12;height:100%;display:flex;align-items:center;justify-content:center;}
-  canvas{border:1px solid #2a2338;border-radius:6px;}
+  canvas{border:1px solid #2a2338;border-radius:6px;max-width:100vw;height:auto;touch-action:none;}
+  #tui{position:fixed;right:12px;bottom:12px;display:none;flex-direction:column;gap:10px;z-index:5;}
+  #tui.show{display:flex;}
+  #tui button{min-width:110px;padding:16px 18px;font-size:16px;border-radius:14px;background:rgba(255,93,125,.2);color:#e8e6f0;border:1px solid #ff5d7d;}
+  #tui button.on{background:rgba(255,93,125,.5);}
 </style>
 </head>
 <body>
 <canvas id="cv" width="960" height="640"></canvas>
+<div id="tui"></div>
 <script>
 'use strict';
 /* ============================================================
@@ -79,7 +85,7 @@ addEventListener('keydown',e=>{
   else if(phase==='play'&&e.code==='KeyR')G=newGame();
 });
 addEventListener('keyup',e=>{keys[e.code]=false;});
-cv.addEventListener('mousemove',e=>{const r=cv.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;});
+cv.addEventListener('mousemove',e=>{const r=cv.getBoundingClientRect(),s=CONFIG.W/r.width;mouse.x=(e.clientX-r.left)*s;mouse.y=(e.clientY-r.top)*s;});
 cv.addEventListener('mousedown',e=>{
   if(phase!=='play')return;
   if(e.button===0)clickLeft();
@@ -87,6 +93,46 @@ cv.addEventListener('mousedown',e=>{
   e.preventDefault();
 });
 cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+// ---------- тач: джойстик слева, тап = выбор NPC/прицел, кнопки справа ----------
+const isTouch='ontouchstart' in window||navigator.maxTouchPoints>0;
+let joy=null, coolMode=false;
+function tp(t){const r=cv.getBoundingClientRect(),s=CONFIG.W/r.width;return{x:(t.clientX-r.left)*s,y:(t.clientY-r.top)*s};}
+cv.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches){
+    const p=tp(t);
+    if(phase==='start'){G=newGame();phase='play';continue;}
+    if(phase==='end')continue;
+    if(p.x<CONFIG.W*0.45&&!joy){joy={id:t.identifier,ox:p.x,oy:p.y,dx:0,dy:0};continue;}
+    mouse.x=p.x;mouse.y=p.y;
+    if(coolMode)clickRight(); else clickLeft();
+  }
+},{passive:false});
+cv.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(!joy)return;
+  for(const t of e.changedTouches)if(t.identifier===joy.id){
+    const p=tp(t);let dx=p.x-joy.ox,dy=p.y-joy.oy;const l=Math.hypot(dx,dy);
+    if(l>50){dx=dx/l*50;dy=dy/l*50;}
+    joy.dx=dx/50;joy.dy=dy/50;
+  }
+},{passive:false});
+cv.addEventListener('touchend',e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches)if(joy&&t.identifier===joy.id)joy=null;
+},{passive:false});
+function mkBtn(label,down,up,toggle){
+  const b=document.createElement('button');b.textContent=label;
+  b.addEventListener('touchstart',e=>{e.preventDefault();b.classList.add('on');down();},{passive:false});
+  b.addEventListener('touchend',e=>{e.preventDefault();if(!toggle)b.classList.remove('on');if(up)up();},{passive:false});
+  document.getElementById('tui').appendChild(b);return b;
+}
+if(isTouch){
+  document.getElementById('tui').classList.add('show');
+  const cb=mkBtn('Остуда (режим)',()=>{coolMode=!coolMode;cb.classList.toggle('on',coolMode);},null,true);
+  mkBtn('Заново',()=>{G=newGame();phase='play';});
+}
 
 function clickLeft(){
   const n=npcAt(mouse); if(!n)return;
@@ -205,6 +251,7 @@ function update(dt){
   // игрок
   let ix=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
   let iy=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0);
+  if(joy){ix+=joy.dx;iy+=joy.dy;}
   if(ix||iy){const l=Math.hypot(ix,iy);P.x=clamp(P.x+ix/l*CONFIG.PLAYER_SPEED*dt,16,CONFIG.W-16);P.y=clamp(P.y+iy/l*CONFIG.PLAYER_SPEED*dt,16,CONFIG.H-16);}
 
   // раздражение затухает
@@ -361,7 +408,7 @@ function renderStart(){
   ctx.fillText('Вопрос: рождает ли матрица и рикошеты тактику — или победит спам по случайным парам?',CONFIG.W/2,396);
   ctx.fillStyle='#5b5372';
   ctx.fillText('ЛКМ A → ЛКМ B (в радиусе нашёптывания от A) · пунктир = траектория с первым отскоком',CONFIG.W/2,436);
-  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('нажми Enter',CONFIG.W/2,486);
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('нажми Enter или коснись экрана',CONFIG.W/2,486);
   ctx.textAlign='left';
 }
 function renderEnd(){

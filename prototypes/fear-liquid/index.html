@@ -2,14 +2,20 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>Страхогон — рождают ли растекание и заражение пространственные решения?</title>
 <style>
   html,body{margin:0;padding:0;background:#0d0a12;height:100%;display:flex;align-items:center;justify-content:center;}
-  canvas{border:1px solid #2a2338;border-radius:6px;}
+  canvas{border:1px solid #2a2338;border-radius:6px;max-width:100vw;height:auto;touch-action:none;}
+  #tui{position:fixed;right:12px;bottom:12px;display:none;flex-direction:column;gap:10px;z-index:5;}
+  #tui.show{display:flex;}
+  #tui button{min-width:110px;padding:16px 18px;font-size:16px;border-radius:14px;background:rgba(178,107,255,.22);color:#e8e6f0;border:1px solid #b26bff;}
+  #tui button.on{background:rgba(178,107,255,.55);}
 </style>
 </head>
 <body>
 <canvas id="cv" width="960" height="640"></canvas>
+<div id="tui"></div>
 <script>
 'use strict';
 /* ============================================================
@@ -84,10 +90,52 @@ addEventListener('keydown',e=>{
   }
 });
 addEventListener('keyup',e=>{keys[e.code]=false; if(e.code==='Space')space=false;});
-cv.addEventListener('mousemove',e=>{const r=cv.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;});
+cv.addEventListener('mousemove',e=>{const r=cv.getBoundingClientRect(),s=CONFIG.W/r.width;mouse.x=(e.clientX-r.left)*s;mouse.y=(e.clientY-r.top)*s;});
 cv.addEventListener('mousedown',e=>{if(e.button===0)m0=true;if(e.button===2)m2=true;});
 addEventListener('mouseup',e=>{if(e.button===0)m0=false;if(e.button===2)m2=false;});
 cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+// ---------- тач: джойстик слева, тап = прицел/старт, кнопки справа ----------
+const isTouch='ontouchstart' in window||navigator.maxTouchPoints>0;
+let joy=null;
+function tp(t){const r=cv.getBoundingClientRect(),s=CONFIG.W/r.width;return{x:(t.clientX-r.left)*s,y:(t.clientY-r.top)*s};}
+cv.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches){
+    const p=tp(t);
+    if(phase==='start'){G=newGame();phase='play';continue;}
+    if(phase==='end')continue;
+    if(p.x<CONFIG.W*0.45&&!joy){joy={id:t.identifier,ox:p.x,oy:p.y,dx:0,dy:0};continue;}
+    mouse.x=p.x;mouse.y=p.y;
+  }
+},{passive:false});
+cv.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(!joy)return;
+  for(const t of e.changedTouches)if(t.identifier===joy.id){
+    const p=tp(t);let dx=p.x-joy.ox,dy=p.y-joy.oy;const l=Math.hypot(dx,dy);
+    if(l>50){dx=dx/l*50;dy=dy/l*50;}
+    joy.dx=dx/50;joy.dy=dy/50;
+  }
+},{passive:false});
+cv.addEventListener('touchend',e=>{
+  e.preventDefault();
+  for(const t of e.changedTouches)if(joy&&t.identifier===joy.id)joy=null;
+},{passive:false});
+function mkBtn(label,down,up,toggle){
+  const b=document.createElement('button');b.textContent=label;
+  b.addEventListener('touchstart',e=>{e.preventDefault();b.classList.add('on');down();},{passive:false});
+  b.addEventListener('touchend',e=>{e.preventDefault();if(!toggle)b.classList.remove('on');if(up)up();},{passive:false});
+  document.getElementById('tui').appendChild(b);return b;
+}
+if(isTouch){
+  document.getElementById('tui').classList.add('show');
+  mkBtn('Отжать',()=>{m0=true;},()=>{m0=false;});
+  mkBtn('Лужа',()=>{space=true;},()=>{space=false;});
+  mkBtn('Пить',()=>{if(phase==='play')drink();});
+  mkBtn('Сброс',()=>{if(phase==='play')dump();});
+  mkBtn('Заново',()=>{G=newGame();phase='play';});
+}
 
 // ---------- спрайты ----------
 const sheet=new Image(); let sheetOK=false;
@@ -195,6 +243,7 @@ function update(dt,now){
   const mult=(P.buff>0?CONFIG.BUFF_MULT:1)*(P.stun>0?0:1);
   let ix=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
   let iy=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0);
+  if(joy){ix+=joy.dx;iy+=joy.dy;}
   if(ix||iy){const l=Math.hypot(ix,iy); P.x=clamp(P.x+ix/l*CONFIG.PLAYER_SPEED*mult*dt,20,CONFIG.W-20);
              P.y=clamp(P.y+iy/l*CONFIG.PLAYER_SPEED*mult*dt,20,CONFIG.H-20); P.dir=Math.atan2(iy,ix);}
 
@@ -350,7 +399,7 @@ function renderStart(){
   ctx.fillText('Вопрос прототипа: рождаются ли пространственные решения — или победит одна лужа в центре?',CONFIG.W/2,384);
   ctx.fillStyle='#5b5372';
   ctx.fillText('WASD · ЛКМ отжим · ПКМ/пробел разлив · E пить · Q стряхнуть',CONFIG.W/2,430);
-  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('нажми Enter',CONFIG.W/2,480);
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('нажми Enter или коснись экрана',CONFIG.W/2,480);
   ctx.textAlign='left';
 }
 function renderEnd(){
