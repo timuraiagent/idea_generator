@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Страхогон — рождают ли растекание и заражение пространственные решения?</title>
+<style>
+  html,body{margin:0;padding:0;background:#0d0a12;height:100%;display:flex;align-items:center;justify-content:center;}
+  canvas{border:1px solid #2a2338;border-radius:6px;}
+</style>
+</head>
+<body>
+<canvas id="cv" width="960" height="640"></canvas>
+<script>
+'use strict';
+/* ============================================================
+   СТРАХОГОН — прототип механики «отжимать × ужас» (v1)
+   Вопрос прототипа: возникают ли из правил растекания, испарения
+   и заражения пространственные решения (где лужа, кого отжимать,
+   когда пить) — или побеждает «большая лужа в центре»?
+   Спека: mechanics/fear-liquid/spec.md. Ассеты: assets.svg (Codex).
+   ============================================================ */
+
+const CONFIG = {
+  W: 960, H: 640,
+  NPC_COUNT: 10,
+  NPC_WANDER_SPEED: 60, PANIC_SPEED: 160, SIGHT: 120,
+  PLAYER_SPEED: 140,
+  SQUEEZE_RATE: 25, SQUEEZE_RADIUS: 44,       // ед/с, px (спека 40 + 4 грация на догонялки)
+  POUR_RATE: 60, POUR_MIN: 10,                // разлив при удержании: ед/с, мин. порция
+  PUDDLE_R0: 20, PUDDLE_K: 0.8, PUDDLE_MAX: 100,
+  PUDDLE_FEAR: 40, EVAPORATE: 6,              // +40 страха при касании; −6 ед/с испарение
+  FRIGHT_COOLDOWN: 2,                          // сек — NPC не пугается от той же лужи повторно
+  CONTAGION_RATE: 20, CONTAGION_R: 90,         // паника заражает соседей
+  PANIC_DECAY: 8,                              // самогашение паники, ед/с
+  WORRIED_AT: 30, PANIC_AT: 70,
+  DRINK_COST: 20, DRINK_FEAR: 15, BUFF_TIME: 5, BUFF_MULT: 1.5,
+  FLASK_MAX: 100, OWN_FEAR_MAX: 100,
+  STUN_TIME: 3, STUN_FEAR: 70,                 // срыв: замирание, колба лужей под себя
+  PARTY_TIME: 90, WIN_STREAK: 45, PANIC_THRESHOLD: 0.5,
+};
+
+const SPRITES = { // ячейки 128×128 в assets.svg (см. таблицу в шапке assets.svg)
+  player:[0,0], npc_calm:[128,0], npc_worried:[256,0], npc_panicking:[384,0],
+  flask:[0,128], flask_full:[256,128], drop:[128,128],
+};
+
+// ---------- утилиты ----------
+const TAU = Math.PI*2;
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+// ---------- состояние ----------
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let phase='start'; // start | play | end
+let G=null;       // объект партии
+
+function newGame(){
+  const npcs=[];
+  for(let i=0;i<CONFIG.NPC_COUNT;i++) npcs.push({
+    x:rnd(60,CONFIG.W-60), y:rnd(60,CONFIG.H-60),
+    dir:rnd(0,TAU), tx:rnd(60,CONFIG.W-60), ty:rnd(60,CONFIG.H-60),
+    retarget:rnd(1,3),
+    fear:rnd(25,60), drained:0, cool:{}, shiver:0,  // стартовый запас — иначе нечего отжимать (бутстрап)
+  });
+  return {
+    player:{x:CONFIG.W/2,y:CONFIG.H/2,dir:-Math.PI/2,flask:0,ownFear:0,buff:0,stun:0,squeezing:null},
+    npcs, puddles:[], parts:[], nextPid:1,
+    t:CONFIG.PARTY_TIME, streak:0, holdTotal:0, panicPeak:0, win:false,
+  };
+}
+
+// ---------- ввод ----------
+const keys={}; let mouse={x:CONFIG.W/2,y:CONFIG.H/2}, m0=false, m2=false, space=false;
+addEventListener('keydown',e=>{
+  keys[e.code]=true;
+  if(e.code==='Space'){space=true;e.preventDefault();}
+  if(phase==='start'&&(e.code==='KeyR'||e.key===' '||e.key==='Enter')){G=newGame();phase='play';}
+  else if(phase==='end'&&e.code==='KeyR'){G=newGame();phase='play';}
+  else if(phase==='play'){
+    if(e.code==='KeyE') drink();
+    if(e.code==='KeyQ') dump();
+    if(e.code==='KeyR'){G=newGame();}
+  }
+});
+addEventListener('keyup',e=>{keys[e.code]=false; if(e.code==='Space')space=false;});
+cv.addEventListener('mousemove',e=>{const r=cv.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;});
+cv.addEventListener('mousedown',e=>{if(e.button===0)m0=true;if(e.button===2)m2=true;});
+addEventListener('mouseup',e=>{if(e.button===0)m0=false;if(e.button===2)m2=false;});
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+
+// ---------- спрайты ----------
+const sheet=new Image(); let sheetOK=false;
+sheet.onload=()=>sheetOK=true; sheet.src='assets.svg';
+function sprite(c){return SPRITES[c];}
+function drawSprite(cell,x,y,angle,scale,alpha=1){
+  scale=scale||0.42;
+  ctx.save(); ctx.globalAlpha=alpha; ctx.translate(x,y); if(angle)ctx.rotate(angle);
+  if(sheetOK){ ctx.drawImage(sheet,cell[0],cell[1],128,128,-64*scale,-64*scale,128*scale,128*scale); }
+  else{ // фолбэк: круги, если assets.svg не подгрузился
+    ctx.fillStyle='#e8e6f0'; ctx.beginPath(); ctx.arc(0,0,16*scale/0.42,0,TAU); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ---------- действия игрока ----------
+function nearestNpc(){
+  let best=null,bd=1e9;
+  for(const n of G.npcs){const d=dist(n,G.player); if(d<CONFIG.SQUEEZE_RADIUS&&d<bd){bd=d;best=n;}}
+  return best;
+}
+function addPuddleAt(x,y,amount){
+  x=clamp(x,20,CONFIG.W-20); y=clamp(y,20,CONFIG.H-20);
+  let p=G.puddles.find(q=>dist(q,{x,y})<Math.max(30,puddleR(q)));
+  if(p){ p.vol=Math.min(CONFIG.PUDDLE_MAX,p.vol+amount); } // излишек сверх 100 пропадает — береги объём
+  else { p={id:G.nextPid++,x,y,vol:amount}; G.puddles.push(p); }
+  for(let i=0;i<6;i++)G.parts.push({x,y,vx:rnd(-40,40),vy:rnd(-40,40),life:rnd(.2,.45),r:rnd(1.5,3.5)});
+}
+function puddleR(p){return Math.min(110,CONFIG.PUDDLE_R0+CONFIG.PUDDLE_K*p.vol);}
+function drink(){
+  const P=G.player;
+  if(P.stun>0||P.flask<CONFIG.DRINK_COST)return;
+  P.flask-=CONFIG.DRINK_COST; P.ownFear=clamp(P.ownFear+CONFIG.DRINK_FEAR,0,CONFIG.OWN_FEAR_MAX);
+  P.buff=CONFIG.BUFF_TIME;
+}
+function dump(){
+  const P=G.player;
+  if(P.stun>0||P.flask<1)return;
+  addPuddleAt(P.x,P.y,P.flask); P.flask=0;
+}
+function collapse(){ // срыв: страх 100
+  const P=G.player;
+  P.stun=CONFIG.STUN_TIME;
+  if(P.flask>=1){addPuddleAt(P.x,P.y,P.flask);P.flask=0;}
+  P.ownFear=CONFIG.STUN_FEAR;
+}
+
+// ---------- NPC ----------
+function npcState(n){ return n.fear>=CONFIG.PANIC_AT?'panic':(n.fear>=CONFIG.WORRIED_AT?'worried':'calm'); }
+
+function updateNpc(n,dt,now){
+  const st=npcState(n);
+  // самогашение паники
+  if(st==='panic') n.fear=Math.max(0,n.fear-CONFIG.PANIC_DECAY*dt);
+
+  let vx=0,vy=0;
+  const flee=[];
+  if(st==='panic'){
+    for(const p of G.puddles){ if(dist(n,p)<CONFIG.SIGHT+puddleR(p)) flee.push({x:n.x-p.x,y:n.y-p.y}); }
+    for(const m of G.npcs){ if(m!==n&&npcState(m)==='panic'&&dist(n,m)<CONFIG.SIGHT) flee.push({x:n.x-m.x,y:n.y-m.y}); }
+    if(dist(n,G.player)<CONFIG.SIGHT) flee.push({x:n.x-G.player.x,y:n.y-G.player.y});
+  }else{
+    for(const p of G.puddles){ if(dist(n,p)<CONFIG.SIGHT) flee.push({x:n.x-p.x,y:n.y-p.y}); }
+  }
+  if(flee.length){ for(const f of flee){vx+=f.x;vy+=f.y;} const l=Math.hypot(vx,vy)||1; vx/=l;vy/=l;
+    const sp=st==='panic'?CONFIG.PANIC_SPEED:CONFIG.NPC_WANDER_SPEED;
+    n.dir=Math.atan2(vy,vx); n.x+=vx*sp*dt; n.y+=vy*sp*dt;
+  }else{
+    n.retarget-=dt;
+    if(n.retarget<=0||dist(n,{x:n.tx,y:n.ty})<12){n.tx=rnd(50,CONFIG.W-50);n.ty=rnd(50,CONFIG.H-50);n.retarget=rnd(1.5,4);}
+    const a=Math.atan2(n.ty-n.y,n.tx-n.x); n.dir=a;
+    n.x+=Math.cos(a)*CONFIG.NPC_WANDER_SPEED*dt; n.y+=Math.sin(a)*CONFIG.NPC_WANDER_SPEED*dt;
+  }
+  n.x=clamp(n.x,24,CONFIG.W-24); n.y=clamp(n.y,24,CONFIG.H-24);
+
+  // касание лужи
+  for(const p of G.puddles){
+    if(dist(n,p)<puddleR(p)+16 && now-(n.cool[p.id]||-9)>CONFIG.FRIGHT_COOLDOWN){
+      n.fear=Math.min(100-n.drained, n.fear+CONFIG.PUDDLE_FEAR);
+      n.cool[p.id]=now;
+      for(let i=0;i<5;i++)G.parts.push({x:n.x,y:n.y,vx:rnd(-60,60),vy:rnd(-60,60),life:.35,r:2});
+    }
+  }
+  n.shiver=Math.max(0,n.shiver-dt*3);
+}
+
+// ---------- главный апдейт ----------
+let last=0;
+function update(dt,now){
+  if(phase!=='play')return;
+  const P=G.player;
+
+  // таймер и стрик
+  G.t-=dt;
+  const panicking=G.npcs.filter(n=>npcState(n)==='panic').length;
+  const ratio=panicking/G.npcs.length;
+  G.panicPeak=Math.max(G.panicPeak,panicking);
+  if(ratio>=CONFIG.PANIC_THRESHOLD){G.streak+=dt;G.holdTotal+=dt;}else{G.streak=0;}
+  if(G.t<=0){G.t=0;phase='end';G.win=G.streak>=CONFIG.WIN_STREAK;return;}
+
+  // игрок
+  P.buff=Math.max(0,P.buff-dt); P.stun=Math.max(0,P.stun-dt);
+  const mult=(P.buff>0?CONFIG.BUFF_MULT:1)*(P.stun>0?0:1);
+  let ix=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0);
+  let iy=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0);
+  if(ix||iy){const l=Math.hypot(ix,iy); P.x=clamp(P.x+ix/l*CONFIG.PLAYER_SPEED*mult*dt,20,CONFIG.W-20);
+             P.y=clamp(P.y+iy/l*CONFIG.PLAYER_SPEED*mult*dt,20,CONFIG.H-20); P.dir=Math.atan2(iy,ix);}
+
+  // отжим
+  P.squeezing=null;
+  if(m0&&P.stun<=0){
+    const n=nearestNpc();
+    if(n&&n.fear>0){
+      P.squeezing=n; n.shiver=1;
+      const amount=Math.min(CONFIG.SQUEEZE_RATE*mult*dt,n.fear);
+      n.fear-=amount; n.drained+=amount; P.flask+=amount;
+      if(Math.random()<0.5)G.parts.push({x:n.x,y:n.y,vx:(P.x-n.x)*2,vy:(P.y-n.y)*2,life:.3,r:2});
+      if(P.flask>CONFIG.FLASK_MAX){ P.ownFear+=(P.flask-CONFIG.FLASK_MAX); P.flask=CONFIG.FLASK_MAX; } // переполнение — в свой страх
+    }
+  }
+  // разлив
+  if((m2||space)&&P.stun<=0&&P.flask>=1){
+    const amount=Math.min(CONFIG.POUR_RATE*dt,P.flask);
+    if(amount>=1){ P.flask-=amount; addPuddleAt(mouse.x,mouse.y,amount); }
+  }
+
+  if(P.ownFear>=CONFIG.OWN_FEAR_MAX) collapse();
+
+  // NPC (elapsed — монотонное время от старта, для cooldown луж)
+  const elapsed=CONFIG.PARTY_TIME-G.t;
+  for(const n of G.npcs) updateNpc(n,dt,elapsed);
+
+  // заражение
+  for(const n of G.npcs) if(npcState(n)==='panic')
+    for(const m of G.npcs) if(m!==n&&dist(n,m)<CONFIG.CONTAGION_R)
+      m.fear=Math.min(100-m.drained,m.fear+CONFIG.CONTAGION_RATE*dt);
+
+  // лужи
+  for(const p of G.puddles)p.vol-=CONFIG.EVAPORATE*dt;
+  G.puddles=G.puddles.filter(p=>p.vol>0);
+
+  // частицы
+  for(const pt of G.parts){pt.x+=pt.vx*dt;pt.y+=pt.vy*dt;pt.life-=dt;}
+  G.parts=G.parts.filter(pt=>pt.life>0);
+}
+
+// ---------- рендер ----------
+function render(){
+  const P=G?G.player:null;
+  ctx.fillStyle='#17131f'; ctx.fillRect(0,0,CONFIG.W,CONFIG.H);
+  // пол: сетка точек
+  ctx.fillStyle='#221b2e';
+  for(let x=30;x<CONFIG.W;x+=60)for(let y=30;y<CONFIG.H;y+=60){ctx.fillRect(x,y,2,2);}
+  if(!G){renderStart();return;}
+
+  // лужи
+  for(const p of G.puddles){
+    const r=puddleR(p), a=0.35+0.4*(p.vol/CONFIG.PUDDLE_MAX);
+    const g=ctx.createRadialGradient(p.x,p.y,r*0.2,p.x,p.y,r);
+    g.addColorStop(0,`rgba(178,107,255,${a})`); g.addColorStop(0.7,`rgba(138,43,226,${a*0.55})`); g.addColorStop(1,'rgba(138,43,226,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,r,0,TAU); ctx.fill();
+    ctx.strokeStyle='rgba(200,150,255,0.35)'; ctx.beginPath(); ctx.arc(p.x,p.y,r*0.96,0,TAU); ctx.stroke();
+  }
+  // частицы
+  for(const pt of G.parts){ ctx.fillStyle=`rgba(200,150,255,${pt.life*2})`; ctx.beginPath(); ctx.arc(pt.x,pt.y,pt.r,0,TAU); ctx.fill(); }
+
+  // NPC
+  for(const n of G.npcs){
+    const st=npcState(n);
+    const cell=st==='panic'?sprite('npc_panicking'):st==='worried'?sprite('npc_worried'):sprite('npc_calm');
+    const sx=n.shiver>0?rnd(-2,2):0;
+    drawSprite(cell,n.x+sx,n.y+sx,n.dir+Math.PI/2,0.42);
+    if(st==='panic'){ ctx.strokeStyle='rgba(255,93,93,0.5)'; ctx.beginPath(); ctx.arc(n.x,n.y,26,0,TAU); ctx.stroke(); }
+  }
+
+  // игрок
+  const buff=P.buff>0;
+  if(buff){ ctx.strokeStyle='rgba(178,107,255,0.6)'; ctx.beginPath(); ctx.arc(P.x,P.y,30,0,TAU); ctx.stroke(); }
+  if(P.squeezing){ const n=P.squeezing; ctx.strokeStyle='rgba(200,150,255,0.7)'; ctx.setLineDash([4,4]);
+    ctx.beginPath(); ctx.moveTo(n.x,n.y); ctx.lineTo(P.x,P.y); ctx.stroke(); ctx.setLineDash([]); }
+  drawSprite(sprite('player'),P.x,P.y,P.dir+Math.PI/2,0.46);
+
+  // курсор разлива
+  if(P.flask>=CONFIG.POUR_MIN&&P.stun<=0){ ctx.strokeStyle='rgba(178,107,255,0.5)'; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.arc(mouse.x,mouse.y,12,0,TAU); ctx.stroke(); ctx.setLineDash([]); }
+
+  if(P.stun>0){ ctx.fillStyle=`rgba(255,255,255,${0.15*P.stun/CONFIG.STUN_TIME})`; ctx.fillRect(0,0,CONFIG.W,CONFIG.H); }
+
+  renderHUD();
+  if(phase==='end')renderEnd();
+}
+
+function bar(x,y,w,h,frac,color,label){
+  ctx.fillStyle='#241d31'; ctx.fillRect(x,y,w,h);
+  ctx.fillStyle=color; ctx.fillRect(x,y,w*clamp(frac,0,1),h);
+  ctx.strokeStyle='#3a3050'; ctx.strokeRect(x+.5,y+.5,w,h);
+  if(label){ctx.fillStyle='#8f86a8';ctx.font='11px sans-serif';ctx.fillText(label,x,y-4);}
+}
+function renderHUD(){
+  const P=G.player;
+  const panicking=G.npcs.filter(n=>npcState(n)==='panic').length;
+  const ratio=panicking/G.npcs.length;
+  // колба
+  drawSprite(sprite(P.flask>80?'flask_full':'flask'),44,112,0,0.4);
+  bar(76,100,114,12,P.flask/CONFIG.FLASK_MAX,'#b26bff','колба '+Math.round(P.flask));
+  // свой страх
+  bar(76,140,114,12,P.ownFear/CONFIG.OWN_FEAR_MAX,P.ownFear>70?'#ff5d5d':'#ff9d5d','свой страх '+Math.round(P.ownFear));
+  if(P.buff>0){ctx.fillStyle='#b26bff';ctx.font='11px sans-serif';ctx.fillText('буф '+P.buff.toFixed(1)+'с',76,170);}
+  // толпа
+  bar(CONFIG.W-300,100,220,14,ratio,ratio>=CONFIG.PANIC_THRESHOLD?'#ff5d5d':'#ffd166');
+  ctx.strokeStyle='#e8e6f0'; ctx.beginPath();
+  const tx=CONFIG.W-300+220*CONFIG.PANIC_THRESHOLD; ctx.moveTo(tx,96); ctx.lineTo(tx,118); ctx.stroke();
+  ctx.fillStyle='#8f86a8';ctx.font='11px sans-serif';ctx.fillText('паника толпы '+panicking+'/'+G.npcs.length,CONFIG.W-300,92);
+  // таймер и стрик
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 22px sans-serif';ctx.textAlign='center';
+  ctx.fillText(Math.ceil(G.t)+'с',CONFIG.W/2,36);ctx.textAlign='left';
+  ctx.font='12px sans-serif';ctx.fillStyle=G.streak>0?'#ff5d5d':'#8f86a8';
+  ctx.fillText('стрик '+Math.floor(G.streak)+'/'+CONFIG.WIN_STREAK+'с (держи ≥50%)',CONFIG.W-300,140);
+  // подсказка
+  ctx.fillStyle='#5b5372';ctx.font='11px sans-serif';
+  ctx.fillText('WASD — идти · ЛКМ (рядом с NPC) — отжимать · ПКМ/пробел — лужа у курсора · E — пить (колба −'+CONFIG.DRINK_COST+', свой страх +'+CONFIG.DRINK_FEAR+') · Q — сбросить колбу',20,CONFIG.H-16);
+}
+function renderStart(){
+  ctx.textAlign='center';ctx.fillStyle='#e8e6f0';ctx.font='bold 44px sans-serif';
+  ctx.fillText('СТРАХОГОН',CONFIG.W/2,240);
+  ctx.font='15px sans-serif';ctx.fillStyle='#b26bff';
+  ctx.fillText('Страх — жидкость: отжимай его из людей в колбу, разливай лужами; лужа пугает,',CONFIG.W/2,300);
+  ctx.fillText('паника заражает соседей, лужи испаряются, страх NPC конечен.',CONFIG.W/2,322);
+  ctx.fillStyle='#8f86a8';
+  ctx.fillText('Цель: держать ≥50% толпы в панике непрерывно 45 секунд из 90.',CONFIG.W/2,360);
+  ctx.fillText('Вопрос прототипа: рождаются ли пространственные решения — или победит одна лужа в центре?',CONFIG.W/2,384);
+  ctx.fillStyle='#5b5372';
+  ctx.fillText('WASD · ЛКМ отжим · ПКМ/пробел разлив · E пить · Q стряхнуть',CONFIG.W/2,430);
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('нажми Enter',CONFIG.W/2,480);
+  ctx.textAlign='left';
+}
+function renderEnd(){
+  ctx.fillStyle='rgba(13,10,18,0.75)';ctx.fillRect(0,0,CONFIG.W,CONFIG.H);
+  ctx.textAlign='center';
+  ctx.fillStyle=G.win?'#b26bff':'#ff5d5d';ctx.font='bold 40px sans-serif';
+  ctx.fillText(G.win?'ПОБЕДА':'ПРОИГРЫШ',CONFIG.W/2,270);
+  ctx.fillStyle='#e8e6f0';ctx.font='15px sans-serif';
+  const hold=Math.round(G.holdTotal);
+  ctx.fillText(`итог: ${G.win?'победа':'проигрыш'} · пик каскада ${G.panicPeak}/${G.npcs.length} · удержание ≥50%: ${hold}с · финальный стрик ${Math.floor(G.streak)}с`,CONFIG.W/2,320);
+  ctx.fillStyle='#8f86a8';ctx.font='13px sans-serif';
+  ctx.fillText('Если победа пришла одной лужей в центре без переносов — механика не состоялась (см. вопрос прототипа).',CONFIG.W/2,352);
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('R — заново',CONFIG.W/2,400);
+  ctx.textAlign='left';
+}
+
+// ---------- цикл ----------
+function loop(ts){
+  const dt=Math.min(0.05,(ts-last)/1000||0); last=ts;
+  update(dt,ts/1000); render(); requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

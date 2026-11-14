@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+<!-- sprites: player 0,0,128,128 | npc_calm 128,0,128,128 | npc_worried 256,0,128,128 | npc_panicking 384,0,128,128 | flask_icon 0,128,128,128 | drop 128,128,128,128 | flask_full 256,128,128,128 -->
+<!-- All figures face up. Coordinates are whole cells, not tight bounds.
+     Safe paint area: local [8,120] on both axes, including the glow.
+     Player flask is half full. Unused cells remain transparent. -->
+<defs>
+<filter id="soft-glow" filterUnits="userSpaceOnUse" x="8" y="8" width="112" height="112" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+  <feFlood flood-color="#8a2be2" flood-opacity=".65"/>
+  <feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<clipPath id="safe-cell"><rect x="8" y="8" width="112" height="112"/></clipPath>
+<clipPath id="bottle-interior"><path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z"/></clipPath>
+</defs>
+<g id="player" transform="translate(0 0)" clip-path="url(#safe-cell)">
+<g stroke="#e8e6f0" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M49 87 L47 104 M79 87 L81 104" stroke="#a6a3b5" stroke-width="12"/>
+  <path d="M44 58 Q32 63 30 79 M84 58 Q96 63 98 79" fill="none" stroke-width="11"/>
+  <path d="M42 60 Q42 49 64 49 Q86 49 86 60 L82 90 Q64 98 46 90 Z" fill="#e8e6f0" stroke-width="2"/>
+  <path d="M51 61 L53 87 M77 61 L75 87" stroke="#797286" stroke-width="4"/>
+  <ellipse cx="64" cy="41" rx="17" ry="18" fill="#e8e6f0" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 25 L64 19 L69 25" fill="#e8e6f0" stroke="none"/>
+  <path d="M57 72 L57 78 Q48 83 51 97 Q53 107 64 107 Q75 107 77 97 Q80 83 71 78 L71 72 Z" fill="#292235" stroke="#d7c7eb" stroke-width="2"/>
+  <path d="M52 92 Q64 88 76 92 L74 99 Q64 108 54 99 Z" fill="#b26bff" stroke="none" filter="url(#soft-glow)"/>
+  <path d="M57 72 H71 M56 83 L55 90" fill="none" stroke-width="2"/>
+</g>
+</g>
+<g id="npc_calm" transform="translate(128 0)" clip-path="url(#safe-cell)">
+<g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M50 87 L48 103 M78 87 L80 103" stroke="#676c75" stroke-width="12"/>
+  <path d="M43 59 Q32 67 33 81 M85 59 Q96 67 95 81" fill="none" stroke="#9aa0a6" stroke-width="11"/>
+  <path d="M42 58 Q64 46 86 58 L82 89 Q64 98 46 89 Z" fill="#9aa0a6"/>
+  <path d="M48 60 Q64 54 80 60" stroke="#c4c8cd" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="40" rx="17" ry="18" fill="#9aa0a6" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 24 L64 18 L69 24" fill="#9aa0a6"/>
+</g>
+</g>
+<g id="npc_worried" transform="translate(256 0)" clip-path="url(#safe-cell)">
+<g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M52 88 L50 103 M76 88 L78 103" stroke="#ac833d" stroke-width="12"/>
+  <path d="M43 60 Q34 65 39 82 L47 77 M85 60 Q94 65 89 82 L81 77" fill="none" stroke="#ffd166" stroke-width="10"/>
+  <path d="M41 61 Q43 48 64 48 Q85 48 87 61 L81 91 Q64 99 47 91 Z" fill="#ffd166"/>
+  <path d="M48 65 Q64 56 80 65" stroke="#fff0b8" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="48" rx="18" ry="17" fill="#ffd166" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 33 L64 27 L69 33" fill="#ffd166"/>
+</g>
+</g>
+<g id="npc_panicking" transform="translate(384 0)" clip-path="url(#safe-cell)">
+<g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M51 87 L40 102 M77 87 L89 98" stroke="#ae424d" stroke-width="12"/>
+  <path d="M44 59 L26 48 L23 26 M84 59 L102 48 L105 26" fill="none" stroke="#ff5d5d" stroke-width="11"/>
+  <circle cx="23" cy="24" r="7" fill="#ff5d5d"/><circle cx="105" cy="24" r="7" fill="#ff5d5d"/>
+  <path d="M42 59 Q64 46 86 59 L82 88 Q64 97 46 88 Z" fill="#ff5d5d"/>
+  <path d="M49 61 Q64 54 79 61" stroke="#ffb0a5" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="39" rx="17" ry="18" fill="#ff5d5d" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 23 L64 17 L69 23" fill="#ff5d5d"/>
+</g>
+</g>
+<g id="flask_icon" transform="translate(0 128)" clip-path="url(#safe-cell)">
+<g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#bottle-interior)">
+    <path d="M24 81 Q43 76 64 81 T104 81 V116 H24 Z" fill="#b26bff" filter="url(#soft-glow)"/>
+    <path d="M30 81 Q47 77 64 81 T99 81" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g>
+</g>
+<g id="drop" transform="translate(128 128)" clip-path="url(#safe-cell)">
+<path d="M64 23 C60 37 40 57 40 77 A24 24 0 0 0 88 77 C88 57 68 37 64 23 Z" fill="#b26bff" filter="url(#soft-glow)"/>
+<path d="M52 71 Q46 82 56 88" fill="none" stroke="#ead5ff" stroke-width="4" stroke-linecap="round"/>
+</g>
+<g id="flask_full" transform="translate(256 128)" clip-path="url(#safe-cell)">
+<g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#bottle-interior)">
+    <path d="M24 55 Q43 50 64 55 T104 55 V116 H24 Z" fill="#b26bff" filter="url(#soft-glow)"/>
+    <path d="M30 55 Q47 51 64 55 T99 55" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g>
+</g>
+</svg>
