@@ -9,10 +9,9 @@
   <feFlood flood-color="#8a2be2" flood-opacity=".65"/>
   <feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
 </filter>
-<clipPath id="safe-cell"><rect x="8" y="8" width="112" height="112"/></clipPath>
 <clipPath id="bottle-interior"><path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z"/></clipPath>
 </defs>
-<g id="player" transform="translate(0 0)" clip-path="url(#safe-cell)">
+<g id="player" transform="translate(0 0)">
 <g stroke="#e8e6f0" stroke-linecap="round" stroke-linejoin="round">
   <path d="M49 87 L47 104 M79 87 L81 104" stroke="#a6a3b5" stroke-width="12"/>
   <path d="M44 58 Q32 63 30 79 M84 58 Q96 63 98 79" fill="none" stroke-width="11"/>
@@ -25,7 +24,7 @@
   <path d="M57 72 H71 M56 83 L55 90" fill="none" stroke-width="2"/>
 </g>
 </g>
-<g id="npc_calm" transform="translate(128 0)" clip-path="url(#safe-cell)">
+<g id="npc_calm" transform="translate(128 0)">
 <g stroke-linecap="round" stroke-linejoin="round">
   <path d="M50 87 L48 103 M78 87 L80 103" stroke="#676c75" stroke-width="12"/>
   <path d="M43 59 Q32 67 33 81 M85 59 Q96 67 95 81" fill="none" stroke="#9aa0a6" stroke-width="11"/>
@@ -35,7 +34,7 @@
   <path d="M59 24 L64 18 L69 24" fill="#9aa0a6"/>
 </g>
 </g>
-<g id="npc_worried" transform="translate(256 0)" clip-path="url(#safe-cell)">
+<g id="npc_worried" transform="translate(256 0)">
 <g stroke-linecap="round" stroke-linejoin="round">
   <path d="M52 88 L50 103 M76 88 L78 103" stroke="#ac833d" stroke-width="12"/>
   <path d="M43 60 Q34 65 39 82 L47 77 M85 60 Q94 65 89 82 L81 77" fill="none" stroke="#ffd166" stroke-width="10"/>
@@ -45,7 +44,7 @@
   <path d="M59 33 L64 27 L69 33" fill="#ffd166"/>
 </g>
 </g>
-<g id="npc_panicking" transform="translate(384 0)" clip-path="url(#safe-cell)">
+<g id="npc_panicking" transform="translate(384 0)">
 <g stroke-linecap="round" stroke-linejoin="round">
   <path d="M51 87 L40 102 M77 87 L89 98" stroke="#ae424d" stroke-width="12"/>
   <path d="M44 59 L26 48 L23 26 M84 59 L102 48 L105 26" fill="none" stroke="#ff5d5d" stroke-width="11"/>
@@ -56,7 +55,7 @@
   <path d="M59 23 L64 17 L69 23" fill="#ff5d5d"/>
 </g>
 </g>
-<g id="flask_icon" transform="translate(0 128)" clip-path="url(#safe-cell)">
+<g id="flask_icon" transform="translate(0 128)">
 <g stroke-linejoin="round">
   <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
   <g clip-path="url(#bottle-interior)">
@@ -67,11 +66,11 @@
   <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
 </g>
 </g>
-<g id="drop" transform="translate(128 128)" clip-path="url(#safe-cell)">
+<g id="drop" transform="translate(128 128)">
 <path d="M64 23 C60 37 40 57 40 77 A24 24 0 0 0 88 77 C88 57 68 37 64 23 Z" fill="#b26bff" filter="url(#soft-glow)"/>
 <path d="M52 71 Q46 82 56 88" fill="none" stroke="#ead5ff" stroke-width="4" stroke-linecap="round"/>
 </g>
-<g id="flask_full" transform="translate(256 128)" clip-path="url(#safe-cell)">
+<g id="flask_full" transform="translate(256 128)">
 <g stroke-linejoin="round">
   <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
   <g clip-path="url(#bottle-interior)">

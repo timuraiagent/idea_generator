@@ -26,7 +26,7 @@ const CONFIG = {
   NPC_WANDER_SPEED: 60, PANIC_SPEED: 160, SIGHT: 120,
   PLAYER_SPEED: 140,
   SQUEEZE_RATE: 25, SQUEEZE_RADIUS: 44,       // ед/с, px (спека 40 + 4 грация на догонялки)
-  POUR_RATE: 60, POUR_MIN: 10,                // разлив при удержании: ед/с, мин. порция
+  POUR_RATE: 60, POUR_CHUNK: 12,              // разлив: ед/с из колбы; лужа возникает порциями по 12 (на 120Гц-экранах dt мелкий — копим буфер)
   PUDDLE_R0: 20, PUDDLE_K: 0.8, PUDDLE_MAX: 100,
   PUDDLE_FEAR: 40, EVAPORATE: 6,              // +40 страха при касании; −6 ед/с испарение
   FRIGHT_COOLDOWN: 2,                          // сек — NPC не пугается от той же лужи повторно
@@ -64,7 +64,7 @@ function newGame(){
     fear:rnd(25,60), drained:0, cool:{}, shiver:0,  // стартовый запас — иначе нечего отжимать (бутстрап)
   });
   return {
-    player:{x:CONFIG.W/2,y:CONFIG.H/2,dir:-Math.PI/2,flask:0,ownFear:0,buff:0,stun:0,squeezing:null},
+    player:{x:CONFIG.W/2,y:CONFIG.H/2,dir:-Math.PI/2,flask:0,ownFear:0,buff:0,stun:0,squeezing:null,pourBuf:0},
     npcs, puddles:[], parts:[], nextPid:1,
     t:CONFIG.PARTY_TIME, streak:0, holdTotal:0, panicPeak:0, win:false,
   };
@@ -152,10 +152,12 @@ function updateNpc(n,dt,now){
   }else{
     for(const p of G.puddles){ if(dist(n,p)<CONFIG.SIGHT) flee.push({x:n.x-p.x,y:n.y-p.y}); }
   }
-  if(flee.length){ for(const f of flee){vx+=f.x;vy+=f.y;} const l=Math.hypot(vx,vy)||1; vx/=l;vy/=l;
+  if(G.player.squeezing===n && st!=='panic'){ n.shiver=1; } // ХВАТ: приоритетнее избегания луж
+  else if(flee.length){ for(const f of flee){vx+=f.x;vy+=f.y;} const l=Math.hypot(vx,vy)||1; vx/=l;vy/=l;
     const sp=st==='panic'?CONFIG.PANIC_SPEED:CONFIG.NPC_WANDER_SPEED;
     n.dir=Math.atan2(vy,vx); n.x+=vx*sp*dt; n.y+=vy*sp*dt;
-  }else{
+  }
+  else{
     n.retarget-=dt;
     if(n.retarget<=0||dist(n,{x:n.tx,y:n.ty})<12){n.tx=rnd(50,CONFIG.W-50);n.ty=rnd(50,CONFIG.H-50);n.retarget=rnd(1.5,4);}
     const a=Math.atan2(n.ty-n.y,n.tx-n.x); n.dir=a;
@@ -208,10 +210,14 @@ function update(dt,now){
       if(P.flask>CONFIG.FLASK_MAX){ P.ownFear+=(P.flask-CONFIG.FLASK_MAX); P.flask=CONFIG.FLASK_MAX; } // переполнение — в свой страх
     }
   }
-  // разлив
-  if((m2||space)&&P.stun<=0&&P.flask>=1){
-    const amount=Math.min(CONFIG.POUR_RATE*dt,P.flask);
-    if(amount>=1){ P.flask-=amount; addPuddleAt(mouse.x,mouse.y,amount); }
+  // разлив: копим порцию в буфере, льём кусками POUR_CHUNK (работает на любом FPS)
+  const pouring=(m2||space)&&P.stun<=0;
+  if(pouring){
+    const take=Math.min(CONFIG.POUR_RATE*dt,P.flask);
+    P.flask-=take; P.pourBuf+=take;
+  }
+  if(P.pourBuf>0&&(!pouring||P.flask<1||P.pourBuf>=CONFIG.POUR_CHUNK)){
+    addPuddleAt(mouse.x,mouse.y,P.pourBuf); P.pourBuf=0;
   }
 
   if(P.ownFear>=CONFIG.OWN_FEAR_MAX) collapse();
@@ -270,9 +276,17 @@ function render(){
     ctx.beginPath(); ctx.moveTo(n.x,n.y); ctx.lineTo(P.x,P.y); ctx.stroke(); ctx.setLineDash([]); }
   drawSprite(sprite('player'),P.x,P.y,P.dir+Math.PI/2,0.46);
 
-  // курсор разлива
-  if(P.flask>=CONFIG.POUR_MIN&&P.stun<=0){ ctx.strokeStyle='rgba(178,107,255,0.5)'; ctx.setLineDash([3,3]);
-    ctx.beginPath(); ctx.arc(mouse.x,mouse.y,12,0,TAU); ctx.stroke(); ctx.setLineDash([]); }
+  // курсор разлива: растёт по мере накопления порции
+  if(P.stun<=0&&(m2||space||P.pourBuf>0)){
+    if(P.flask>0||P.pourBuf>0){
+      ctx.fillStyle='rgba(178,107,255,0.25)'; ctx.strokeStyle='rgba(178,107,255,0.6)';
+      const pr=8+P.pourBuf*0.5;
+      ctx.beginPath(); ctx.arc(mouse.x,mouse.y,pr,0,TAU); ctx.fill(); ctx.stroke();
+    }else{
+      ctx.fillStyle='#ff5d5d'; ctx.font='11px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('колба пуста — отожми ЛКМ возле NPC',mouse.x,mouse.y-14); ctx.textAlign='left';
+    }
+  }
 
   if(P.stun>0){ ctx.fillStyle=`rgba(255,255,255,${0.15*P.stun/CONFIG.STUN_TIME})`; ctx.fillRect(0,0,CONFIG.W,CONFIG.H); }
 
@@ -308,7 +322,7 @@ function renderHUD(){
   ctx.fillText('стрик '+Math.floor(G.streak)+'/'+CONFIG.WIN_STREAK+'с (держи ≥50%)',CONFIG.W-300,140);
   // подсказка
   ctx.fillStyle='#5b5372';ctx.font='11px sans-serif';
-  ctx.fillText('WASD — идти · ЛКМ (рядом с NPC) — отжимать · ПКМ/пробел — лужа у курсора · E — пить (колба −'+CONFIG.DRINK_COST+', свой страх +'+CONFIG.DRINK_FEAR+') · Q — сбросить колбу',20,CONFIG.H-16);
+  ctx.fillText('WASD — идти · ЛКМ у NPC — схватить и отжимать (паникующего не удержать) · держи ПКМ/пробел — лужа у курсора · E — пить (колба −'+CONFIG.DRINK_COST+', свой страх +'+CONFIG.DRINK_FEAR+') · Q — сбросить колбу',20,CONFIG.H-16);
 }
 function renderStart(){
   ctx.textAlign='center';ctx.fillStyle='#e8e6f0';ctx.font='bold 44px sans-serif';
