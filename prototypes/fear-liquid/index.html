@@ -25,7 +25,7 @@ const CONFIG = {
   NPC_COUNT: 10,
   NPC_WANDER_SPEED: 60, PANIC_SPEED: 160, SIGHT: 120,
   PLAYER_SPEED: 140,
-  SQUEEZE_RATE: 25, SQUEEZE_RADIUS: 44,       // ед/с, px (спека 40 + 4 грация на догонялки)
+  SQUEEZE_RATE: 25, SQUEEZE_RADIUS: 56,       // ед/с, px (спека 40 + грация: спрайт сам ~54px)
   POUR_RATE: 60, POUR_CHUNK: 12,              // разлив: ед/с из колбы; лужа возникает порциями по 12 (на 120Гц-экранах dt мелкий — копим буфер)
   PUDDLE_R0: 20, PUDDLE_K: 0.8, PUDDLE_MAX: 100,
   PUDDLE_FEAR: 40, EVAPORATE: 6,              // +40 страха при касании; −6 ед/с испарение
@@ -61,7 +61,7 @@ function newGame(){
     x:rnd(60,CONFIG.W-60), y:rnd(60,CONFIG.H-60),
     dir:rnd(0,TAU), tx:rnd(60,CONFIG.W-60), ty:rnd(60,CONFIG.H-60),
     retarget:rnd(1,3),
-    fear:rnd(25,60), drained:0, cool:{}, shiver:0,  // стартовый запас — иначе нечего отжимать (бутстрап)
+    fear:rnd(10,35), drained:0, cool:{}, shiver:0,  // стартовый запас умеренный: пара жёлтых, не вся толпа
   });
   return {
     player:{x:CONFIG.W/2,y:CONFIG.H/2,dir:-Math.PI/2,flask:0,ownFear:0,buff:0,stun:0,squeezing:null,pourBuf:0},
@@ -200,8 +200,9 @@ function update(dt,now){
 
   // отжим
   P.squeezing=null;
+  P.squeezable=(P.stun<=0)?nearestNpc():null;   // подсветка «можно схватить» даже без клика
   if(m0&&P.stun<=0){
-    const n=nearestNpc();
+    const n=P.squeezable;
     if(n&&n.fear>0){
       P.squeezing=n; n.shiver=1;
       const amount=Math.min(CONFIG.SQUEEZE_RATE*mult*dt,n.fear);
@@ -261,12 +262,21 @@ function render(){
   for(const pt of G.parts){ ctx.fillStyle=`rgba(200,150,255,${pt.life*2})`; ctx.beginPath(); ctx.arc(pt.x,pt.y,pt.r,0,TAU); ctx.fill(); }
 
   // NPC
+  const hoverNpc=G.npcs.find(n=>dist(n,mouse)<30);
   for(const n of G.npcs){
     const st=npcState(n);
     const cell=st==='panic'?sprite('npc_panicking'):st==='worried'?sprite('npc_worried'):sprite('npc_calm');
     const sx=n.shiver>0?rnd(-2,2):0;
     drawSprite(cell,n.x+sx,n.y+sx,n.dir+Math.PI/2,0.42);
     if(st==='panic'){ ctx.strokeStyle='rgba(255,93,93,0.5)'; ctx.beginPath(); ctx.arc(n.x,n.y,26,0,TAU); ctx.stroke(); }
+    if(n===G.player.squeezable){ // пульс «можно схватить»
+      const p=0.5+0.5*Math.sin(last*0.006);
+      ctx.strokeStyle=`rgba(178,107,255,${0.35+0.4*p})`; ctx.setLineDash([5,4]);
+      ctx.beginPath(); ctx.arc(n.x,n.y,30+p*3,0,TAU); ctx.stroke(); ctx.setLineDash([]);
+    }
+    if(n===hoverNpc&&n!==G.player.squeezable){ // курсор над NPC — лёгкий отклик
+      ctx.strokeStyle='rgba(232,230,240,0.45)'; ctx.beginPath(); ctx.arc(n.x,n.y,27,0,TAU); ctx.stroke();
+    }
   }
 
   // игрок
@@ -276,6 +286,11 @@ function render(){
     ctx.beginPath(); ctx.moveTo(n.x,n.y); ctx.lineTo(P.x,P.y); ctx.stroke(); ctx.setLineDash([]); }
   drawSprite(sprite('player'),P.x,P.y,P.dir+Math.PI/2,0.46);
 
+  // пустой клик без цели — честный отклик
+  if(m0&&!G.player.squeezable&&G.player.stun<=0){
+    ctx.fillStyle='#ffd166'; ctx.font='11px sans-serif'; ctx.textAlign='center';
+    ctx.fillText('подойди вплотную к человечку',mouse.x,mouse.y-14); ctx.textAlign='left';
+  }
   // курсор разлива: растёт по мере накопления порции
   if(P.stun<=0&&(m2||space||P.pourBuf>0)){
     if(P.flask>0||P.pourBuf>0){
