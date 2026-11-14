@@ -21,4 +21,10 @@
 
 ## Как устроен код
 
-_Пока пусто. Когда появится код — опиши здесь структуру, как запускать и как проверять, что всё работает._
+- `scripts/sample_pairs.py` — сэмплирование далёких пар «глагол × существительное» из word2vec.
+  Модель: RusVectores `ruwikiruscorpora_upos_cbow_300_20_2019` (лежит в `.data/nlpl_model/model.txt`,
+  в git не входит — скачать: `curl -o .data/nlpl_model/180.zip http://vectors.nlpl.eu/repository/20/180.zip && unzip`).
+  Запуск: `python3 scripts/sample_pairs.py .data/nlpl_model/model.txt --mode random --threshold 0.15 --n 60`
+  Режимы: `random` (случайные пары с sim < threshold), `far` (для глагола — дальнее существительное),
+  `--seeds <файл>` (для заданных слов найти дальних партнёров). Косинусная близость < 0.15 = «достаточное
+  расстояние»: понятия не смежные и не из одного контекста, но оба живые и частотные. Результаты — в `.data/out/`.
