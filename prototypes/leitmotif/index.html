@@ -380,9 +380,12 @@ function render(){
   // патрули
   for(const l of G.loops)if(l.type==='patrol'){
     const pos=patPos(l);
-    if(l.jamT<=0&&sameRoom(pos.x,G.player.x)&&dist(pos,G.player)<CONFIG.VISION){
-      ctx.fillStyle='rgba(255,209,102,0.1)';ctx.beginPath();ctx.arc(pos.x,pos.y,CONFIG.VISION,0,TAU);ctx.fill();
-      ctx.strokeStyle='rgba(255,209,102,0.35)';ctx.beginPath();ctx.arc(pos.x,pos.y,CONFIG.VISION,0,TAU);ctx.stroke();
+    if(l.jamT<=0){ // круг зрения виден ВСЕГДА, яркее — когда ты внутри
+      const inside=sameRoom(pos.x,G.player.x)&&dist(pos,G.player)<CONFIG.VISION;
+      ctx.fillStyle=inside?'rgba(255,209,102,0.16)':'rgba(255,209,102,0.07)';
+      ctx.beginPath();ctx.arc(pos.x,pos.y,CONFIG.VISION,0,TAU);ctx.fill();
+      ctx.strokeStyle=inside?'rgba(255,209,102,0.5)':'rgba(255,209,102,0.25)';
+      ctx.beginPath();ctx.arc(pos.x,pos.y,CONFIG.VISION,0,TAU);ctx.stroke();
     }
     drawSprite(SPRITES.patrol,pos.x,pos.y,0,0.42);
     if(l.jamT>0){ctx.strokeStyle='#8a2be2';ctx.lineWidth=3;ctx.beginPath();ctx.arc(pos.x,pos.y,22,0,TAU);ctx.stroke();ctx.lineWidth=1;
