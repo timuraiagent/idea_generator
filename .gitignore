@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# данные моделей и результаты (не в git)
+.data/
+
 # зависимости и сборка
 node_modules/
 .venv/
