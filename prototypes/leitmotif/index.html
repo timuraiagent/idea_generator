@@ -41,7 +41,7 @@ const CONFIG = {
   GATE_GAP:{y0:260, y1:380}, OPEN_FRAC:[0.5, 0.33, 0.25],
   VISION: 100, ALARM_SEEN: 6,
   WIN_DUR:[5, 3, 1.8],
-  BIT_FRAC: 0.25, TACT_FRAC: 0.125,
+  BIT_FRAC: 0.25, TACT_OF_BIT: 0.3,   // «в такт» = 30% ширины интервала между битами (раньше был сломанный T/8 = всегда в такт!)
   DMIN: 0.2, DMAX: 0.35,
   CASCADE_DELAY: 0.4, CASCADE_DEPTH: 2, CASCADE_DECAY: 0.6,
   REPAIR_AFTER: 10, H_MAX: 2, PATROL_SPEEDUP: 0.85,
@@ -118,7 +118,7 @@ function disrupt(li, depth){
   const gain=depth===0?CONFIG.ALARM_HIT:depth===1?CONFIG.ALARM_C1:CONFIG.ALARM_C2;
   G.alarm=clamp(G.alarm+gain,0,100);
   G.peakAlarm=Math.max(G.peakAlarm,G.alarm);
-  G.alarmFx={v:'+'+gain,t:1.2,c:'#ff5d5d'};     // явная связь: удар → полоса тревоги
+  G.alarmFx={v:'+'+gain+' тревога',t:1.2,c:'#ff5d5d'};     // явная связь: удар → полоса тревоги
   l.repairIn=CONFIG.REPAIR_AFTER;
   ring(l.ax,l.ay, depth===0?'#b26bff':'#8a2be2');
   if(depth<CONFIG.CASCADE_DEPTH)
@@ -130,14 +130,17 @@ function resync(l){ // подпевание: пересвод к сетке, т�
   l.phi=wrapPhase(Math.round(wrapPhase(l.phi,T)/b)*b, T);
   l.jamT=0; l.repairIn=null;
   G.alarm=clamp(G.alarm+CONFIG.ALARM_SYNC,0,100);
-  G.alarmFx={v:CONFIG.ALARM_SYNC+'',t:1.2,c:'#7ad0ff'};
+  G.alarmFx={v:CONFIG.ALARM_SYNC+' тревога',t:1.2,c:'#7ad0ff'};
   ring(l.ax,l.ay,'#7ad0ff');
 }
 function strike(l){
   const li=G.loops.indexOf(l);
-  if(nearestBitDist(l)<=Teff(l)*CONFIG.TACT_FRAC){ // «в такт» — слабый: без сдвига и каскада
+  const b=Teff(l)*CONFIG.BIT_FRAC;
+  if(nearestBitDist(l)<=b*CONFIG.TACT_OF_BIT){ // «в такт» — слабый: без сдвига и каскада
     l.jamT=CONFIG.WIN_DUR[0]/2; l.repairIn=CONFIG.REPAIR_AFTER;
     G.strikes++; G.alarm=clamp(G.alarm+CONFIG.ALARM_HIT,0,100); G.peakAlarm=Math.max(G.peakAlarm,G.alarm);
+    G.alarmFx={v:'в такт — слабо',t:1.2,c:'#55506a'};
+    G.weakFx=1.6;                                  // большая плашка-исправление
     ring(l.ax,l.ay,'#55506a'); return;
   }
   disrupt(li,0);
@@ -304,6 +307,7 @@ function update(dt){
   for(const e of G.effects){e.life-=dt;if(e.type==='ring')e.r+=110*dt;}
   G.effects=G.effects.filter(e=>e.life>0);
   if(G.alarmFx){G.alarmFx.t-=dt;if(G.alarmFx.t<=0)G.alarmFx=null;}
+  if(G.weakFx){G.weakFx-=dt;if(G.weakFx<=0)G.weakFx=null;}
 }
 
 function sameRoom(x1,x2){
@@ -401,7 +405,7 @@ function render(){
   if(hover&&mode==='play'){
     ctx.strokeStyle='rgba(232,230,240,0.5)';ctx.setLineDash([4,4]);
     ctx.beginPath();ctx.arc(hover.ax,hover.ay,CONFIG.STRIKE_R,0,TAU);ctx.stroke();ctx.setLineDash([]);
-    const d=nearestBitDist(hover), inTact=d<=Teff(hover)*CONFIG.TACT_FRAC;
+    const d=nearestBitDist(hover), inTact=d<=Teff(hover)*CONFIG.BIT_FRAC*CONFIG.TACT_OF_BIT;
     ctx.fillStyle=inTact?'#8f86a8':'#b26bff';ctx.font='11px sans-serif';ctx.textAlign='center';
     ctx.fillText(inTact?'в такт — слабый удар':'перебить (сдвиг ~'+(clamp(d,CONFIG.DMIN*Teff(hover),CONFIG.DMAX*Teff(hover))/Teff(hover)).toFixed(2)+'T)',mouse.x,mouse.y-14);
     ctx.textAlign='left';
@@ -415,6 +419,16 @@ function render(){
       ctx.textAlign='center';ctx.fillText(e.s,e.x,e.y);ctx.textAlign='left';ctx.globalAlpha=1;}
   }
 
+  if(G.weakFx&&mode==='play'){ // крупное исправление при ударе «в такт»
+    const a=Math.min(1,G.weakFx);
+    ctx.fillStyle='rgba(13,10,18,0.7)';ctx.fillRect(0,240,CONFIG.W,140);
+    ctx.textAlign='center';
+    ctx.fillStyle='#ffd166';ctx.globalAlpha=a;ctx.font='bold 34px sans-serif';
+    ctx.fillText('В ТАКТ = СЛАБО! БЕЙ МЕЖДУ КРУГАМИ',CONFIG.W/2,300);
+    ctx.fillStyle='#e8e6f0';ctx.font='bold 18px sans-serif';
+    ctx.fillText('OFF-BEAT! Strike BETWEEN the expanding rings',CONFIG.W/2,336);
+    ctx.globalAlpha=1;ctx.textAlign='left';
+  }
   renderHUD();
   if(G.alarm>70){ctx.fillStyle=`rgba(255,93,93,${(G.alarm-70)/30*0.12})`;ctx.fillRect(0,0,CONFIG.W,CONFIG.H);}
   if(mode==='end')renderEnd();
@@ -576,7 +590,7 @@ function renderHUD(){
   if(G.alarmFx&&G.alarmFx.t>0){ // всплывающее «+10 / −8» над полосой
     const a=Math.min(1,G.alarmFx.t);
     ctx.fillStyle=G.alarmFx.c;ctx.globalAlpha=a;ctx.font='bold 20px sans-serif';ctx.textAlign='center';
-    ctx.fillText(G.alarmFx.v+' тревога',CONFIG.W/2,CONFIG.H-42-(1.2-G.alarmFx.t)*30);
+    ctx.fillText(G.alarmFx.v,CONFIG.W/2,CONFIG.H-42-(1.2-G.alarmFx.t)*30);
     ctx.globalAlpha=1;ctx.textAlign='left';
   }
   ctx.fillStyle='#cfcbe0';ctx.font='bold 15px sans-serif';ctx.textAlign='center';
