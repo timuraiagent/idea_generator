@@ -560,7 +560,7 @@ function renderHUD(){
   // ЖИВАЯ ПОДСКАЗКА (RU + EN)
   let h1,h2;
   if(G.unlocked){h1='БЕГИ ВПРАВО К ВЫХОДУ!';h2='RUN RIGHT TO THE EXIT!';}
-  else if(G.strikes===0){h1='УДАРЬ по любому ромбику — НЕ по белой точке';h2='TAP any diamond anchor — NOT on a white dot';}
+  else if(G.strikes===0){h1='УДАРЬ по ромбику — МЕЖДУ расходящимися кругами';h2='TAP an anchor BETWEEN the expanding rings (rings = the beat)';}
   else if(G.overlapT>0.3){h1='ДЕРЖИ ПЕРЕКРЫТИЕ! Ещё удар!';h2='KEEP THE OVERLAP GOING!';}
   else if(G.alarm>70){h1='ТРЕВОГА! «Подпевать» гасит её';h2='ALARM HIGH! Resync to calm it';}
   else{h1='БЕЙ ОХРАНУ: 1 → потом 2 → потом 3';h2='Strike GUARD 1 → 2 → 3 to open gates A/B/C';}
