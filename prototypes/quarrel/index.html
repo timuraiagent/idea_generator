@@ -384,44 +384,52 @@ function bar(x,y,w,h,frac,color,label){
 }
 function renderHUD(){
   const P=G.player;
-  bar(20,100,140,12,P.nerves/CONFIG.NERVES_MAX,P.nerves<40?'#ff5d5d':'#7ad0ff','нервы '+Math.round(P.nerves));
-  bar(20,140,140,12,1-G.coolCd/CONFIG.COOL_CD,'#7ad0ff',G.coolCd>0?'остуда '+G.coolCd.toFixed(1)+'с':'остуда готова (ПКМ по NPC)');
-  ctx.fillStyle='#e8e6f0';ctx.font='bold 22px sans-serif';ctx.textAlign='center';
-  ctx.fillText(Math.ceil(G.t)+'с',CONFIG.W/2,36);ctx.textAlign='left';
-  const pairsTxt=`пары ${G.pairs.size}/${CONFIG.GOAL_PAIRS}`;
-  ctx.font='bold 16px sans-serif';ctx.fillStyle=G.pairs.size>=CONFIG.GOAL_PAIRS?'#9fe8b0':'#ffd166';
-  ctx.fillText(pairsTxt,CONFIG.W-260,36);
-  ctx.font='12px sans-serif';ctx.fillStyle='#8f86a8';
-  ctx.fillText(`ссор брошено: ${G.shots} · на драку: ${G.pairs.size?(G.shots/Math.max(1,G.pairs.size)).toFixed(1):'—'}`,CONFIG.W-260,56);
-  ctx.fillStyle='#5b5372';ctx.font='11px sans-serif';
-  ctx.fillText('WASD — идти · ЛКМ: NPC A → NPC B — ссора (A осип 8с; попадание: +40 к A) · ПКМ по NPC — остуда −30 (кд 5с) · ESC — снять выбор',20,CONFIG.H-16);
+  bar(20,104,190,16,P.nerves/CONFIG.NERVES_MAX,P.nerves<40?'#ff5d5d':'#7ad0ff','НЕРВЫ '+Math.round(P.nerves));
+  bar(20,152,190,16,1-G.coolCd/CONFIG.COOL_CD,'#7ad0ff',G.coolCd>0?'ОСТУДА '+G.coolCd.toFixed(1)+'с':'ОСТУДА ГОТОВА');
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 34px sans-serif';ctx.textAlign='center';
+  ctx.fillText(Math.ceil(G.t)+'с',CONFIG.W/2,44);ctx.textAlign='left';
+  ctx.font='bold 24px sans-serif';ctx.fillStyle=G.pairs.size>=CONFIG.GOAL_PAIRS?'#9fe8b0':'#ffd166';
+  ctx.fillText(`ДРАКИ ${G.pairs.size}/${CONFIG.GOAL_PAIRS}`,CONFIG.W-300,44);
+  ctx.font='bold 15px sans-serif';ctx.fillStyle='#8f86a8';
+  ctx.fillText(`ссор: ${G.shots} · на драку: ${G.pairs.size?(G.shots/Math.max(1,G.pairs.size)).toFixed(1):'—'}`,CONFIG.W-300,70);
+  // живая подсказка
+  let hint,hintColor='#ff5d7d';
+  if(G.selA!==null)hint='Теперь тапни по NPC B — претензия полетит';
+  else if(G.pairs.size===0&&G.shots===0)hint='1. Тапни по одному NPC, потом по второму';
+  else if(G.pairs.size<CONFIG.GOAL_PAIRS)hint='Своди пары! Линии красные = близко к драке';
+  else hint='ФИНИШ — дожми счётчик!';
+  ctx.font='bold 20px sans-serif';ctx.textAlign='center';
+  ctx.fillStyle='rgba(13,10,18,0.55)';const hw=ctx.measureText(hint).width;
+  ctx.fillRect(CONFIG.W/2-hw/2-12,58,hw+24,30);
+  ctx.fillStyle=hintColor;ctx.fillText(hint,CONFIG.W/2,80);
+  ctx.textAlign='left';
+  ctx.fillStyle='#5b5372';ctx.font='13px sans-serif';
+  ctx.fillText(isTouch?'Джойстик слева · тап по NPC = ссора · «Остуда» — режим гашения':'ЛКМ A → B — ссора · ПКМ по NPC — остуда · ESC — снять выбор',20,CONFIG.H-14);
 }
 function renderStart(){
-  ctx.textAlign='center';ctx.fillStyle='#e8e6f0';ctx.font='bold 44px sans-serif';
-  ctx.fillText('РАЗДОР',CONFIG.W/2,230);
-  ctx.font='15px sans-serif';ctx.fillStyle='#ff5d7d';
-  ctx.fillText('Ссора — физический снаряд: претензия летит из NPC, рикошетит от стен,',CONFIG.W/2,290);
-  ctx.fillText('и первый, кого заденет, возненавидит ИСТОЧНИКА. Взаимная ненависть 60/60 = драка',CONFIG.W/2,312);
-  ctx.fillText('и разлёт с импульсом, растравляющим всех вокруг.',CONFIG.W/2,334);
-  ctx.fillStyle='#8f86a8';
-  ctx.fillText('Цель: свести 6 разных пар за 90 секунд. Остуда — ПКМ. Драки бьют игрока: запускай у стены.',CONFIG.W/2,372);
-  ctx.fillText('Вопрос: рождает ли матрица и рикошеты тактику — или победит спам по случайным парам?',CONFIG.W/2,396);
-  ctx.fillStyle='#5b5372';
-  ctx.fillText('ЛКМ A → ЛКМ B (в радиусе нашёптывания от A) · пунктир = траектория с первым отскоком',CONFIG.W/2,436);
-  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('нажми Enter или коснись экрана',CONFIG.W/2,486);
+  ctx.textAlign='center';ctx.fillStyle='#e8e6f0';ctx.font='bold 56px sans-serif';
+  ctx.fillText('РАЗДОР',CONFIG.W/2,180);
+  ctx.font='bold 22px sans-serif';ctx.fillStyle='#ff5d7d';
+  ctx.fillText('1. Тапни по NPC A, потом по NPC B — полетит претензия',CONFIG.W/2,270);
+  ctx.fillText('2. Она рикошетит от стен: кто задет, злится на ИСТОЧНИКА',CONFIG.W/2,310);
+  ctx.fillText('3. Взаимная ненависть 60/60 = ДРАКА и разлёт — растравляет толпу',CONFIG.W/2,350);
+  ctx.fillStyle='#ffd166';ctx.font='bold 20px sans-serif';
+  ctx.fillText('Цель: 6 драк-пар за 90 секунд. Драки бьют тебя — запускай у стен!',CONFIG.W/2,410);
+  ctx.fillStyle='#5b5372';ctx.font='14px sans-serif';
+  ctx.fillText(isTouch?'Джойстик слева · тап по NPC = ссора · «Остуда» — режим остужения':'ЛКМ A → ЛКМ B · ПКМ по NPC — остуда · пунктир = траектория с отскоком',CONFIG.W/2,450);
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 22px sans-serif';ctx.fillText('нажми Enter или коснись экрана',CONFIG.W/2,500);
   ctx.textAlign='left';
 }
 function renderEnd(){
-  ctx.fillStyle='rgba(13,10,18,0.75)';ctx.fillRect(0,0,CONFIG.W,CONFIG.H);
+  ctx.fillStyle='rgba(13,10,18,0.8)';ctx.fillRect(0,0,CONFIG.W,CONFIG.H);
   ctx.textAlign='center';
-  ctx.fillStyle=G.win?'#9fe8b0':'#ff5d5d';ctx.font='bold 40px sans-serif';
+  ctx.fillStyle=G.win?'#9fe8b0':'#ff5d5d';ctx.font='bold 54px sans-serif';
   ctx.fillText(G.win?'ПОБЕДА':'ПРОИГРЫШ',CONFIG.W/2,270);
-  ctx.fillStyle='#e8e6f0';ctx.font='15px sans-serif';
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 20px sans-serif';
   const perFight=G.pairs.size?(G.shots/G.pairs.size).toFixed(1):'—';
-  ctx.fillText(`итог: ${G.win?'победа':'проигрыш'} · пар ${G.pairs.size}/${CONFIG.GOAL_PAIRS} · ссор ${G.shots} (${perFight} на драку) · нервы ${Math.max(0,Math.round(G.player.nerves))}`,CONFIG.W/2,320);
-  ctx.fillStyle='#8f86a8';ctx.font='13px sans-serif';
-  ctx.fillText('Много ссор на драку = спам победил, и вопрос прототипа закрыт против механики.',CONFIG.W/2,352);
-  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('R — заново',CONFIG.W/2,400);
+  ctx.fillText(`Драк: ${G.pairs.size}/${CONFIG.GOAL_PAIRS} · ссор: ${G.shots} (${perFight} на драку) · нервы ${Math.max(0,Math.round(G.player.nerves))}`,CONFIG.W/2,330);
+  ctx.fillStyle='#8f86a8';ctx.font='16px sans-serif';
+  ctx.fillText(isTouch?'Ещё раз — кнопка ЗАНОВО справа':'Ещё раз — клавиша R',CONFIG.W/2,380);
   ctx.textAlign='left';
 }
 

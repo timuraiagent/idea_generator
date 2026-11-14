@@ -397,24 +397,26 @@ function renderHUD(){
     ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(ph-Math.PI/2)*(r-2),cy+Math.sin(ph-Math.PI/2)*(r-2));ctx.stroke();ctx.lineWidth=1;
     for(let k=0;k<CONFIG.H_MAX;k++){ctx.fillStyle=k<l.h?'#ffd166':'#332b45';ctx.fillRect(x+52+k*10,y+12,7,7);}
     drawSprite(l.type==='gate'?SPRITES.gate_icon:SPRITES.patrol_icon,x+76,y+44,0,0.22);
-    ctx.fillStyle='#e8e6f0';ctx.font='bold 13px sans-serif';ctx.fillText(l.id,x+cw-34,y+20);
-    ctx.font='10px sans-serif';ctx.fillStyle='#8f86a8';
-    ctx.fillText(l.type==='gate'?(gateOpen(l)?'открыто':'закрыто'):(l.jamT>0?'замер':'обход'),x+cw-56,y+34);
-    if(l.jamT>0){ctx.fillStyle='#7ad0ff';ctx.fillText(l.jamT.toFixed(1)+'с',x+cw-32,y+48);}
-    if(l.repairIn!==null){ctx.fillStyle='#ffd166';ctx.fillText('починка '+l.repairIn.toFixed(0)+'с',x+cw-62,y+60);}
+    ctx.fillStyle='#e8e6f0';ctx.font='bold 15px sans-serif';ctx.fillText(l.id,x+cw-30,y+20);
+    ctx.font='bold 12px sans-serif';ctx.fillStyle='#8f86a8';
+    ctx.fillText(l.type==='gate'?(gateOpen(l)?'ОТКРЫТО':'закрыто'):(l.jamT>0?'ЗАМЕР':'обход'),x+cw-64,y+36);
+    if(l.jamT>0){ctx.fillStyle='#7ad0ff';ctx.fillText('окно '+l.jamT.toFixed(1)+'с',x+cw-64,y+52);}
+    if(l.repairIn!==null){ctx.fillStyle='#ffd166';ctx.fillText('жёстче через '+l.repairIn.toFixed(0)+'с',x+cw-80,y+62);}
   });
   ctx.strokeStyle='rgba(178,107,255,0.35)';
   for(const [a,b] of EDGES){
     ctx.beginPath();ctx.moveTo((cw+gapx)*a+cw,40);ctx.lineTo((cw+gapx)*b,40);ctx.stroke();
   }
-  bar(CONFIG.W/2-110,CONFIG.H-34,220,12,G.alarm/100,G.alarm>70?'#ff5d5d':'#ffd166');
-  ctx.fillStyle='#8f86a8';ctx.font='11px sans-serif';ctx.textAlign='center';
-  ctx.fillText('тревога '+Math.round(G.alarm)+' (100 = полный пересвод)',CONFIG.W/2,CONFIG.H-40);
-  ctx.fillText('A+B+C перекрытие: '+G.overlapT.toFixed(1)+'с / '+CONFIG.OVERLAP_NEED+'с',CONFIG.W/2,CONFIG.H-52);
-  ctx.fillText(Math.ceil(G.t)+'с · ударов '+G.strikes+' · каскадов '+G.cascades,CONFIG.W/2,CONFIG.H-64);
+  bar(CONFIG.W/2-130,CONFIG.H-30,260,14,G.alarm/100,G.alarm>70?'#ff5d5d':'#ffd166');
+  ctx.fillStyle='#cfcbe0';ctx.font='bold 15px sans-serif';ctx.textAlign='center';
+  ctx.fillText('ТРЕВОГА '+Math.round(G.alarm)+' — 100 = полный пересвод',CONFIG.W/2,CONFIG.H-38);
+  ctx.fillStyle=G.overlapT>0?'#7ad0ff':'#8f86a8';ctx.font='bold 16px sans-serif';
+  ctx.fillText('Ворота A+B+C: '+G.overlapT.toFixed(1)+'с / '+CONFIG.OVERLAP_NEED+'с',CONFIG.W/2,CONFIG.H-56);
+  ctx.fillStyle='#8f86a8';ctx.font='bold 15px sans-serif';
+  ctx.fillText(Math.ceil(G.t)+'с · ударов '+G.strikes+' · каскадов '+G.cascades,CONFIG.W/2,CONFIG.H-72);
   ctx.textAlign='left';
-  ctx.fillStyle='#5b5372';ctx.font='11px sans-serif';
-  ctx.fillText('WASD — идти · ЛКМ у анкера — перебить не в такт (близко к биту = слабый удар) · ПКМ — подпевать (пересвод, тревога −8)',20,CONFIG.H-16);
+  ctx.fillStyle='#5b5372';ctx.font='13px sans-serif';
+  ctx.fillText(isTouch?'Джойстик слева · тап по анкеру = удар · «Подпевать» — режим':'WASD · ЛКМ у анкера — перебить (в такт = слабо) · ПКМ — подпевать',20,CONFIG.H-14);
 }
 function bar(x,y,w,h,frac,color){
   ctx.fillStyle='#241d31';ctx.fillRect(x,y,w,h);
@@ -422,33 +424,31 @@ function bar(x,y,w,h,frac,color){
   ctx.strokeStyle='#3a3050';ctx.strokeRect(x+.5,y+.5,w,h);
 }
 function renderStart(){
-  ctx.textAlign='center';ctx.fillStyle='#e8e6f0';ctx.font='bold 44px sans-serif';
-  ctx.fillText('ЛЕЙТМОТИВ',CONFIG.W/2,220);
-  ctx.font='15px sans-serif';ctx.fillStyle='#b26bff';
-  ctx.fillText('Весь мир живёт петлями: патрули и ворота тикают со своими фазами.',CONFIG.W/2,280);
-  ctx.fillText('Перебей петлю НЕ В ТАКТ — она споткнётся, фаза сдвинется, и сбой покатится',CONFIG.W/2,302);
-  ctx.fillText('по графу каскадом. Сведи окна трёх ворот на ≥1.5 с — и беги к выходу.',CONFIG.W/2,324);
-  ctx.fillStyle='#8f86a8';
-  ctx.fillText('Сбой поднимает тревогу; 100 тревоги = полный пересвод, всё становится жёстче.',CONFIG.W/2,362);
-  ctx.fillText('Подпевание (ПКМ) гасит тревогу, но закрывает окно этой петли.',CONFIG.W/2,384);
-  ctx.fillStyle='#5b5372';
-  ctx.fillText('ЛКМ у анкера — перебить · ПКМ — подпевать · циферблаты и рёбра графа — сверху',CONFIG.W/2,424);
-  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('нажми Enter или коснись экрана',CONFIG.W/2,470);
+  ctx.textAlign='center';ctx.fillStyle='#e8e6f0';ctx.font='bold 56px sans-serif';
+  ctx.fillText('ЛЕЙТМОТИВ',CONFIG.W/2,180);
+  ctx.font='bold 22px sans-serif';ctx.fillStyle='#b26bff';
+  ctx.fillText('1. Тапни по ромбику-анкеру НЕ в такт — петля споткнётся и откроется',CONFIG.W/2,270);
+  ctx.fillText('2. Сбой катится по графу: удар P1 открывает A и B, удар P2 — B и C',CONFIG.W/2,310);
+  ctx.fillText('3. Сведи окна ТРЁХ ворот на 1.5 секунды — и беги к выходу справа',CONFIG.W/2,350);
+  ctx.fillStyle='#ffd166';ctx.font='bold 20px sans-serif';
+  ctx.fillText('Тревога 100 = полный пересвод: всё станет жёстче. Подпевай, чтобы гасить её',CONFIG.W/2,410);
+  ctx.fillStyle='#5b5372';ctx.font='14px sans-serif';
+  ctx.fillText(isTouch?'Джойстик слева · тап по анкеру = удар · «Подпевать» — режим гашения':'ЛКМ у анкера — перебить · ПКМ — подпевать · циферблаты петель — сверху',CONFIG.W/2,450);
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 22px sans-serif';ctx.fillText('нажми Enter или коснись экрана',CONFIG.W/2,500);
   ctx.textAlign='left';
 }
 function renderEnd(){
-  ctx.fillStyle='rgba(13,10,18,0.78)';ctx.fillRect(0,0,CONFIG.W,CONFIG.H);
+  ctx.fillStyle='rgba(13,10,18,0.8)';ctx.fillRect(0,0,CONFIG.W,CONFIG.H);
   ctx.textAlign='center';
-  ctx.fillStyle=G.win?'#7ad0ff':'#ff5d5d';ctx.font='bold 40px sans-serif';
+  ctx.fillStyle=G.win?'#7ad0ff':'#ff5d5d';ctx.font='bold 54px sans-serif';
   ctx.fillText(G.win?'ПОБЕДА':'ПРОИГРЫШ',CONFIG.W/2,270);
-  ctx.fillStyle='#e8e6f0';ctx.font='15px sans-serif';
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 20px sans-serif';
   const share=G.strikes?Math.round(G.cascades/G.strikes*100):0;
-  ctx.fillText(`итог: ${G.win?'победа':'проигрыш'} · время ${Math.round(CONFIG.PARTY_TIME-G.t)}с · ударов ${G.strikes}, каскадов ${G.cascades} (${share}%) · пик тревоги ${Math.round(G.peakAlarm)}`,CONFIG.W/2,320);
-  ctx.fillStyle='#b26bff';ctx.font='13px sans-serif';
-  ctx.fillText(G.win?('unlock: ворота A+B+C · последние удары: '+(G.unlockChain||'—')):'Ворота не сведены — нужна хореография ударов по графу.',CONFIG.W/2,352);
-  ctx.fillStyle='#8f86a8';
-  ctx.fillText('Если победа достигается спамом ударов без чтения графа — вопрос прототипа закрыт против механики.',CONFIG.W/2,380);
-  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('R — заново',CONFIG.W/2,424);
+  ctx.fillText(`Ударов: ${G.strikes}, каскадов: ${G.cascades} (${share}%) · пик тревоги ${Math.round(G.peakAlarm)}`,CONFIG.W/2,330);
+  ctx.fillStyle='#b26bff';ctx.font='16px sans-serif';
+  ctx.fillText(G.win?('Цепочка: '+(G.unlockChain||'—')):'Ворота не сведены: бей петли в такт графу (рёбра — на карточках сверху)',CONFIG.W/2,372);
+  ctx.fillStyle='#8f86a8';ctx.font='16px sans-serif';
+  ctx.fillText(isTouch?'Ещё раз — кнопка ЗАНОВО справа':'Ещё раз — клавиша R',CONFIG.W/2,410);
   ctx.textAlign='left';
 }
 

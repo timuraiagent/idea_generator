@@ -347,8 +347,8 @@ function render(){
       const pr=8+P.pourBuf*0.5;
       ctx.beginPath(); ctx.arc(mouse.x,mouse.y,pr,0,TAU); ctx.fill(); ctx.stroke();
     }else{
-      ctx.fillStyle='#ff5d5d'; ctx.font='11px sans-serif'; ctx.textAlign='center';
-      ctx.fillText('колба пуста — отожми ЛКМ возле NPC',mouse.x,mouse.y-14); ctx.textAlign='left';
+      ctx.fillStyle='#ff5d5d'; ctx.font='bold 15px sans-serif'; ctx.textAlign='center';
+      ctx.fillText('колба пуста — держи ОТЖАТЬ у человечка',mouse.x,mouse.y-16); ctx.textAlign='left';
     }
   }
 
@@ -358,61 +358,73 @@ function render(){
   if(phase==='end')renderEnd();
 }
 
-function bar(x,y,w,h,frac,color,label){
+function bar(x,y,w,h,frac,color,label,labelColor){
   ctx.fillStyle='#241d31'; ctx.fillRect(x,y,w,h);
   ctx.fillStyle=color; ctx.fillRect(x,y,w*clamp(frac,0,1),h);
   ctx.strokeStyle='#3a3050'; ctx.strokeRect(x+.5,y+.5,w,h);
-  if(label){ctx.fillStyle='#8f86a8';ctx.font='11px sans-serif';ctx.fillText(label,x,y-4);}
+  if(label){ctx.fillStyle=labelColor||'#cfcbe0';ctx.font='bold 15px sans-serif';ctx.fillText(label,x,y-6);}
 }
 function renderHUD(){
   const P=G.player;
   const panicking=G.npcs.filter(n=>npcState(n)==='panic').length;
   const ratio=panicking/G.npcs.length;
+  // таймер
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 34px sans-serif';ctx.textAlign='center';
+  ctx.fillText(Math.ceil(G.t)+'с',CONFIG.W/2,44);ctx.textAlign='left';
   // колба
-  drawSprite(sprite(P.flask>80?'flask_full':'flask'),44,112,0,0.4);
-  bar(76,100,114,12,P.flask/CONFIG.FLASK_MAX,'#b26bff','колба '+Math.round(P.flask));
+  drawSprite(sprite(P.flask>80?'flask_full':'flask'),40,116,0,0.42);
+  bar(76,104,190,16,P.flask/CONFIG.FLASK_MAX,'#b26bff','КОЛБА '+Math.round(P.flask));
   // свой страх
-  bar(76,140,114,12,P.ownFear/CONFIG.OWN_FEAR_MAX,P.ownFear>70?'#ff5d5d':'#ff9d5d','свой страх '+Math.round(P.ownFear));
-  if(P.buff>0){ctx.fillStyle='#b26bff';ctx.font='11px sans-serif';ctx.fillText('буф '+P.buff.toFixed(1)+'с',76,170);}
-  // толпа
-  bar(CONFIG.W-300,100,220,14,ratio,ratio>=CONFIG.PANIC_THRESHOLD?'#ff5d5d':'#ffd166');
-  ctx.strokeStyle='#e8e6f0'; ctx.beginPath();
-  const tx=CONFIG.W-300+220*CONFIG.PANIC_THRESHOLD; ctx.moveTo(tx,96); ctx.lineTo(tx,118); ctx.stroke();
-  ctx.fillStyle='#8f86a8';ctx.font='11px sans-serif';ctx.fillText('паника толпы '+panicking+'/'+G.npcs.length,CONFIG.W-300,92);
-  // таймер и стрик
-  ctx.fillStyle='#e8e6f0';ctx.font='bold 22px sans-serif';ctx.textAlign='center';
-  ctx.fillText(Math.ceil(G.t)+'с',CONFIG.W/2,36);ctx.textAlign='left';
-  ctx.font='12px sans-serif';ctx.fillStyle=G.streak>0?'#ff5d5d':'#8f86a8';
-  ctx.fillText('стрик '+Math.floor(G.streak)+'/'+CONFIG.WIN_STREAK+'с (держи ≥50%)',CONFIG.W-300,140);
-  // подсказка
-  ctx.fillStyle='#5b5372';ctx.font='11px sans-serif';
-  ctx.fillText('WASD — идти · ЛКМ у NPC — схватить и отжимать (паникующего не удержать) · держи ПКМ/пробел — лужа у курсора · E — пить (колба −'+CONFIG.DRINK_COST+', свой страх +'+CONFIG.DRINK_FEAR+') · Q — сбросить колбу',20,CONFIG.H-16);
+  bar(76,152,190,16,P.ownFear/CONFIG.OWN_FEAR_MAX,P.ownFear>70?'#ff5d5d':'#ff9d5d','СВОЙ СТРАХ '+Math.round(P.ownFear)+' (100 = срыв)');
+  if(P.buff>0){ctx.fillStyle='#b26bff';ctx.font='bold 15px sans-serif';ctx.fillText('БУФ '+P.buff.toFixed(1)+'с',76,190);}
+  // паника толпы — главное
+  bar(CONFIG.W-330,104,300,18,ratio,ratio>=CONFIG.PANIC_THRESHOLD?'#ff5d5d':'#ffd166',
+      'ПАНИКА '+panicking+'/'+G.npcs.length, ratio>=CONFIG.PANIC_THRESHOLD?'#ff5d5d':'#ffd166');
+  ctx.strokeStyle='#e8e6f0'; ctx.lineWidth=2; ctx.beginPath();
+  const tx=CONFIG.W-330+300*CONFIG.PANIC_THRESHOLD; ctx.moveTo(tx,100); ctx.lineTo(tx,126); ctx.stroke(); ctx.lineWidth=1;
+  ctx.font='bold 15px sans-serif';ctx.fillStyle=G.streak>0?'#ff5d5d':'#8f86a8';
+  ctx.fillText(G.streak>0?('ДЕРЖИМ! стрик '+Math.floor(G.streak)+'/'+CONFIG.WIN_STREAK+'с'):'стрик 0/'+CONFIG.WIN_STREAK+'с',CONFIG.W-330,152);
+  // ЖИВАЯ ПОДСКАЗКА — что делать прямо сейчас
+  let hint,hintColor='#b26bff';
+  if(P.stun>0){hint='ТЫ В СРЫВЕ — ждём...';hintColor='#ff5d5d';}
+  else if(P.squeezing)hint='Отжимаем... держи рядом!';
+  else if(P.flask<CONFIG.POUR_CHUNK&&P.flask<1)hint='1. Подойди к человечку и держи ОТЖАТЬ';
+  else if(G.puddles.length===0)hint='2. Тапни, куда лить, и держи ЛУЖА';
+  else if(ratio<CONFIG.PANIC_THRESHOLD)hint='3. Лужа пугает — паника заразна, корми толпу';
+  else {hint='ДЕРЖИ ПАНИКУ! Не дам угаснуть';hintColor='#ff5d5d';}
+  ctx.font='bold 20px sans-serif';ctx.textAlign='center';
+  ctx.fillStyle='rgba(13,10,18,0.55)';const hw=ctx.measureText(hint).width;
+  ctx.fillRect(CONFIG.W/2-hw/2-12,58,hw+24,30);
+  ctx.fillStyle=hintColor;ctx.fillText(hint,CONFIG.W/2,80);
+  ctx.textAlign='left';
+  // низ
+  ctx.fillStyle='#5b5372';ctx.font='13px sans-serif';
+  ctx.fillText(isTouch?'Джойстик слева · тап = куда лить · ЛУЖА — держать':'WASD · ЛКМ у NPC — отжим (паникующего не удержать) · ПКМ/пробел — лужа · E — пить · Q — сброс',20,CONFIG.H-14);
 }
 function renderStart(){
-  ctx.textAlign='center';ctx.fillStyle='#e8e6f0';ctx.font='bold 44px sans-serif';
-  ctx.fillText('СТРАХОГОН',CONFIG.W/2,240);
-  ctx.font='15px sans-serif';ctx.fillStyle='#b26bff';
-  ctx.fillText('Страх — жидкость: отжимай его из людей в колбу, разливай лужами; лужа пугает,',CONFIG.W/2,300);
-  ctx.fillText('паника заражает соседей, лужи испаряются, страх NPC конечен.',CONFIG.W/2,322);
-  ctx.fillStyle='#8f86a8';
-  ctx.fillText('Цель: держать ≥50% толпы в панике непрерывно 45 секунд из 90.',CONFIG.W/2,360);
-  ctx.fillText('Вопрос прототипа: рождаются ли пространственные решения — или победит одна лужа в центре?',CONFIG.W/2,384);
-  ctx.fillStyle='#5b5372';
-  ctx.fillText('WASD · ЛКМ отжим · ПКМ/пробел разлив · E пить · Q стряхнуть',CONFIG.W/2,430);
-  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('нажми Enter или коснись экрана',CONFIG.W/2,480);
+  ctx.textAlign='center';ctx.fillStyle='#e8e6f0';ctx.font='bold 56px sans-serif';
+  ctx.fillText('СТРАХОГОН',CONFIG.W/2,180);
+  ctx.font='bold 22px sans-serif';ctx.fillStyle='#b26bff';
+  ctx.fillText('1. Подойди к человечку и держи ОТЖАТЬ — колба наполнится',CONFIG.W/2,270);
+  ctx.fillText('2. Тапни, куда лить, и держи ЛУЖА — кто коснётся, испугается',CONFIG.W/2,310);
+  ctx.fillText('3. Испуганный заражает соседей — запусти волну по толпе!',CONFIG.W/2,350);
+  ctx.fillStyle='#ffd166';ctx.font='bold 20px sans-serif';
+  ctx.fillText('Цель: красная полоса ПАНИКИ выше риски — 45 секунд из 90',CONFIG.W/2,410);
+  ctx.fillStyle='#5b5372';ctx.font='14px sans-serif';
+  ctx.fillText(isTouch?'Джойстик слева · кнопки справа · тап = куда лить':'WASD · ЛКМ у NPC — отжим · ПКМ/пробел — лужа · E — пить · Q — сброс',CONFIG.W/2,450);
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 22px sans-serif';ctx.fillText('нажми Enter или коснись экрана',CONFIG.W/2,500);
   ctx.textAlign='left';
 }
 function renderEnd(){
-  ctx.fillStyle='rgba(13,10,18,0.75)';ctx.fillRect(0,0,CONFIG.W,CONFIG.H);
+  ctx.fillStyle='rgba(13,10,18,0.8)';ctx.fillRect(0,0,CONFIG.W,CONFIG.H);
   ctx.textAlign='center';
-  ctx.fillStyle=G.win?'#b26bff':'#ff5d5d';ctx.font='bold 40px sans-serif';
+  ctx.fillStyle=G.win?'#b26bff':'#ff5d5d';ctx.font='bold 54px sans-serif';
   ctx.fillText(G.win?'ПОБЕДА':'ПРОИГРЫШ',CONFIG.W/2,270);
-  ctx.fillStyle='#e8e6f0';ctx.font='15px sans-serif';
+  ctx.fillStyle='#e8e6f0';ctx.font='bold 20px sans-serif';
   const hold=Math.round(G.holdTotal);
-  ctx.fillText(`итог: ${G.win?'победа':'проигрыш'} · пик каскада ${G.panicPeak}/${G.npcs.length} · удержание ≥50%: ${hold}с · финальный стрик ${Math.floor(G.streak)}с`,CONFIG.W/2,320);
-  ctx.fillStyle='#8f86a8';ctx.font='13px sans-serif';
-  ctx.fillText('Если победа пришла одной лужей в центре без переносов — механика не состоялась (см. вопрос прототипа).',CONFIG.W/2,352);
-  ctx.fillStyle='#e8e6f0';ctx.font='bold 16px sans-serif';ctx.fillText('R — заново',CONFIG.W/2,400);
+  ctx.fillText(`Пик паники: ${G.panicPeak}/${G.npcs.length} · Держали ≥50%: ${hold}с`,CONFIG.W/2,330);
+  ctx.fillStyle='#8f86a8';ctx.font='16px sans-serif';
+  ctx.fillText(isTouch?'Ещё раз — кнопка ЗАНОВО справа':'Ещё раз — клавиша R',CONFIG.W/2,380);
   ctx.textAlign='left';
 }
 
