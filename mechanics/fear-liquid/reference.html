@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Страхогон — визуальный референс</title>
+<style>*{box-sizing:border-box} :root{color-scheme:dark;--scene:#17131f;--ink:#e8e6f0;--muted:#aaa1b6;--liquid:#b26bff} body{margin:0;background:#100d16;color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.55} main{max-width:1264px;margin:auto;padding:64px 40px 48px} .eyebrow{margin:0 0 15px;color:var(--liquid);font-size:11px;letter-spacing:.2em;text-transform:uppercase;font-weight:700} h1{font-size:clamp(36px,5vw,64px);line-height:1.06;letter-spacing:-.05em;margin:0 0 20px;font-weight:750} h1 span{color:#aaa1b6;font-size:.45em;letter-spacing:-.025em;display:block;margin-top:14px;font-weight:450} .intro{max-width:700px;margin:0;color:#bdb5c9;font-size:16px} .palette{display:flex;flex-wrap:wrap;gap:10px 24px;margin:30px 0 40px;padding:20px 0;border-block:1px solid #302639;font-size:11px;color:var(--muted)} .swatch{display:inline-flex;align-items:center;gap:9px} .swatch i{width:13px;height:13px;border-radius:50%;background:var(--swatch);border:1px solid #ffffff20}.swatch code{font-size:10px;color:#d4cadd} .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px} figure{margin:0;border:1px solid #382b44;border-radius:18px;overflow:hidden;background:#1b1523} .frame-head{display:flex;align-items:center;gap:12px;padding:15px 20px;border-bottom:1px solid #302639} .num{font-size:12px;color:var(--liquid);font-variant-numeric:tabular-nums;font-weight:750} .frame-head h2{font-size:12px;font-weight:550;margin:0;color:#cfc5dc;letter-spacing:.03em} figure>svg{display:block;width:100%;height:auto;aspect-ratio:3/2} figcaption{padding:20px 22px 22px;border-top:1px solid #302639} figcaption h3{margin:0 0 9px;font-size:12px;letter-spacing:.065em;font-weight:700;color:var(--ink)} figcaption p{font-size:13px;line-height:1.65;color:#b8aec5;margin:0} .metric{display:block;margin-top:13px;font-size:11px;color:#bca2d6;font-variant-numeric:tabular-nums} .hud-caption{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}.hud-caption span{font-size:11px;padding:5px 9px;background:#2a2035;border:1px solid #493359;border-radius:6px}.hud-caption strong{font-weight:650;color:#dfb7ff} footer{margin-top:32px;display:flex;justify-content:space-between;gap:20px;padding-top:20px;border-top:1px solid #302639;color:#82758f;font-size:11px} @media(max-width:720px){main{padding:36px 18px}.grid{grid-template-columns:1fr;gap:20px}.palette{gap:12px 20px}footer{display:block}footer span{display:block;margin-top:8px}} @media print{body{background:#100d16;print-color-adjust:exact}main{padding:20px}figure{break-inside:avoid}.grid{gap:16px}figcaption p{font-size:11px}}</style>
+</head>
+<body><main>
+<header><p class="eyebrow">Визуальная спецификация · 01 / страх как жидкость</p>
+<h1>Страхогон<span>Визуальный референс</span></h1>
+<p class="intro">Отжать → донести → разлить → запустить каскад. Один экран, конечный запас страха и толпа, которая никогда не стоит на месте.</p></header>
+<div class="palette" aria-label="Палитра"><span class="swatch"><i style="--swatch:#17131f"></i>Сцена <code>#17131f</code></span>
+<span class="swatch"><i style="--swatch:#b26bff"></i>Страх <code>#b26bff</code></span>
+<span class="swatch"><i style="--swatch:#8a2be2"></i>Ореол <code>#8a2be2</code></span>
+<span class="swatch"><i style="--swatch:#9aa0a6"></i>Спокоен <code>#9aa0a6</code></span>
+<span class="swatch"><i style="--swatch:#ffd166"></i>Встревожен <code>#ffd166</code></span>
+<span class="swatch"><i style="--swatch:#ff5d5d"></i>Паникует <code>#ff5d5d</code></span>
+<span class="swatch"><i style="--swatch:#e8e6f0"></i>Игрок <code>#e8e6f0</code></span>
+</div>
+<section class="grid" aria-label="Десять кадров механики">
+<figure id="frame-01" data-frame="1">
+<div class="frame-head"><span class="num">01</span><h2>Арена · двигаться</h2></div>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" role="img" aria-labelledby="f1-scene-1-title"><title id="f1-scene-1-title">Арена · двигаться</title><defs><filter id="f1-soft-glow" filterUnits="userSpaceOnUse" x="8" y="8" width="112" height="112" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+  <feFlood flood-color="#8a2be2" flood-opacity=".65"/>
+  <feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<clipPath id="f1-safe-cell"><rect x="8" y="8" width="112" height="112"/></clipPath>
+<clipPath id="f1-bottle-interior"><path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z"/></clipPath>
+<g id="f1-player"><g stroke="#e8e6f0" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M49 87 L47 104 M79 87 L81 104" stroke="#a6a3b5" stroke-width="12"/>
+  <path d="M44 58 Q32 63 30 79 M84 58 Q96 63 98 79" fill="none" stroke-width="11"/>
+  <path d="M42 60 Q42 49 64 49 Q86 49 86 60 L82 90 Q64 98 46 90 Z" fill="#e8e6f0" stroke-width="2"/>
+  <path d="M51 61 L53 87 M77 61 L75 87" stroke="#797286" stroke-width="4"/>
+  <ellipse cx="64" cy="41" rx="17" ry="18" fill="#e8e6f0" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 25 L64 19 L69 25" fill="#e8e6f0" stroke="none"/>
+  <path d="M57 72 L57 78 Q48 83 51 97 Q53 107 64 107 Q75 107 77 97 Q80 83 71 78 L71 72 Z" fill="#292235" stroke="#d7c7eb" stroke-width="2"/>
+  <path d="M52 92 Q64 88 76 92 L74 99 Q64 108 54 99 Z" fill="#b26bff" stroke="none" filter="url(#f1-soft-glow)"/>
+  <path d="M57 72 H71 M56 83 L55 90" fill="none" stroke-width="2"/>
+</g></g>
+<g id="f1-npc_calm"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M50 87 L48 103 M78 87 L80 103" stroke="#676c75" stroke-width="12"/>
+  <path d="M43 59 Q32 67 33 81 M85 59 Q96 67 95 81" fill="none" stroke="#9aa0a6" stroke-width="11"/>
+  <path d="M42 58 Q64 46 86 58 L82 89 Q64 98 46 89 Z" fill="#9aa0a6"/>
+  <path d="M48 60 Q64 54 80 60" stroke="#c4c8cd" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="40" rx="17" ry="18" fill="#9aa0a6" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 24 L64 18 L69 24" fill="#9aa0a6"/>
+</g></g>
+<g id="f1-npc_worried"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M52 88 L50 103 M76 88 L78 103" stroke="#ac833d" stroke-width="12"/>
+  <path d="M43 60 Q34 65 39 82 L47 77 M85 60 Q94 65 89 82 L81 77" fill="none" stroke="#ffd166" stroke-width="10"/>
+  <path d="M41 61 Q43 48 64 48 Q85 48 87 61 L81 91 Q64 99 47 91 Z" fill="#ffd166"/>
+  <path d="M48 65 Q64 56 80 65" stroke="#fff0b8" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="48" rx="18" ry="17" fill="#ffd166" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 33 L64 27 L69 33" fill="#ffd166"/>
+</g></g>
+<g id="f1-npc_panicking"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M51 87 L40 102 M77 87 L89 98" stroke="#ae424d" stroke-width="12"/>
+  <path d="M44 59 L26 48 L23 26 M84 59 L102 48 L105 26" fill="none" stroke="#ff5d5d" stroke-width="11"/>
+  <circle cx="23" cy="24" r="7" fill="#ff5d5d"/><circle cx="105" cy="24" r="7" fill="#ff5d5d"/>
+  <path d="M42 59 Q64 46 86 59 L82 88 Q64 97 46 88 Z" fill="#ff5d5d"/>
+  <path d="M49 61 Q64 54 79 61" stroke="#ffb0a5" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="39" rx="17" ry="18" fill="#ff5d5d" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 23 L64 17 L69 23" fill="#ff5d5d"/>
+</g></g>
+<g id="f1-flask_icon"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f1-bottle-interior)">
+    <path d="M24 81 Q43 76 64 81 T104 81 V116 H24 Z" fill="#b26bff" filter="url(#f1-soft-glow)"/>
+    <path d="M30 81 Q47 77 64 81 T99 81" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+<g id="f1-drop"><path d="M64 23 C60 37 40 57 40 77 A24 24 0 0 0 88 77 C88 57 68 37 64 23 Z" fill="#b26bff" filter="url(#f1-soft-glow)"/>
+<path d="M52 71 Q46 82 56 88" fill="none" stroke="#ead5ff" stroke-width="4" stroke-linecap="round"/></g>
+<g id="f1-flask_full"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f1-bottle-interior)">
+    <path d="M24 55 Q43 50 64 55 T104 55 V116 H24 Z" fill="#b26bff" filter="url(#f1-soft-glow)"/>
+    <path d="M30 55 Q47 51 64 55 T99 55" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+
+<filter id="f1-pool-glow" x="-30%" y="-45%" width="160%" height="190%" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="blur"/><feFlood flood-color="#8a2be2" flood-opacity=".65"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<marker id="f1-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#b26bff" stroke-width="1.5"/></marker>
+<pattern id="f1-floor" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="#393142"/></pattern>
+</defs>
+<rect width="960" height="640" fill="#17131f"/><rect width="960" height="640" fill="url(#f1-floor)"/>
+<rect x="20" y="20" width="920" height="600" rx="28" fill="none" stroke="#352c40" stroke-width="1.5"/>
+<g transform="translate(632 407) scale(1.25)"><path d="M-65 -8 C-77 -31 -40 -40 -18 -34 C1 -49 24 -31 40 -27 C69 -28 84 -2 60 14 C56 39 20 34 2 31 C-25 45 -39 26 -57 27 C-81 26 -86 5 -65 -8 Z" fill="#b26bff" fill-opacity=".68" stroke="#b26bff" stroke-width="2" filter="url(#f1-pool-glow)"/><path d="M-49 -15 Q-29 -27 -13 -22 M29 19 L43 16" fill="none" stroke="#e4baff" stroke-opacity=".7" stroke-width="3" stroke-linecap="round"/></g><g transform="translate(282 241) scale(0.6)"><path d="M-65 -8 C-77 -31 -40 -40 -18 -34 C1 -49 24 -31 40 -27 C69 -28 84 -2 60 14 C56 39 20 34 2 31 C-25 45 -39 26 -57 27 C-81 26 -86 5 -65 -8 Z" fill="#b26bff" fill-opacity=".68" stroke="#b26bff" stroke-width="2" filter="url(#f1-pool-glow)"/><path d="M-49 -15 Q-29 -27 -13 -22 M29 19 L43 16" fill="none" stroke="#e4baff" stroke-opacity=".7" stroke-width="3" stroke-linecap="round"/></g><g transform="translate(160 150) rotate(-30) scale(0.62)"><use href="#f1-npc_calm" x="-64" y="-64"/></g><g transform="translate(376 126) rotate(65) scale(0.62)"><use href="#f1-npc_calm" x="-64" y="-64"/></g><g transform="translate(600 155) rotate(20) scale(0.62)"><use href="#f1-npc_calm" x="-64" y="-64"/></g><g transform="translate(808 179) rotate(110) scale(0.62)"><use href="#f1-npc_calm" x="-64" y="-64"/></g><g transform="translate(156 421) rotate(-55) scale(0.62)"><use href="#f1-npc_calm" x="-64" y="-64"/></g><g transform="translate(303 336) rotate(40) scale(0.62)"><use href="#f1-npc_worried" x="-64" y="-64"/></g><g transform="translate(462 449) rotate(-25) scale(0.62)"><use href="#f1-npc_worried" x="-64" y="-64"/></g><g transform="translate(739 388) rotate(80) scale(0.62)"><use href="#f1-npc_worried" x="-64" y="-64"/></g><g transform="translate(576 527) rotate(200) scale(0.62)"><use href="#f1-npc_panicking" x="-64" y="-64"/></g><g transform="translate(826 511) rotate(120) scale(0.62)"><use href="#f1-npc_panicking" x="-64" y="-64"/></g><circle cx="445" cy="278" r="49" fill="none" stroke="#e8e6f0" stroke-opacity=".18" stroke-dasharray="5 7"/><g transform="translate(445 278) rotate(0) scale(0.8)"><use href="#f1-player" x="-64" y="-64"/></g></svg>
+<figcaption><h3>ДВИГАТЬСЯ / АРЕНА</h3><p>Один экран 960 × 640, без стен. Десять NPC и игрок с колбой: место разлива определяет будущий каскад.</p><span class="metric">10 NPC · партия 90 с</span></figcaption></figure>
+<figure id="frame-02" data-frame="2">
+<div class="frame-head"><span class="num">02</span><h2>Отжимать · собрать страх</h2></div>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-labelledby="f2-scene-2-title"><title id="f2-scene-2-title">Отжимать · собрать страх</title><defs><filter id="f2-soft-glow" filterUnits="userSpaceOnUse" x="8" y="8" width="112" height="112" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+  <feFlood flood-color="#8a2be2" flood-opacity=".65"/>
+  <feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<clipPath id="f2-safe-cell"><rect x="8" y="8" width="112" height="112"/></clipPath>
+<clipPath id="f2-bottle-interior"><path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z"/></clipPath>
+<g id="f2-player"><g stroke="#e8e6f0" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M49 87 L47 104 M79 87 L81 104" stroke="#a6a3b5" stroke-width="12"/>
+  <path d="M44 58 Q32 63 30 79 M84 58 Q96 63 98 79" fill="none" stroke-width="11"/>
+  <path d="M42 60 Q42 49 64 49 Q86 49 86 60 L82 90 Q64 98 46 90 Z" fill="#e8e6f0" stroke-width="2"/>
+  <path d="M51 61 L53 87 M77 61 L75 87" stroke="#797286" stroke-width="4"/>
+  <ellipse cx="64" cy="41" rx="17" ry="18" fill="#e8e6f0" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 25 L64 19 L69 25" fill="#e8e6f0" stroke="none"/>
+  <path d="M57 72 L57 78 Q48 83 51 97 Q53 107 64 107 Q75 107 77 97 Q80 83 71 78 L71 72 Z" fill="#292235" stroke="#d7c7eb" stroke-width="2"/>
+  <path d="M52 92 Q64 88 76 92 L74 99 Q64 108 54 99 Z" fill="#b26bff" stroke="none" filter="url(#f2-soft-glow)"/>
+  <path d="M57 72 H71 M56 83 L55 90" fill="none" stroke-width="2"/>
+</g></g>
+<g id="f2-npc_calm"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M50 87 L48 103 M78 87 L80 103" stroke="#676c75" stroke-width="12"/>
+  <path d="M43 59 Q32 67 33 81 M85 59 Q96 67 95 81" fill="none" stroke="#9aa0a6" stroke-width="11"/>
+  <path d="M42 58 Q64 46 86 58 L82 89 Q64 98 46 89 Z" fill="#9aa0a6"/>
+  <path d="M48 60 Q64 54 80 60" stroke="#c4c8cd" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="40" rx="17" ry="18" fill="#9aa0a6" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 24 L64 18 L69 24" fill="#9aa0a6"/>
+</g></g>
+<g id="f2-npc_worried"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M52 88 L50 103 M76 88 L78 103" stroke="#ac833d" stroke-width="12"/>
+  <path d="M43 60 Q34 65 39 82 L47 77 M85 60 Q94 65 89 82 L81 77" fill="none" stroke="#ffd166" stroke-width="10"/>
+  <path d="M41 61 Q43 48 64 48 Q85 48 87 61 L81 91 Q64 99 47 91 Z" fill="#ffd166"/>
+  <path d="M48 65 Q64 56 80 65" stroke="#fff0b8" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="48" rx="18" ry="17" fill="#ffd166" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 33 L64 27 L69 33" fill="#ffd166"/>
+</g></g>
+<g id="f2-npc_panicking"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M51 87 L40 102 M77 87 L89 98" stroke="#ae424d" stroke-width="12"/>
+  <path d="M44 59 L26 48 L23 26 M84 59 L102 48 L105 26" fill="none" stroke="#ff5d5d" stroke-width="11"/>
+  <circle cx="23" cy="24" r="7" fill="#ff5d5d"/><circle cx="105" cy="24" r="7" fill="#ff5d5d"/>
+  <path d="M42 59 Q64 46 86 59 L82 88 Q64 97 46 88 Z" fill="#ff5d5d"/>
+  <path d="M49 61 Q64 54 79 61" stroke="#ffb0a5" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="39" rx="17" ry="18" fill="#ff5d5d" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 23 L64 17 L69 23" fill="#ff5d5d"/>
+</g></g>
+<g id="f2-flask_icon"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f2-bottle-interior)">
+    <path d="M24 81 Q43 76 64 81 T104 81 V116 H24 Z" fill="#b26bff" filter="url(#f2-soft-glow)"/>
+    <path d="M30 81 Q47 77 64 81 T99 81" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+<g id="f2-drop"><path d="M64 23 C60 37 40 57 40 77 A24 24 0 0 0 88 77 C88 57 68 37 64 23 Z" fill="#b26bff" filter="url(#f2-soft-glow)"/>
+<path d="M52 71 Q46 82 56 88" fill="none" stroke="#ead5ff" stroke-width="4" stroke-linecap="round"/></g>
+<g id="f2-flask_full"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f2-bottle-interior)">
+    <path d="M24 55 Q43 50 64 55 T104 55 V116 H24 Z" fill="#b26bff" filter="url(#f2-soft-glow)"/>
+    <path d="M30 55 Q47 51 64 55 T99 55" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+
+<filter id="f2-pool-glow" x="-30%" y="-45%" width="160%" height="190%" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="blur"/><feFlood flood-color="#8a2be2" flood-opacity=".65"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<marker id="f2-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#b26bff" stroke-width="1.5"/></marker>
+<pattern id="f2-floor" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="#393142"/></pattern>
+</defs>
+<rect width="480" height="320" fill="#17131f"/><rect width="480" height="320" fill="url(#f2-floor)"/>
+<rect x="12" y="12" width="456" height="296" rx="18" fill="none" stroke="#352c40" stroke-width="1.5"/>
+<circle cx="252" cy="156" r="82" fill="none" stroke="#e8e6f0" stroke-opacity=".12" stroke-dasharray="4 8"/><g transform="translate(279 119) rotate(10) scale(1.05)"><use href="#f2-npc_worried" x="-64" y="-64"/></g><g transform="translate(224 223) rotate(0) scale(1.05)"><use href="#f2-player" x="-64" y="-64"/></g><path d="M208 195 Q218 159 253 143" fill="none" stroke="#e8e6f0" stroke-width="10" stroke-linecap="round"/><path d="M269 146 C303 181 258 217 224 252" fill="none" stroke="#8a2be2" stroke-opacity=".25" stroke-width="14"/><path d="M269 146 C303 181 258 217 224 252" fill="none" stroke="#b26bff" stroke-width="5" stroke-linecap="round"/><circle cx="273" cy="193" r="5" fill="#dfb7ff"/><circle cx="244" cy="234" r="4" fill="#dfb7ff"/><path d="M218 99 l-5 9 5 9 -5 9 M339 100 l5 9 -5 9 5 9" fill="none" stroke="#ffd166" stroke-width="2" stroke-linecap="round"/></svg>
+<figcaption><h3>ОТЖИМАТЬ / ПЕРЕНОС</h3><p>Игрок держит NPC в радиусе 40 px. Донор дрожит; тонкая струя уходит в колбу за спиной. Отжатый страх не восстанавливается.</p><span class="metric">ЛКМ · +25 ед/с в колбу</span></figcaption></figure>
+<figure id="frame-03" data-frame="3">
+<div class="frame-head"><span class="num">03</span><h2>Колба · почти полна</h2></div>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-labelledby="f3-scene-3-title"><title id="f3-scene-3-title">Колба · почти полна</title><defs><filter id="f3-soft-glow" filterUnits="userSpaceOnUse" x="8" y="8" width="112" height="112" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+  <feFlood flood-color="#8a2be2" flood-opacity=".65"/>
+  <feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<clipPath id="f3-safe-cell"><rect x="8" y="8" width="112" height="112"/></clipPath>
+<clipPath id="f3-bottle-interior"><path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z"/></clipPath>
+<g id="f3-player"><g stroke="#e8e6f0" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M49 87 L47 104 M79 87 L81 104" stroke="#a6a3b5" stroke-width="12"/>
+  <path d="M44 58 Q32 63 30 79 M84 58 Q96 63 98 79" fill="none" stroke-width="11"/>
+  <path d="M42 60 Q42 49 64 49 Q86 49 86 60 L82 90 Q64 98 46 90 Z" fill="#e8e6f0" stroke-width="2"/>
+  <path d="M51 61 L53 87 M77 61 L75 87" stroke="#797286" stroke-width="4"/>
+  <ellipse cx="64" cy="41" rx="17" ry="18" fill="#e8e6f0" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 25 L64 19 L69 25" fill="#e8e6f0" stroke="none"/>
+  <path d="M57 72 L57 78 Q48 83 51 97 Q53 107 64 107 Q75 107 77 97 Q80 83 71 78 L71 72 Z" fill="#292235" stroke="#d7c7eb" stroke-width="2"/>
+  <path d="M52 92 Q64 88 76 92 L74 99 Q64 108 54 99 Z" fill="#b26bff" stroke="none" filter="url(#f3-soft-glow)"/>
+  <path d="M57 72 H71 M56 83 L55 90" fill="none" stroke-width="2"/>
+</g></g>
+<g id="f3-npc_calm"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M50 87 L48 103 M78 87 L80 103" stroke="#676c75" stroke-width="12"/>
+  <path d="M43 59 Q32 67 33 81 M85 59 Q96 67 95 81" fill="none" stroke="#9aa0a6" stroke-width="11"/>
+  <path d="M42 58 Q64 46 86 58 L82 89 Q64 98 46 89 Z" fill="#9aa0a6"/>
+  <path d="M48 60 Q64 54 80 60" stroke="#c4c8cd" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="40" rx="17" ry="18" fill="#9aa0a6" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 24 L64 18 L69 24" fill="#9aa0a6"/>
+</g></g>
+<g id="f3-npc_worried"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M52 88 L50 103 M76 88 L78 103" stroke="#ac833d" stroke-width="12"/>
+  <path d="M43 60 Q34 65 39 82 L47 77 M85 60 Q94 65 89 82 L81 77" fill="none" stroke="#ffd166" stroke-width="10"/>
+  <path d="M41 61 Q43 48 64 48 Q85 48 87 61 L81 91 Q64 99 47 91 Z" fill="#ffd166"/>
+  <path d="M48 65 Q64 56 80 65" stroke="#fff0b8" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="48" rx="18" ry="17" fill="#ffd166" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 33 L64 27 L69 33" fill="#ffd166"/>
+</g></g>
+<g id="f3-npc_panicking"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M51 87 L40 102 M77 87 L89 98" stroke="#ae424d" stroke-width="12"/>
+  <path d="M44 59 L26 48 L23 26 M84 59 L102 48 L105 26" fill="none" stroke="#ff5d5d" stroke-width="11"/>
+  <circle cx="23" cy="24" r="7" fill="#ff5d5d"/><circle cx="105" cy="24" r="7" fill="#ff5d5d"/>
+  <path d="M42 59 Q64 46 86 59 L82 88 Q64 97 46 88 Z" fill="#ff5d5d"/>
+  <path d="M49 61 Q64 54 79 61" stroke="#ffb0a5" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="39" rx="17" ry="18" fill="#ff5d5d" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 23 L64 17 L69 23" fill="#ff5d5d"/>
+</g></g>
+<g id="f3-flask_icon"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f3-bottle-interior)">
+    <path d="M24 81 Q43 76 64 81 T104 81 V116 H24 Z" fill="#b26bff" filter="url(#f3-soft-glow)"/>
+    <path d="M30 81 Q47 77 64 81 T99 81" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+<g id="f3-drop"><path d="M64 23 C60 37 40 57 40 77 A24 24 0 0 0 88 77 C88 57 68 37 64 23 Z" fill="#b26bff" filter="url(#f3-soft-glow)"/>
+<path d="M52 71 Q46 82 56 88" fill="none" stroke="#ead5ff" stroke-width="4" stroke-linecap="round"/></g>
+<g id="f3-flask_full"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f3-bottle-interior)">
+    <path d="M24 55 Q43 50 64 55 T104 55 V116 H24 Z" fill="#b26bff" filter="url(#f3-soft-glow)"/>
+    <path d="M30 55 Q47 51 64 55 T99 55" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+
+<filter id="f3-pool-glow" x="-30%" y="-45%" width="160%" height="190%" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="blur"/><feFlood flood-color="#8a2be2" flood-opacity=".65"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<marker id="f3-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#b26bff" stroke-width="1.5"/></marker>
+<pattern id="f3-floor" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="#393142"/></pattern>
+</defs>
+<rect width="480" height="320" fill="#17131f"/><rect width="480" height="320" fill="url(#f3-floor)"/>
+<rect x="12" y="12" width="456" height="296" rx="18" fill="none" stroke="#352c40" stroke-width="1.5"/>
+<g transform="translate(180 157) rotate(0) scale(1.8)"><use href="#f3-flask_full" x="-64" y="-64"/></g><rect x="306" y="62" width="104" height="194" rx="18" fill="#211a2b" stroke="#453651"/><rect x="325" y="83" width="12" height="144" rx="6" fill="#100d16"/><rect x="325" y="93" width="12" height="134" rx="6" fill="#b26bff"/><path d="M347 95 H386 M347 129 H374 M347 163 H374 M347 197 H386 M347 226 H374" stroke="#74667f" stroke-width="2"/><circle cx="374" cy="95" r="5" fill="#b26bff"/></svg>
+<figcaption><h3>КОЛБА / ПОЧТИ ПОЛНА</h3><p>Ёмкость — конечный переносимый запас. Стекло остаётся читаемым поверх свечения; уровень и отдельная шкала HUD повторяют друг друга.</p><span class="metric">Колба 93 / 100 · свой страх 25 / 100</span></figcaption></figure>
+<figure id="frame-04" data-frame="4">
+<div class="frame-head"><span class="num">04</span><h2>Разливать · выбрать место</h2></div>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-labelledby="f4-scene-4-title"><title id="f4-scene-4-title">Разливать · выбрать место</title><defs><filter id="f4-soft-glow" filterUnits="userSpaceOnUse" x="8" y="8" width="112" height="112" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+  <feFlood flood-color="#8a2be2" flood-opacity=".65"/>
+  <feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<clipPath id="f4-safe-cell"><rect x="8" y="8" width="112" height="112"/></clipPath>
+<clipPath id="f4-bottle-interior"><path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z"/></clipPath>
+<g id="f4-player"><g stroke="#e8e6f0" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M49 87 L47 104 M79 87 L81 104" stroke="#a6a3b5" stroke-width="12"/>
+  <path d="M44 58 Q32 63 30 79 M84 58 Q96 63 98 79" fill="none" stroke-width="11"/>
+  <path d="M42 60 Q42 49 64 49 Q86 49 86 60 L82 90 Q64 98 46 90 Z" fill="#e8e6f0" stroke-width="2"/>
+  <path d="M51 61 L53 87 M77 61 L75 87" stroke="#797286" stroke-width="4"/>
+  <ellipse cx="64" cy="41" rx="17" ry="18" fill="#e8e6f0" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 25 L64 19 L69 25" fill="#e8e6f0" stroke="none"/>
+  <path d="M57 72 L57 78 Q48 83 51 97 Q53 107 64 107 Q75 107 77 97 Q80 83 71 78 L71 72 Z" fill="#292235" stroke="#d7c7eb" stroke-width="2"/>
+  <path d="M52 92 Q64 88 76 92 L74 99 Q64 108 54 99 Z" fill="#b26bff" stroke="none" filter="url(#f4-soft-glow)"/>
+  <path d="M57 72 H71 M56 83 L55 90" fill="none" stroke-width="2"/>
+</g></g>
+<g id="f4-npc_calm"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M50 87 L48 103 M78 87 L80 103" stroke="#676c75" stroke-width="12"/>
+  <path d="M43 59 Q32 67 33 81 M85 59 Q96 67 95 81" fill="none" stroke="#9aa0a6" stroke-width="11"/>
+  <path d="M42 58 Q64 46 86 58 L82 89 Q64 98 46 89 Z" fill="#9aa0a6"/>
+  <path d="M48 60 Q64 54 80 60" stroke="#c4c8cd" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="40" rx="17" ry="18" fill="#9aa0a6" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 24 L64 18 L69 24" fill="#9aa0a6"/>
+</g></g>
+<g id="f4-npc_worried"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M52 88 L50 103 M76 88 L78 103" stroke="#ac833d" stroke-width="12"/>
+  <path d="M43 60 Q34 65 39 82 L47 77 M85 60 Q94 65 89 82 L81 77" fill="none" stroke="#ffd166" stroke-width="10"/>
+  <path d="M41 61 Q43 48 64 48 Q85 48 87 61 L81 91 Q64 99 47 91 Z" fill="#ffd166"/>
+  <path d="M48 65 Q64 56 80 65" stroke="#fff0b8" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="48" rx="18" ry="17" fill="#ffd166" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 33 L64 27 L69 33" fill="#ffd166"/>
+</g></g>
+<g id="f4-npc_panicking"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M51 87 L40 102 M77 87 L89 98" stroke="#ae424d" stroke-width="12"/>
+  <path d="M44 59 L26 48 L23 26 M84 59 L102 48 L105 26" fill="none" stroke="#ff5d5d" stroke-width="11"/>
+  <circle cx="23" cy="24" r="7" fill="#ff5d5d"/><circle cx="105" cy="24" r="7" fill="#ff5d5d"/>
+  <path d="M42 59 Q64 46 86 59 L82 88 Q64 97 46 88 Z" fill="#ff5d5d"/>
+  <path d="M49 61 Q64 54 79 61" stroke="#ffb0a5" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="39" rx="17" ry="18" fill="#ff5d5d" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 23 L64 17 L69 23" fill="#ff5d5d"/>
+</g></g>
+<g id="f4-flask_icon"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f4-bottle-interior)">
+    <path d="M24 81 Q43 76 64 81 T104 81 V116 H24 Z" fill="#b26bff" filter="url(#f4-soft-glow)"/>
+    <path d="M30 81 Q47 77 64 81 T99 81" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+<g id="f4-drop"><path d="M64 23 C60 37 40 57 40 77 A24 24 0 0 0 88 77 C88 57 68 37 64 23 Z" fill="#b26bff" filter="url(#f4-soft-glow)"/>
+<path d="M52 71 Q46 82 56 88" fill="none" stroke="#ead5ff" stroke-width="4" stroke-linecap="round"/></g>
+<g id="f4-flask_full"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f4-bottle-interior)">
+    <path d="M24 55 Q43 50 64 55 T104 55 V116 H24 Z" fill="#b26bff" filter="url(#f4-soft-glow)"/>
+    <path d="M30 55 Q47 51 64 55 T99 55" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+
+<filter id="f4-pool-glow" x="-30%" y="-45%" width="160%" height="190%" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="blur"/><feFlood flood-color="#8a2be2" flood-opacity=".65"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<marker id="f4-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#b26bff" stroke-width="1.5"/></marker>
+<pattern id="f4-floor" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="#393142"/></pattern>
+</defs>
+<rect width="480" height="320" fill="#17131f"/><rect width="480" height="320" fill="url(#f4-floor)"/>
+<rect x="12" y="12" width="456" height="296" rx="18" fill="none" stroke="#352c40" stroke-width="1.5"/>
+<g transform="translate(105 221) rotate(53) scale(0.9)"><use href="#f4-player" x="-64" y="-64"/></g><g transform="translate(313 170) scale(1.05)"><path d="M-65 -8 C-77 -31 -40 -40 -18 -34 C1 -49 24 -31 40 -27 C69 -28 84 -2 60 14 C56 39 20 34 2 31 C-25 45 -39 26 -57 27 C-81 26 -86 5 -65 -8 Z" fill="#b26bff" fill-opacity=".68" stroke="#b26bff" stroke-width="2" filter="url(#f4-pool-glow)"/><path d="M-49 -15 Q-29 -27 -13 -22 M29 19 L43 16" fill="none" stroke="#e4baff" stroke-opacity=".7" stroke-width="3" stroke-linecap="round"/></g><path d="M125 243 Q194 98 276 149" fill="none" stroke="#b26bff" stroke-width="3" stroke-dasharray="2 12" stroke-linecap="round"/><g transform="translate(215 149) rotate(32) scale(0.26)"><use href="#f4-drop" x="-64" y="-64"/></g><g transform="translate(276 128) rotate(-20) scale(0.18)"><use href="#f4-drop" x="-64" y="-64"/></g><g transform="translate(367 203) rotate(70) scale(0.2)"><use href="#f4-drop" x="-64" y="-64"/></g><circle cx="313" cy="170" r="14" fill="none" stroke="#e8e6f0" stroke-width="1.5"/><path d="M313 148 V157 M313 183 V192 M291 170 H300 M326 170 H335" stroke="#e8e6f0" stroke-width="1.5"/></svg>
+<figcaption><h3>РАЗЛИВАТЬ / ЖИДКОСТЬ</h3><p>Порция падает у курсора. Светлый край обозначает область касания, мягкий ореол — только свет. Больше объём — шире лужа.</p><span class="metric">ПКМ / пробел · r = 20 + 0,8 × объём</span></figcaption></figure>
+<figure id="frame-05" data-frame="5">
+<div class="frame-head"><span class="num">05</span><h2>Контакт · встревожен</h2></div>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-labelledby="f5-scene-5-title"><title id="f5-scene-5-title">Контакт · встревожен</title><defs><filter id="f5-soft-glow" filterUnits="userSpaceOnUse" x="8" y="8" width="112" height="112" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+  <feFlood flood-color="#8a2be2" flood-opacity=".65"/>
+  <feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<clipPath id="f5-safe-cell"><rect x="8" y="8" width="112" height="112"/></clipPath>
+<clipPath id="f5-bottle-interior"><path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z"/></clipPath>
+<g id="f5-player"><g stroke="#e8e6f0" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M49 87 L47 104 M79 87 L81 104" stroke="#a6a3b5" stroke-width="12"/>
+  <path d="M44 58 Q32 63 30 79 M84 58 Q96 63 98 79" fill="none" stroke-width="11"/>
+  <path d="M42 60 Q42 49 64 49 Q86 49 86 60 L82 90 Q64 98 46 90 Z" fill="#e8e6f0" stroke-width="2"/>
+  <path d="M51 61 L53 87 M77 61 L75 87" stroke="#797286" stroke-width="4"/>
+  <ellipse cx="64" cy="41" rx="17" ry="18" fill="#e8e6f0" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 25 L64 19 L69 25" fill="#e8e6f0" stroke="none"/>
+  <path d="M57 72 L57 78 Q48 83 51 97 Q53 107 64 107 Q75 107 77 97 Q80 83 71 78 L71 72 Z" fill="#292235" stroke="#d7c7eb" stroke-width="2"/>
+  <path d="M52 92 Q64 88 76 92 L74 99 Q64 108 54 99 Z" fill="#b26bff" stroke="none" filter="url(#f5-soft-glow)"/>
+  <path d="M57 72 H71 M56 83 L55 90" fill="none" stroke-width="2"/>
+</g></g>
+<g id="f5-npc_calm"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M50 87 L48 103 M78 87 L80 103" stroke="#676c75" stroke-width="12"/>
+  <path d="M43 59 Q32 67 33 81 M85 59 Q96 67 95 81" fill="none" stroke="#9aa0a6" stroke-width="11"/>
+  <path d="M42 58 Q64 46 86 58 L82 89 Q64 98 46 89 Z" fill="#9aa0a6"/>
+  <path d="M48 60 Q64 54 80 60" stroke="#c4c8cd" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="40" rx="17" ry="18" fill="#9aa0a6" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 24 L64 18 L69 24" fill="#9aa0a6"/>
+</g></g>
+<g id="f5-npc_worried"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M52 88 L50 103 M76 88 L78 103" stroke="#ac833d" stroke-width="12"/>
+  <path d="M43 60 Q34 65 39 82 L47 77 M85 60 Q94 65 89 82 L81 77" fill="none" stroke="#ffd166" stroke-width="10"/>
+  <path d="M41 61 Q43 48 64 48 Q85 48 87 61 L81 91 Q64 99 47 91 Z" fill="#ffd166"/>
+  <path d="M48 65 Q64 56 80 65" stroke="#fff0b8" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="48" rx="18" ry="17" fill="#ffd166" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 33 L64 27 L69 33" fill="#ffd166"/>
+</g></g>
+<g id="f5-npc_panicking"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M51 87 L40 102 M77 87 L89 98" stroke="#ae424d" stroke-width="12"/>
+  <path d="M44 59 L26 48 L23 26 M84 59 L102 48 L105 26" fill="none" stroke="#ff5d5d" stroke-width="11"/>
+  <circle cx="23" cy="24" r="7" fill="#ff5d5d"/><circle cx="105" cy="24" r="7" fill="#ff5d5d"/>
+  <path d="M42 59 Q64 46 86 59 L82 88 Q64 97 46 88 Z" fill="#ff5d5d"/>
+  <path d="M49 61 Q64 54 79 61" stroke="#ffb0a5" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="39" rx="17" ry="18" fill="#ff5d5d" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 23 L64 17 L69 23" fill="#ff5d5d"/>
+</g></g>
+<g id="f5-flask_icon"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f5-bottle-interior)">
+    <path d="M24 81 Q43 76 64 81 T104 81 V116 H24 Z" fill="#b26bff" filter="url(#f5-soft-glow)"/>
+    <path d="M30 81 Q47 77 64 81 T99 81" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+<g id="f5-drop"><path d="M64 23 C60 37 40 57 40 77 A24 24 0 0 0 88 77 C88 57 68 37 64 23 Z" fill="#b26bff" filter="url(#f5-soft-glow)"/>
+<path d="M52 71 Q46 82 56 88" fill="none" stroke="#ead5ff" stroke-width="4" stroke-linecap="round"/></g>
+<g id="f5-flask_full"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f5-bottle-interior)">
+    <path d="M24 55 Q43 50 64 55 T104 55 V116 H24 Z" fill="#b26bff" filter="url(#f5-soft-glow)"/>
+    <path d="M30 55 Q47 51 64 55 T99 55" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+
+<filter id="f5-pool-glow" x="-30%" y="-45%" width="160%" height="190%" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="blur"/><feFlood flood-color="#8a2be2" flood-opacity=".65"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<marker id="f5-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#b26bff" stroke-width="1.5"/></marker>
+<pattern id="f5-floor" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="#393142"/></pattern>
+</defs>
+<rect width="480" height="320" fill="#17131f"/><rect width="480" height="320" fill="url(#f5-floor)"/>
+<rect x="12" y="12" width="456" height="296" rx="18" fill="none" stroke="#352c40" stroke-width="1.5"/>
+<g transform="translate(189 205) scale(1.05)"><path d="M-65 -8 C-77 -31 -40 -40 -18 -34 C1 -49 24 -31 40 -27 C69 -28 84 -2 60 14 C56 39 20 34 2 31 C-25 45 -39 26 -57 27 C-81 26 -86 5 -65 -8 Z" fill="#b26bff" fill-opacity=".68" stroke="#b26bff" stroke-width="2" filter="url(#f5-pool-glow)"/><path d="M-49 -15 Q-29 -27 -13 -22 M29 19 L43 16" fill="none" stroke="#e4baff" stroke-opacity=".7" stroke-width="3" stroke-linecap="round"/></g><g transform="translate(281 161) rotate(55) scale(1.1)"><use href="#f5-npc_worried" x="-64" y="-64"/></g><circle cx="253" cy="189" r="14" fill="none" stroke="#ffd166" stroke-width="2"/><path d="M250 175 L249 161 M266 186 L278 181" stroke="#ffd166" stroke-width="2"/><path d="M310 137 Q335 124 351 104" fill="none" stroke="#ffd166" stroke-width="2.5" stroke-linecap="round" marker-end="url(#f5-arrow)"/><path d="M255 106 l-7 -8 M281 100 l1 -10" stroke="#ffd166" stroke-width="2" stroke-linecap="round"/></svg>
+<figcaption><h3>КОСНУТЬСЯ / ВСТРЕВОЖЕН</h3><p>NPC пересекает край лужи: +40 страха. Из спокойного становится жёлтым и отшатывается; порог тревоги — 30.</p><span class="metric">Страх 0 → 40 · контакт с жидкостью</span></figcaption></figure>
+<figure id="frame-06" data-frame="6">
+<div class="frame-head"><span class="num">06</span><h2>Паника · разбегание</h2></div>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-labelledby="f6-scene-6-title"><title id="f6-scene-6-title">Паника · разбегание</title><defs><filter id="f6-soft-glow" filterUnits="userSpaceOnUse" x="8" y="8" width="112" height="112" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+  <feFlood flood-color="#8a2be2" flood-opacity=".65"/>
+  <feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<clipPath id="f6-safe-cell"><rect x="8" y="8" width="112" height="112"/></clipPath>
+<clipPath id="f6-bottle-interior"><path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z"/></clipPath>
+<g id="f6-player"><g stroke="#e8e6f0" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M49 87 L47 104 M79 87 L81 104" stroke="#a6a3b5" stroke-width="12"/>
+  <path d="M44 58 Q32 63 30 79 M84 58 Q96 63 98 79" fill="none" stroke-width="11"/>
+  <path d="M42 60 Q42 49 64 49 Q86 49 86 60 L82 90 Q64 98 46 90 Z" fill="#e8e6f0" stroke-width="2"/>
+  <path d="M51 61 L53 87 M77 61 L75 87" stroke="#797286" stroke-width="4"/>
+  <ellipse cx="64" cy="41" rx="17" ry="18" fill="#e8e6f0" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 25 L64 19 L69 25" fill="#e8e6f0" stroke="none"/>
+  <path d="M57 72 L57 78 Q48 83 51 97 Q53 107 64 107 Q75 107 77 97 Q80 83 71 78 L71 72 Z" fill="#292235" stroke="#d7c7eb" stroke-width="2"/>
+  <path d="M52 92 Q64 88 76 92 L74 99 Q64 108 54 99 Z" fill="#b26bff" stroke="none" filter="url(#f6-soft-glow)"/>
+  <path d="M57 72 H71 M56 83 L55 90" fill="none" stroke-width="2"/>
+</g></g>
+<g id="f6-npc_calm"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M50 87 L48 103 M78 87 L80 103" stroke="#676c75" stroke-width="12"/>
+  <path d="M43 59 Q32 67 33 81 M85 59 Q96 67 95 81" fill="none" stroke="#9aa0a6" stroke-width="11"/>
+  <path d="M42 58 Q64 46 86 58 L82 89 Q64 98 46 89 Z" fill="#9aa0a6"/>
+  <path d="M48 60 Q64 54 80 60" stroke="#c4c8cd" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="40" rx="17" ry="18" fill="#9aa0a6" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 24 L64 18 L69 24" fill="#9aa0a6"/>
+</g></g>
+<g id="f6-npc_worried"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M52 88 L50 103 M76 88 L78 103" stroke="#ac833d" stroke-width="12"/>
+  <path d="M43 60 Q34 65 39 82 L47 77 M85 60 Q94 65 89 82 L81 77" fill="none" stroke="#ffd166" stroke-width="10"/>
+  <path d="M41 61 Q43 48 64 48 Q85 48 87 61 L81 91 Q64 99 47 91 Z" fill="#ffd166"/>
+  <path d="M48 65 Q64 56 80 65" stroke="#fff0b8" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="48" rx="18" ry="17" fill="#ffd166" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 33 L64 27 L69 33" fill="#ffd166"/>
+</g></g>
+<g id="f6-npc_panicking"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M51 87 L40 102 M77 87 L89 98" stroke="#ae424d" stroke-width="12"/>
+  <path d="M44 59 L26 48 L23 26 M84 59 L102 48 L105 26" fill="none" stroke="#ff5d5d" stroke-width="11"/>
+  <circle cx="23" cy="24" r="7" fill="#ff5d5d"/><circle cx="105" cy="24" r="7" fill="#ff5d5d"/>
+  <path d="M42 59 Q64 46 86 59 L82 88 Q64 97 46 88 Z" fill="#ff5d5d"/>
+  <path d="M49 61 Q64 54 79 61" stroke="#ffb0a5" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="39" rx="17" ry="18" fill="#ff5d5d" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 23 L64 17 L69 23" fill="#ff5d5d"/>
+</g></g>
+<g id="f6-flask_icon"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f6-bottle-interior)">
+    <path d="M24 81 Q43 76 64 81 T104 81 V116 H24 Z" fill="#b26bff" filter="url(#f6-soft-glow)"/>
+    <path d="M30 81 Q47 77 64 81 T99 81" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+<g id="f6-drop"><path d="M64 23 C60 37 40 57 40 77 A24 24 0 0 0 88 77 C88 57 68 37 64 23 Z" fill="#b26bff" filter="url(#f6-soft-glow)"/>
+<path d="M52 71 Q46 82 56 88" fill="none" stroke="#ead5ff" stroke-width="4" stroke-linecap="round"/></g>
+<g id="f6-flask_full"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f6-bottle-interior)">
+    <path d="M24 55 Q43 50 64 55 T104 55 V116 H24 Z" fill="#b26bff" filter="url(#f6-soft-glow)"/>
+    <path d="M30 55 Q47 51 64 55 T99 55" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+
+<filter id="f6-pool-glow" x="-30%" y="-45%" width="160%" height="190%" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="blur"/><feFlood flood-color="#8a2be2" flood-opacity=".65"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<marker id="f6-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#b26bff" stroke-width="1.5"/></marker>
+<pattern id="f6-floor" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="#393142"/></pattern>
+</defs>
+<rect width="480" height="320" fill="#17131f"/><rect width="480" height="320" fill="url(#f6-floor)"/>
+<rect x="12" y="12" width="456" height="296" rx="18" fill="none" stroke="#352c40" stroke-width="1.5"/>
+<g transform="translate(147 223) scale(0.9)"><path d="M-65 -8 C-77 -31 -40 -40 -18 -34 C1 -49 24 -31 40 -27 C69 -28 84 -2 60 14 C56 39 20 34 2 31 C-25 45 -39 26 -57 27 C-81 26 -86 5 -65 -8 Z" fill="#b26bff" fill-opacity=".68" stroke="#b26bff" stroke-width="2" filter="url(#f6-pool-glow)"/><path d="M-49 -15 Q-29 -27 -13 -22 M29 19 L43 16" fill="none" stroke="#e4baff" stroke-opacity=".7" stroke-width="3" stroke-linecap="round"/></g><g transform="translate(284 145) rotate(45) scale(1.1)"><use href="#f6-npc_panicking" x="-64" y="-64"/></g><path d="M204 217 L221 201 M220 231 L237 215" stroke="#ff5d5d" stroke-opacity=".5" stroke-width="3" stroke-linecap="round"/><path d="M330 103 L365 68" fill="none" stroke="#ff5d5d" stroke-width="2.5" stroke-linecap="round" marker-end="url(#f6-arrow)"/><path d="M231 86 L225 75 M251 76 L248 64 M320 216 L328 224" stroke="#ff5d5d" stroke-width="2" stroke-linecap="round"/></svg>
+<figcaption><h3>УБЕГАТЬ / ПАНИКА</h3><p>С 70 единиц NPC краснеет, поднимает руки и бежит от лужи, игрока и паникующих. Направление читается по позе и следам движения.</p><span class="metric">Порог 70 · скорость 60 → 160 px/с</span></figcaption></figure>
+<figure id="frame-07" data-frame="7">
+<div class="frame-head"><span class="num">07</span><h2>Заражение · каскад</h2></div>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-labelledby="f7-scene-7-title"><title id="f7-scene-7-title">Заражение · каскад</title><defs><filter id="f7-soft-glow" filterUnits="userSpaceOnUse" x="8" y="8" width="112" height="112" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+  <feFlood flood-color="#8a2be2" flood-opacity=".65"/>
+  <feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<clipPath id="f7-safe-cell"><rect x="8" y="8" width="112" height="112"/></clipPath>
+<clipPath id="f7-bottle-interior"><path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z"/></clipPath>
+<g id="f7-player"><g stroke="#e8e6f0" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M49 87 L47 104 M79 87 L81 104" stroke="#a6a3b5" stroke-width="12"/>
+  <path d="M44 58 Q32 63 30 79 M84 58 Q96 63 98 79" fill="none" stroke-width="11"/>
+  <path d="M42 60 Q42 49 64 49 Q86 49 86 60 L82 90 Q64 98 46 90 Z" fill="#e8e6f0" stroke-width="2"/>
+  <path d="M51 61 L53 87 M77 61 L75 87" stroke="#797286" stroke-width="4"/>
+  <ellipse cx="64" cy="41" rx="17" ry="18" fill="#e8e6f0" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 25 L64 19 L69 25" fill="#e8e6f0" stroke="none"/>
+  <path d="M57 72 L57 78 Q48 83 51 97 Q53 107 64 107 Q75 107 77 97 Q80 83 71 78 L71 72 Z" fill="#292235" stroke="#d7c7eb" stroke-width="2"/>
+  <path d="M52 92 Q64 88 76 92 L74 99 Q64 108 54 99 Z" fill="#b26bff" stroke="none" filter="url(#f7-soft-glow)"/>
+  <path d="M57 72 H71 M56 83 L55 90" fill="none" stroke-width="2"/>
+</g></g>
+<g id="f7-npc_calm"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M50 87 L48 103 M78 87 L80 103" stroke="#676c75" stroke-width="12"/>
+  <path d="M43 59 Q32 67 33 81 M85 59 Q96 67 95 81" fill="none" stroke="#9aa0a6" stroke-width="11"/>
+  <path d="M42 58 Q64 46 86 58 L82 89 Q64 98 46 89 Z" fill="#9aa0a6"/>
+  <path d="M48 60 Q64 54 80 60" stroke="#c4c8cd" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="40" rx="17" ry="18" fill="#9aa0a6" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 24 L64 18 L69 24" fill="#9aa0a6"/>
+</g></g>
+<g id="f7-npc_worried"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M52 88 L50 103 M76 88 L78 103" stroke="#ac833d" stroke-width="12"/>
+  <path d="M43 60 Q34 65 39 82 L47 77 M85 60 Q94 65 89 82 L81 77" fill="none" stroke="#ffd166" stroke-width="10"/>
+  <path d="M41 61 Q43 48 64 48 Q85 48 87 61 L81 91 Q64 99 47 91 Z" fill="#ffd166"/>
+  <path d="M48 65 Q64 56 80 65" stroke="#fff0b8" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="48" rx="18" ry="17" fill="#ffd166" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 33 L64 27 L69 33" fill="#ffd166"/>
+</g></g>
+<g id="f7-npc_panicking"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M51 87 L40 102 M77 87 L89 98" stroke="#ae424d" stroke-width="12"/>
+  <path d="M44 59 L26 48 L23 26 M84 59 L102 48 L105 26" fill="none" stroke="#ff5d5d" stroke-width="11"/>
+  <circle cx="23" cy="24" r="7" fill="#ff5d5d"/><circle cx="105" cy="24" r="7" fill="#ff5d5d"/>
+  <path d="M42 59 Q64 46 86 59 L82 88 Q64 97 46 88 Z" fill="#ff5d5d"/>
+  <path d="M49 61 Q64 54 79 61" stroke="#ffb0a5" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="39" rx="17" ry="18" fill="#ff5d5d" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 23 L64 17 L69 23" fill="#ff5d5d"/>
+</g></g>
+<g id="f7-flask_icon"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f7-bottle-interior)">
+    <path d="M24 81 Q43 76 64 81 T104 81 V116 H24 Z" fill="#b26bff" filter="url(#f7-soft-glow)"/>
+    <path d="M30 81 Q47 77 64 81 T99 81" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+<g id="f7-drop"><path d="M64 23 C60 37 40 57 40 77 A24 24 0 0 0 88 77 C88 57 68 37 64 23 Z" fill="#b26bff" filter="url(#f7-soft-glow)"/>
+<path d="M52 71 Q46 82 56 88" fill="none" stroke="#ead5ff" stroke-width="4" stroke-linecap="round"/></g>
+<g id="f7-flask_full"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f7-bottle-interior)">
+    <path d="M24 55 Q43 50 64 55 T104 55 V116 H24 Z" fill="#b26bff" filter="url(#f7-soft-glow)"/>
+    <path d="M30 55 Q47 51 64 55 T99 55" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+
+<filter id="f7-pool-glow" x="-30%" y="-45%" width="160%" height="190%" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="blur"/><feFlood flood-color="#8a2be2" flood-opacity=".65"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<marker id="f7-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#b26bff" stroke-width="1.5"/></marker>
+<pattern id="f7-floor" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="#393142"/></pattern>
+</defs>
+<rect width="480" height="320" fill="#17131f"/><rect width="480" height="320" fill="url(#f7-floor)"/>
+<rect x="12" y="12" width="456" height="296" rx="18" fill="none" stroke="#352c40" stroke-width="1.5"/>
+<circle cx="240" cy="160" r="90" fill="#ff5d5d" fill-opacity=".035" stroke="#ff5d5d" stroke-opacity=".22" stroke-dasharray="4 8"/><g transform="translate(240 160) rotate(0) scale(0.76)"><use href="#f7-npc_panicking" x="-64" y="-64"/></g><g transform="translate(157 134) rotate(-30) scale(0.76)"><use href="#f7-npc_worried" x="-64" y="-64"/></g><g transform="translate(316 206) rotate(130) scale(0.76)"><use href="#f7-npc_worried" x="-64" y="-64"/></g><path d="M217 137 Q188 84 164 103" fill="none" stroke="#b26bff" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="5 7" marker-end="url(#f7-arrow)"/><path d="M268 167 Q310 153 322 175" fill="none" stroke="#b26bff" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="5 7" marker-end="url(#f7-arrow)"/><path d="M126 126 l-4 -8 M132 114 l-7 -6 M343 200 l9 -3 M341 211 l10 2" stroke="#ffd166" stroke-width="2"/></svg>
+<figcaption><h3>ЗАРАЖЕНИЕ / КАСКАД P1</h3><p>Красный NPC в центре повышает страх двух соседей в радиусе 90 px: они желтеют. Пунктир показывает передачу между людьми, без лужи.</p><span class="metric">+20 ед/с · радиус 90 px</span></figcaption></figure>
+<figure id="frame-08" data-frame="8">
+<div class="frame-head"><span class="num">08</span><h2>Угасание · дренаж</h2></div>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-labelledby="f8-scene-8-title"><title id="f8-scene-8-title">Угасание · дренаж</title><defs><filter id="f8-soft-glow" filterUnits="userSpaceOnUse" x="8" y="8" width="112" height="112" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+  <feFlood flood-color="#8a2be2" flood-opacity=".65"/>
+  <feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<clipPath id="f8-safe-cell"><rect x="8" y="8" width="112" height="112"/></clipPath>
+<clipPath id="f8-bottle-interior"><path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z"/></clipPath>
+<g id="f8-player"><g stroke="#e8e6f0" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M49 87 L47 104 M79 87 L81 104" stroke="#a6a3b5" stroke-width="12"/>
+  <path d="M44 58 Q32 63 30 79 M84 58 Q96 63 98 79" fill="none" stroke-width="11"/>
+  <path d="M42 60 Q42 49 64 49 Q86 49 86 60 L82 90 Q64 98 46 90 Z" fill="#e8e6f0" stroke-width="2"/>
+  <path d="M51 61 L53 87 M77 61 L75 87" stroke="#797286" stroke-width="4"/>
+  <ellipse cx="64" cy="41" rx="17" ry="18" fill="#e8e6f0" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 25 L64 19 L69 25" fill="#e8e6f0" stroke="none"/>
+  <path d="M57 72 L57 78 Q48 83 51 97 Q53 107 64 107 Q75 107 77 97 Q80 83 71 78 L71 72 Z" fill="#292235" stroke="#d7c7eb" stroke-width="2"/>
+  <path d="M52 92 Q64 88 76 92 L74 99 Q64 108 54 99 Z" fill="#b26bff" stroke="none" filter="url(#f8-soft-glow)"/>
+  <path d="M57 72 H71 M56 83 L55 90" fill="none" stroke-width="2"/>
+</g></g>
+<g id="f8-npc_calm"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M50 87 L48 103 M78 87 L80 103" stroke="#676c75" stroke-width="12"/>
+  <path d="M43 59 Q32 67 33 81 M85 59 Q96 67 95 81" fill="none" stroke="#9aa0a6" stroke-width="11"/>
+  <path d="M42 58 Q64 46 86 58 L82 89 Q64 98 46 89 Z" fill="#9aa0a6"/>
+  <path d="M48 60 Q64 54 80 60" stroke="#c4c8cd" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="40" rx="17" ry="18" fill="#9aa0a6" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 24 L64 18 L69 24" fill="#9aa0a6"/>
+</g></g>
+<g id="f8-npc_worried"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M52 88 L50 103 M76 88 L78 103" stroke="#ac833d" stroke-width="12"/>
+  <path d="M43 60 Q34 65 39 82 L47 77 M85 60 Q94 65 89 82 L81 77" fill="none" stroke="#ffd166" stroke-width="10"/>
+  <path d="M41 61 Q43 48 64 48 Q85 48 87 61 L81 91 Q64 99 47 91 Z" fill="#ffd166"/>
+  <path d="M48 65 Q64 56 80 65" stroke="#fff0b8" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="48" rx="18" ry="17" fill="#ffd166" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 33 L64 27 L69 33" fill="#ffd166"/>
+</g></g>
+<g id="f8-npc_panicking"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M51 87 L40 102 M77 87 L89 98" stroke="#ae424d" stroke-width="12"/>
+  <path d="M44 59 L26 48 L23 26 M84 59 L102 48 L105 26" fill="none" stroke="#ff5d5d" stroke-width="11"/>
+  <circle cx="23" cy="24" r="7" fill="#ff5d5d"/><circle cx="105" cy="24" r="7" fill="#ff5d5d"/>
+  <path d="M42 59 Q64 46 86 59 L82 88 Q64 97 46 88 Z" fill="#ff5d5d"/>
+  <path d="M49 61 Q64 54 79 61" stroke="#ffb0a5" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="39" rx="17" ry="18" fill="#ff5d5d" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 23 L64 17 L69 23" fill="#ff5d5d"/>
+</g></g>
+<g id="f8-flask_icon"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f8-bottle-interior)">
+    <path d="M24 81 Q43 76 64 81 T104 81 V116 H24 Z" fill="#b26bff" filter="url(#f8-soft-glow)"/>
+    <path d="M30 81 Q47 77 64 81 T99 81" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+<g id="f8-drop"><path d="M64 23 C60 37 40 57 40 77 A24 24 0 0 0 88 77 C88 57 68 37 64 23 Z" fill="#b26bff" filter="url(#f8-soft-glow)"/>
+<path d="M52 71 Q46 82 56 88" fill="none" stroke="#ead5ff" stroke-width="4" stroke-linecap="round"/></g>
+<g id="f8-flask_full"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f8-bottle-interior)">
+    <path d="M24 55 Q43 50 64 55 T104 55 V116 H24 Z" fill="#b26bff" filter="url(#f8-soft-glow)"/>
+    <path d="M30 55 Q47 51 64 55 T99 55" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+
+<filter id="f8-pool-glow" x="-30%" y="-45%" width="160%" height="190%" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="blur"/><feFlood flood-color="#8a2be2" flood-opacity=".65"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<marker id="f8-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#b26bff" stroke-width="1.5"/></marker>
+<pattern id="f8-floor" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="#393142"/></pattern>
+</defs>
+<rect width="480" height="320" fill="#17131f"/><rect width="480" height="320" fill="url(#f8-floor)"/>
+<rect x="12" y="12" width="456" height="296" rx="18" fill="none" stroke="#352c40" stroke-width="1.5"/>
+<g transform="translate(211 207) scale(1.12)"><path d="M-65 -8 C-77 -31 -40 -40 -18 -34 C1 -49 24 -31 40 -27 C69 -28 84 -2 60 14 C56 39 20 34 2 31 C-25 45 -39 26 -57 27 C-81 26 -86 5 -65 -8 Z" fill="#b26bff" fill-opacity=".04" stroke="#b26bff" stroke-opacity=".5" stroke-width="2" stroke-dasharray="5 7"/><path d="M-34 4 Q-17 -5 2 2 M23 9 L37 6" stroke="#b26bff" stroke-opacity=".25" stroke-width="3" stroke-linecap="round"/></g><g transform="translate(350 117) rotate(58) scale(0.9)"><use href="#f8-npc_calm" x="-64" y="-64"/></g><path d="M172 176 Q167 167 173 158 M219 167 Q225 157 219 150 M253 184 Q247 175 254 169" fill="none" stroke="#b26bff" stroke-opacity=".45" stroke-width="2" stroke-linecap="round"/><circle cx="174" cy="148" r="2" fill="#b26bff" opacity=".3"/><circle cx="219" cy="140" r="1.5" fill="#b26bff" opacity=".2"/><path d="M319 172 H372" stroke="#9aa0a6" stroke-opacity=".6" stroke-width="3" stroke-linecap="round"/></svg>
+<figcaption><h3>УГАСАНИЕ / ДРЕНАЖ N2 + N3</h3><p>Лужа теряет объём: остаются пунктирный контур и редкие следы испарения. NPC снова спокоен. Испарение не создаёт пугающего облака.</p><span class="metric">Лужа −6 ед/с · страх NPC −8 ед/с после пика</span></figcaption></figure>
+<figure id="frame-09" data-frame="9">
+<div class="frame-head"><span class="num">09</span><h2>Срыв · свой страх 100</h2></div>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-labelledby="f9-scene-9-title"><title id="f9-scene-9-title">Срыв · свой страх 100</title><defs><filter id="f9-soft-glow" filterUnits="userSpaceOnUse" x="8" y="8" width="112" height="112" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+  <feFlood flood-color="#8a2be2" flood-opacity=".65"/>
+  <feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<clipPath id="f9-safe-cell"><rect x="8" y="8" width="112" height="112"/></clipPath>
+<clipPath id="f9-bottle-interior"><path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z"/></clipPath>
+<g id="f9-player"><g stroke="#e8e6f0" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M49 87 L47 104 M79 87 L81 104" stroke="#a6a3b5" stroke-width="12"/>
+  <path d="M44 58 Q32 63 30 79 M84 58 Q96 63 98 79" fill="none" stroke-width="11"/>
+  <path d="M42 60 Q42 49 64 49 Q86 49 86 60 L82 90 Q64 98 46 90 Z" fill="#e8e6f0" stroke-width="2"/>
+  <path d="M51 61 L53 87 M77 61 L75 87" stroke="#797286" stroke-width="4"/>
+  <ellipse cx="64" cy="41" rx="17" ry="18" fill="#e8e6f0" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 25 L64 19 L69 25" fill="#e8e6f0" stroke="none"/>
+  <path d="M57 72 L57 78 Q48 83 51 97 Q53 107 64 107 Q75 107 77 97 Q80 83 71 78 L71 72 Z" fill="#292235" stroke="#d7c7eb" stroke-width="2"/>
+  <path d="M52 92 Q64 88 76 92 L74 99 Q64 108 54 99 Z" fill="#b26bff" stroke="none" filter="url(#f9-soft-glow)"/>
+  <path d="M57 72 H71 M56 83 L55 90" fill="none" stroke-width="2"/>
+</g></g>
+<g id="f9-npc_calm"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M50 87 L48 103 M78 87 L80 103" stroke="#676c75" stroke-width="12"/>
+  <path d="M43 59 Q32 67 33 81 M85 59 Q96 67 95 81" fill="none" stroke="#9aa0a6" stroke-width="11"/>
+  <path d="M42 58 Q64 46 86 58 L82 89 Q64 98 46 89 Z" fill="#9aa0a6"/>
+  <path d="M48 60 Q64 54 80 60" stroke="#c4c8cd" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="40" rx="17" ry="18" fill="#9aa0a6" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 24 L64 18 L69 24" fill="#9aa0a6"/>
+</g></g>
+<g id="f9-npc_worried"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M52 88 L50 103 M76 88 L78 103" stroke="#ac833d" stroke-width="12"/>
+  <path d="M43 60 Q34 65 39 82 L47 77 M85 60 Q94 65 89 82 L81 77" fill="none" stroke="#ffd166" stroke-width="10"/>
+  <path d="M41 61 Q43 48 64 48 Q85 48 87 61 L81 91 Q64 99 47 91 Z" fill="#ffd166"/>
+  <path d="M48 65 Q64 56 80 65" stroke="#fff0b8" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="48" rx="18" ry="17" fill="#ffd166" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 33 L64 27 L69 33" fill="#ffd166"/>
+</g></g>
+<g id="f9-npc_panicking"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M51 87 L40 102 M77 87 L89 98" stroke="#ae424d" stroke-width="12"/>
+  <path d="M44 59 L26 48 L23 26 M84 59 L102 48 L105 26" fill="none" stroke="#ff5d5d" stroke-width="11"/>
+  <circle cx="23" cy="24" r="7" fill="#ff5d5d"/><circle cx="105" cy="24" r="7" fill="#ff5d5d"/>
+  <path d="M42 59 Q64 46 86 59 L82 88 Q64 97 46 88 Z" fill="#ff5d5d"/>
+  <path d="M49 61 Q64 54 79 61" stroke="#ffb0a5" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="39" rx="17" ry="18" fill="#ff5d5d" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 23 L64 17 L69 23" fill="#ff5d5d"/>
+</g></g>
+<g id="f9-flask_icon"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f9-bottle-interior)">
+    <path d="M24 81 Q43 76 64 81 T104 81 V116 H24 Z" fill="#b26bff" filter="url(#f9-soft-glow)"/>
+    <path d="M30 81 Q47 77 64 81 T99 81" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+<g id="f9-drop"><path d="M64 23 C60 37 40 57 40 77 A24 24 0 0 0 88 77 C88 57 68 37 64 23 Z" fill="#b26bff" filter="url(#f9-soft-glow)"/>
+<path d="M52 71 Q46 82 56 88" fill="none" stroke="#ead5ff" stroke-width="4" stroke-linecap="round"/></g>
+<g id="f9-flask_full"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f9-bottle-interior)">
+    <path d="M24 55 Q43 50 64 55 T104 55 V116 H24 Z" fill="#b26bff" filter="url(#f9-soft-glow)"/>
+    <path d="M30 55 Q47 51 64 55 T99 55" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+
+<filter id="f9-pool-glow" x="-30%" y="-45%" width="160%" height="190%" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="blur"/><feFlood flood-color="#8a2be2" flood-opacity=".65"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<marker id="f9-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#b26bff" stroke-width="1.5"/></marker>
+<pattern id="f9-floor" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="#393142"/></pattern>
+</defs>
+<rect width="480" height="320" fill="#17131f"/><rect width="480" height="320" fill="url(#f9-floor)"/>
+<rect x="12" y="12" width="456" height="296" rx="18" fill="none" stroke="#352c40" stroke-width="1.5"/>
+<g transform="translate(238 203) scale(1.33)"><path d="M-65 -8 C-77 -31 -40 -40 -18 -34 C1 -49 24 -31 40 -27 C69 -28 84 -2 60 14 C56 39 20 34 2 31 C-25 45 -39 26 -57 27 C-81 26 -86 5 -65 -8 Z" fill="#b26bff" fill-opacity=".68" stroke="#b26bff" stroke-width="2" filter="url(#f9-pool-glow)"/><path d="M-49 -15 Q-29 -27 -13 -22 M29 19 L43 16" fill="none" stroke="#e4baff" stroke-opacity=".7" stroke-width="3" stroke-linecap="round"/></g><g transform="translate(238 159) rotate(0) scale(1.15)"><use href="#f9-player" x="-64" y="-64"/></g><path d="M224 172 L219 193 Q239 206 260 193 L255 172 Z" fill="#292235" stroke="#d7c7eb" stroke-width="2"/><g transform="translate(279 197) rotate(70) scale(.5) translate(-64 -64)"><path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#292235" stroke="#e8e6f0" stroke-width="3"/><path d="M51 23 H77 M42 78 L39 91" fill="none" stroke="#e8e6f0" stroke-width="3"/></g><path d="M291 185 Q300 205 280 215" fill="none" stroke="#b26bff" stroke-width="6" stroke-linecap="round"/><path d="M172 123 V180 M304 123 V160 M180 92 l-8 -8 M296 92 l8 -8" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/><rect x="130" y="48" width="216" height="8" rx="4" fill="#ff5d5d"/></svg>
+<figcaption><h3>СРЫВ / СВОЙ СТРАХ 100</h3><p>Игрок замирает на 3 с; колба автоматически выплёскивается под ним, свой страх падает до 70. Это наказание, партия продолжается.</p><span class="metric">100 → 70 · колба пуста · заморозка 3 с</span></figcaption></figure>
+<figure id="frame-10" data-frame="10">
+<div class="frame-head"><span class="num">10</span><h2>Цель · удержание паники</h2></div>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 320" role="img" aria-labelledby="f10-scene-10-title"><title id="f10-scene-10-title">Цель · удержание паники</title><defs><filter id="f10-soft-glow" filterUnits="userSpaceOnUse" x="8" y="8" width="112" height="112" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+  <feFlood flood-color="#8a2be2" flood-opacity=".65"/>
+  <feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<clipPath id="f10-safe-cell"><rect x="8" y="8" width="112" height="112"/></clipPath>
+<clipPath id="f10-bottle-interior"><path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z"/></clipPath>
+<g id="f10-player"><g stroke="#e8e6f0" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M49 87 L47 104 M79 87 L81 104" stroke="#a6a3b5" stroke-width="12"/>
+  <path d="M44 58 Q32 63 30 79 M84 58 Q96 63 98 79" fill="none" stroke-width="11"/>
+  <path d="M42 60 Q42 49 64 49 Q86 49 86 60 L82 90 Q64 98 46 90 Z" fill="#e8e6f0" stroke-width="2"/>
+  <path d="M51 61 L53 87 M77 61 L75 87" stroke="#797286" stroke-width="4"/>
+  <ellipse cx="64" cy="41" rx="17" ry="18" fill="#e8e6f0" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 25 L64 19 L69 25" fill="#e8e6f0" stroke="none"/>
+  <path d="M57 72 L57 78 Q48 83 51 97 Q53 107 64 107 Q75 107 77 97 Q80 83 71 78 L71 72 Z" fill="#292235" stroke="#d7c7eb" stroke-width="2"/>
+  <path d="M52 92 Q64 88 76 92 L74 99 Q64 108 54 99 Z" fill="#b26bff" stroke="none" filter="url(#f10-soft-glow)"/>
+  <path d="M57 72 H71 M56 83 L55 90" fill="none" stroke-width="2"/>
+</g></g>
+<g id="f10-npc_calm"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M50 87 L48 103 M78 87 L80 103" stroke="#676c75" stroke-width="12"/>
+  <path d="M43 59 Q32 67 33 81 M85 59 Q96 67 95 81" fill="none" stroke="#9aa0a6" stroke-width="11"/>
+  <path d="M42 58 Q64 46 86 58 L82 89 Q64 98 46 89 Z" fill="#9aa0a6"/>
+  <path d="M48 60 Q64 54 80 60" stroke="#c4c8cd" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="40" rx="17" ry="18" fill="#9aa0a6" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 24 L64 18 L69 24" fill="#9aa0a6"/>
+</g></g>
+<g id="f10-npc_worried"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M52 88 L50 103 M76 88 L78 103" stroke="#ac833d" stroke-width="12"/>
+  <path d="M43 60 Q34 65 39 82 L47 77 M85 60 Q94 65 89 82 L81 77" fill="none" stroke="#ffd166" stroke-width="10"/>
+  <path d="M41 61 Q43 48 64 48 Q85 48 87 61 L81 91 Q64 99 47 91 Z" fill="#ffd166"/>
+  <path d="M48 65 Q64 56 80 65" stroke="#fff0b8" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="48" rx="18" ry="17" fill="#ffd166" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 33 L64 27 L69 33" fill="#ffd166"/>
+</g></g>
+<g id="f10-npc_panicking"><g stroke-linecap="round" stroke-linejoin="round">
+  <path d="M51 87 L40 102 M77 87 L89 98" stroke="#ae424d" stroke-width="12"/>
+  <path d="M44 59 L26 48 L23 26 M84 59 L102 48 L105 26" fill="none" stroke="#ff5d5d" stroke-width="11"/>
+  <circle cx="23" cy="24" r="7" fill="#ff5d5d"/><circle cx="105" cy="24" r="7" fill="#ff5d5d"/>
+  <path d="M42 59 Q64 46 86 59 L82 88 Q64 97 46 88 Z" fill="#ff5d5d"/>
+  <path d="M49 61 Q64 54 79 61" stroke="#ffb0a5" stroke-width="3" fill="none"/>
+  <ellipse cx="64" cy="39" rx="17" ry="18" fill="#ff5d5d" stroke="#17131f" stroke-width="3"/>
+  <path d="M59 23 L64 17 L69 23" fill="#ff5d5d"/>
+</g></g>
+<g id="f10-flask_icon"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f10-bottle-interior)">
+    <path d="M24 81 Q43 76 64 81 T104 81 V116 H24 Z" fill="#b26bff" filter="url(#f10-soft-glow)"/>
+    <path d="M30 81 Q47 77 64 81 T99 81" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+<g id="f10-drop"><path d="M64 23 C60 37 40 57 40 77 A24 24 0 0 0 88 77 C88 57 68 37 64 23 Z" fill="#b26bff" filter="url(#f10-soft-glow)"/>
+<path d="M52 71 Q46 82 56 88" fill="none" stroke="#ead5ff" stroke-width="4" stroke-linecap="round"/></g>
+<g id="f10-flask_full"><g stroke-linejoin="round">
+  <path d="M51 23 H77 V45 L94 72 Q108 108 78 111 H50 Q20 108 34 72 L51 45 Z" fill="#e8e6f0" fill-opacity=".08" stroke="#e8e6f0" stroke-opacity=".85" stroke-width="3"/>
+  <g clip-path="url(#f10-bottle-interior)">
+    <path d="M24 55 Q43 50 64 55 T104 55 V116 H24 Z" fill="#b26bff" filter="url(#f10-soft-glow)"/>
+    <path d="M30 55 Q47 51 64 55 T99 55" fill="none" stroke="#dfb7ff" stroke-width="3"/>
+  </g>
+  <path d="M51 23 H77 M51 32 H77 M42 78 Q36 91 41 98" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/>
+  <path d="M49 18 H79 V25 H49 Z" fill="#797286"/>
+</g></g>
+
+<filter id="f10-pool-glow" x="-30%" y="-45%" width="160%" height="190%" color-interpolation-filters="sRGB">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="7" result="blur"/><feFlood flood-color="#8a2be2" flood-opacity=".65"/><feComposite in2="blur" operator="in"/><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<marker id="f10-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#b26bff" stroke-width="1.5"/></marker>
+<pattern id="f10-floor" width="40" height="40" patternUnits="userSpaceOnUse"><circle cx="20" cy="20" r="1" fill="#393142"/></pattern>
+</defs>
+<rect width="480" height="320" fill="#17131f"/><rect width="480" height="320" fill="url(#f10-floor)"/>
+<rect x="12" y="12" width="456" height="296" rx="18" fill="none" stroke="#352c40" stroke-width="1.5"/>
+<rect x="44" y="48" width="392" height="224" rx="20" fill="#211a2b" stroke="#453651"/><g transform="translate(68 91) rotate(0) scale(0.29)"><use href="#f10-npc_panicking" x="-64" y="-64"/></g><g transform="translate(106 91) rotate(0) scale(0.29)"><use href="#f10-npc_panicking" x="-64" y="-64"/></g><g transform="translate(144 91) rotate(0) scale(0.29)"><use href="#f10-npc_panicking" x="-64" y="-64"/></g><g transform="translate(182 91) rotate(0) scale(0.29)"><use href="#f10-npc_panicking" x="-64" y="-64"/></g><g transform="translate(220 91) rotate(0) scale(0.29)"><use href="#f10-npc_panicking" x="-64" y="-64"/></g><g transform="translate(258 91) rotate(0) scale(0.29)"><use href="#f10-npc_panicking" x="-64" y="-64"/></g><g transform="translate(296 91) rotate(0) scale(0.29)"><use href="#f10-npc_calm" x="-64" y="-64"/></g><g transform="translate(334 91) rotate(0) scale(0.29)"><use href="#f10-npc_calm" x="-64" y="-64"/></g><g transform="translate(372 91) rotate(0) scale(0.29)"><use href="#f10-npc_calm" x="-64" y="-64"/></g><g transform="translate(410 91) rotate(0) scale(0.29)"><use href="#f10-npc_calm" x="-64" y="-64"/></g><rect x="66" y="130" width="348" height="22" rx="11" fill="#100d16"/><path d="M77 130 H275 V152 H77 A11 11 0 0 1 77 130" fill="#ff5d5d"/><path d="M240 118 V164" stroke="#ffd166" stroke-width="2"/><path d="M235 116 H245 L240 122 Z" fill="#ffd166"/><circle cx="96" cy="216" r="25" fill="none" stroke="#b26bff" stroke-width="4"/><path d="M96 199 V216 L109 223" fill="none" stroke="#e8e6f0" stroke-width="3" stroke-linecap="round"/><rect x="146" y="207" width="266" height="16" rx="8" fill="#b26bff"/><path d="M164 232 V239 M226 232 V239 M288 232 V239 M350 232 V239 M412 232 V239" stroke="#74667f" stroke-width="2"/></svg>
+<figcaption><h3>УДЕРЖИВАТЬ / ЦЕЛЬ ПАРТИИ</h3><p>Индекс паники толпы: 60% — 6 из 10 NPC. Жёлтая линия — порог 50%. Стрик: 45 / 45 с; удержание должно покрыть последние 45 с партии.</p><span class="metric">Ниже 50% → сброс стрика · победа при завершении таймера</span><div class="hud-caption"><span>Индекс паники толпы <strong>60%</strong></span><span>Порог <strong>50%</strong></span><span>Стрик <strong>45 / 45 с</strong></span></div></figcaption></figure>
+</section>
+<footer><span>Вид сверху · плоские силуэты · свечение только у жидкости</span><span>Механика v1 · 10 состояний одной игры</span></footer>
+</main></body></html>
