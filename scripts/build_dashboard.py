@@ -44,10 +44,10 @@ def card(slug, name, pair, rule, question, has_proto, has_ref):
 
     links = []
     if has_proto:
-        links.append(f'<a class="play" href="/prototypes/{slug}/index.html">▶ ИГРАТЬ</a>')
+        links.append(f'<a class="play" href="prototypes/{slug}/index.html">▶ ИГРАТЬ</a>')
     if has_ref:
-        links.append(f'<a href="/mechanics/{slug}/reference.html">визреференс</a>')
-    links.append(f'<a href="/mechanics/{slug}/spec.md">спека</a>')
+        links.append(f'<a href="mechanics/{slug}/reference.html">визреференс</a>')
+    links.append(f'<a href="mechanics/{slug}/spec.md">спека</a>')
     links_html = "\n      ".join(links)
 
     proto_note = "" if has_proto else '<div class="note">прошёл фильтр, прототип ещё не собран</div>'
