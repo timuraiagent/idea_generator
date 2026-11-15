@@ -15,6 +15,11 @@
 
 Режимы:
   random   — случайные пары с гейтами (по образцу sample_pairs.py)
+  regions  — идея пользователя: две случайные точки-направления в пространстве,
+             около одной ищем СУЩЕСТВИТЕЛЬНОЕ, около другой ГЛАГОЛ; направления
+             пересэмплируются, пока области не разойдутся (cos < --region-sep),
+             существительное берётся ближайшее к своему направлению среди
+             проходящих гейтов. Итог: пары из ядер далёких семантических областей.
   validate — прогон классификатора архетипов по известным парам (сверка с вердиктами фильтра)
 
 Вывод: таблица + JSON (--out).
@@ -89,7 +94,11 @@ def cloud_cos(mat, vi, ni, k=30):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("model")
-    ap.add_argument("--mode", choices=["random", "validate"], default="random")
+    ap.add_argument("--mode", choices=["random", "regions", "validate"], default="random")
+    ap.add_argument("--region-sep", type=float, default=0.55,
+                    help="regions: минимальный угол между направлениями областей (cos < значения)")
+    ap.add_argument("--region-k", type=int, default=40,
+                    help="regions: сколько ближайших кандидатов к направлению перебирать")
     ap.add_argument("--n", type=int, default=12)
     ap.add_argument("--max-sim", type=float, default=MAX_SIM_DEFAULT,
                     help="№1: гейт близости (sim <= значения)")
@@ -134,34 +143,83 @@ def main():
 
     probe_index = {p: index[p] for arch, ps in ARCHETYPES.items() for p in ps if p in index}
     out, tries = [], 0
-    while len(out) < args.n and tries < args.n * 3000:
-        tries += 1
-        vi, ni = rng.choice(verbs), rng.choice(nouns)
-        wv, wn = words[vi], words[ni]
-        lem_v = wv.rsplit("_", 1)[0]
-        sim = float(mat[vi] @ mat[ni])
-        if sim > args.max_sim:                                   # №1 близость
-            continue
-        if stop_hit(lem_v):                                      # №2 стоп-лист
-            continue
-        if wv in used_v or wv.rsplit("_", 1)[0] in USED_VERBS:   # эмбарго глаголов
-            continue
-        if wn in used_n:                                         # эмбарго существительных
-            continue
-        arch, scores = classify_verb(mat[vi], index, mat)
-        if arch not in GOOD_ARCH and not args.no_arch_gate:      # №8: гейт архетипа
-            continue
-        fresh = max((float(mat[vi] @ mat[index[u]]) for u in used_v if u in index),
-                    default=-1.0)
-        if fresh > args.fresh_sim:                               # «старая ось»
-            continue
-        bridge = cloud_cos(mat, vi, ni)
-        out.append({"verb": wv, "noun": wn, "sim": round(sim, 3),
-                    "archetype": arch, "arch_scores": {k: round(v, 3) for k, v in scores.items()},
-                    "cloud_cos": round(bridge, 3),
-                    "old_axis": fresh > 0.25,
-                    "warnings": (["архетип " + arch] if arch not in GOOD_ARCH else []) +
-                                (["бытовая связь (риск буквальности №3)"] if bridge > 0.03 else [])})
+
+    if args.mode == "regions":
+        # идея пользователя: две случайные точки-направления; существительное
+        # «около» одной, глагол «около» другой. Точка = гауссов вектор, нормированный.
+        dir_rng = np.random.default_rng(args.seed)
+
+        def direction(exclude):
+            while True:
+                v = dir_rng.standard_normal(mat.shape[1])
+                v /= (np.linalg.norm(v) + 1e-9)
+                if all(float(v @ e) < args.region_sep for e in exclude):
+                    return v
+        directions = []
+        while len(out) < args.n and tries < args.n * 4000:
+            tries += 1
+            A = direction(directions)
+            B = direction(directions + [A])
+            # существительное около A, глагол около B — ближайшие проходящие гейты
+            nouns_near = [i for i in np.argsort(-(mat @ A)) if pos[i] == "NOUN"][: args.region_k * 3]
+            verbs_near = [i for i in np.argsort(-(mat @ B)) if pos[i] == "VERB"][: args.region_k * 3]
+            ni = next((i for i in nouns_near if words[i] not in used_n), None)
+            vi = next((i for i in verbs_near
+                       if words[i] not in used_v
+                       and words[i].rsplit("_", 1)[0] not in USED_VERBS
+                       and not stop_hit(words[i].rsplit("_", 1)[0])), None)
+            if ni is None or vi is None:
+                continue
+            sim = float(mat[vi] @ mat[ni])
+            if sim > args.max_sim:                                   # №1 между областями
+                continue
+            arch, scores = classify_verb(mat[vi], index, mat)
+            if arch not in GOOD_ARCH and not args.no_arch_gate:
+                continue
+            fresh = max((float(mat[vi] @ mat[index[u]]) for u in used_v if u in index),
+                        default=-1.0)
+            if fresh > args.fresh_sim:
+                continue
+            bridge = cloud_cos(mat, vi, ni)
+            out.append({"verb": words[vi], "noun": words[ni], "sim": round(sim, 3),
+                        "archetype": arch,
+                        "arch_scores": {k: round(v, 3) for k, v in scores.items()},
+                        "cloud_cos": round(bridge, 3),
+                        "old_axis": fresh > 0.25,
+                        "region_a": words[int(np.argmax(mat @ A))],
+                        "region_b": words[int(np.argmax(mat @ B))],
+                        "warnings": (["архетип " + arch] if arch not in GOOD_ARCH else []) +
+                                    (["бытовая связь (риск буквальности №3)"] if bridge > 0.03 else [])})
+            directions += [A, B]   # области заняты только успехом
+    else:
+        while len(out) < args.n and tries < args.n * 3000:
+            tries += 1
+            vi, ni = rng.choice(verbs), rng.choice(nouns)
+            wv, wn = words[vi], words[ni]
+            lem_v = wv.rsplit("_", 1)[0]
+            sim = float(mat[vi] @ mat[ni])
+            if sim > args.max_sim:                                   # №1 близость
+                continue
+            if stop_hit(lem_v):                                      # №2 стоп-лист
+                continue
+            if wv in used_v or wv.rsplit("_", 1)[0] in USED_VERBS:   # эмбарго глаголов
+                continue
+            if wn in used_n:                                         # эмбарго существительных
+                continue
+            arch, scores = classify_verb(mat[vi], index, mat)
+            if arch not in GOOD_ARCH and not args.no_arch_gate:      # №8: гейт архетипа
+                continue
+            fresh = max((float(mat[vi] @ mat[index[u]]) for u in used_v if u in index),
+                        default=-1.0)
+            if fresh > args.fresh_sim:                               # «старая ось»
+                continue
+            bridge = cloud_cos(mat, vi, ni)
+            out.append({"verb": wv, "noun": wn, "sim": round(sim, 3),
+                        "archetype": arch, "arch_scores": {k: round(v, 3) for k, v in scores.items()},
+                        "cloud_cos": round(bridge, 3),
+                        "old_axis": fresh > 0.25,
+                        "warnings": (["архетип " + arch] if arch not in GOOD_ARCH else []) +
+                                    (["бытовая связь (риск буквальности №3)"] if bridge > 0.03 else [])})
 
     out.sort(key=lambda p: p["sim"])
     for k, p in enumerate(out, 1):
