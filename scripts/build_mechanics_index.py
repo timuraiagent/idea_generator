@@ -28,7 +28,7 @@ SCORES = {
     "furniture": 10, "windrope": 9, "feedchain": 8, "merit": 7,
     "gaze": 16, "preposition": 16, "pathos": 16, "acid": 15, "closet": 15, "chip": 15, "settle": 15,
     "sharpen-evening": 15, "screen-rebuff": 15,
-    "soak-stage": 16, "deny-path": 16,
+    "soak-stage": 16, "deny-path": 16, "waft-credit": 16, "glorify-touch": 16,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
