@@ -35,7 +35,7 @@ const CONFIG = {
   ROOM:{x0:22, y0:190, x1:938, y1:626},
   DOOR:{cx:480, top:50, gap0:420, gap1:540},
   HERO_SPEED:180, HERO_R:16, REACH:90, CLAP_CD:0.35, DEAF_CD:1.0,
-  LAMP_TIME:5, HOLD:1.0, SPARK_TIME:0.45, STUN_TIME:3, CASCADE_MAX:3,
+  LAMP_TIME:5, HOLD:1.0, SPARK_TIME:0.45, STUN_TIME:3, COND_STUN:4, CASCADE_MAX:3,
   STEP:0.3,                  // один такт песенки; полоска = 8 тактов
   CAGE_W:124, CAGE_H:112,
 };
@@ -50,6 +50,10 @@ const LIDX = {R:0, Y:1, B:2};
 const DCOLORS = ['#ff8fc7','#c3a6ff','#ffb38a','#e3cfa4','#8fe3e0','#f2f0f7','#b8e986','#ffc6e0'];
 const BEATC = '#ff9a3c';      // цвет удара на полоске
 const STRING_DRUM = '#b26bff';
+const GROUPC = {A:'#b8e986', B:'#ff8fc7'};   // ленты групп оркестра
+const ROLL = 'xxxxxxxx';                     // сплошная дробь: паузы нет
+const PARTC = {1:'#7a62a8', 2:'#ff9a3c', 3:'#4fd1c5'}, PARTT = {1:'#e8e6f0', 2:'#ffb066', 3:'#7fe3d8'};
+const partOf = lv => lv.part3?3:(lv.part2?2:1);
 
 /* Уровни. links: 'R'/'Y'/'B' — зажечь лампочку, '-R' — погасить, число — индекс барабанщика (домино).
    a,b — концы маршрута (a==b — покачивается на месте), T — период маршрута, ph — стартовая фаза,
@@ -58,6 +62,7 @@ const STRING_DRUM = '#b26bff';
    solution — порядок для подсказки. */
 const D=(x,y,links,pat,o)=>Object.assign({a:[x,y],b:[x,y],T:4+((x+y)%7)/5,ph:((x*7+y)%10)/10,pat:pat||'x...x...',links},o||{});
 const W=(a,b,T,ph,links,pat)=>({a,b,T,ph,links,pat:pat||'x...x...'});
+const C=(x,y,grp,pat,o)=>Object.assign({a:[x,y],b:[x,y],T:5,ph:0,pat:pat||'x.x.x.x.',links:[],cond:grp||'A'},o||{});   // дирижёр
 const LEVELS = [
   // ---------- Часть 1: учимся (одна новая идея на уровень) ----------
   { name:{ru:'Хлопни!', en:'Clap!'}, par:1, hand:true, drown:false,
@@ -120,6 +125,32 @@ const LEVELS = [
     hero:[480,600], drummers:[ W([220,262],[700,262],9,0,['R','-Y'],'xx..xx..'), D(140,320,[5],'x...x...'), D(330,520,['B',6],'xxx.....'),
                                D(480,420,['R','Y','B',7],'x.x.x.x.'), D(630,520,['Y'],'xx..xx..'),
                                D(150,480,['Y','-B'],'x...x...',{caged:true}), D(810,470,['-R'],'x...x...',{caged:true}), D(810,300,['-B'],'x...x...',{caged:true}) ] },
+  // ---------- Часть 3: оркестр (дирижёр: сбит — его оркестр молчит) ----------
+  { name:{ru:'Дирижёр', en:'The conductor'}, part3:true, par:2, drown:true,
+    tip:{ru:'У этого барабанщика сплошная дробь — паузы нет! Сбей ДИРИЖЁРА: оркестр замолчит на 4 секунды — успей.',
+         en:'This drummer plays a nonstop roll — no pause! Knock the CONDUCTOR: the orchestra falls silent for 4 seconds — hurry.'},
+    hero:[480,600], drummers:[ C(300,330,'A','x.x.x.x.'), D(650,390,['R','Y','B'],ROLL) ] },
+  { name:{ru:'Четыре секунды', en:'Four seconds'}, part3:true, par:4, drown:true,
+    tip:{ru:'Трое со сплошной дробью. Тишина длится 4 секунды — продумай маршрут заранее!',
+         en:'Three nonstop rolls. Silence lasts 4 seconds — plan your route first!'},
+    hero:[480,600], drummers:[ C(480,300,'A','xx..xx..'), D(300,470,['R'],ROLL), D(480,530,['Y'],ROLL), D(660,470,['B'],ROLL) ] },
+  { name:{ru:'Дирижёр в клетке', en:'Caged conductor'}, part3:true, budget:3, drown:true, solution:[1,2,3],
+    tip:{ru:'До дирижёра не дойти. Но искра по ниточке тоже его сбивает!',
+         en:'You cannot reach the conductor. But a spark along a string knocks him too!'},
+    hero:[480,600], drummers:[ C(480,300,'A','x.x.x.x.',{caged:true}), D(250,470,[0,'R'],'x...x...'), D(620,470,['Y'],ROLL),
+                               D(770,320,['B'],ROLL), D(800,560,['Y','-R'],'xx..xx..') ] },
+  { name:{ru:'Две группы', en:'Two sections'}, part3:true, budget:3, drown:true, solution:[1,5,6],
+    tip:{ru:'Два оркестра: у каждого своя лента. Дирижёр усмиряет только свою группу. Какую выбрать?',
+         en:'Two orchestras, each with its own ribbon. A conductor silences only his section. Which one?'},
+    hero:[480,600], drummers:[ C(200,300,'A','x.x.x.x.'), C(760,300,'B','xx..xx..'),
+                               D(120,470,['R'],ROLL,{grp:'A'}), D(270,540,['Y'],ROLL,{grp:'A'}), D(380,420,['B'],ROLL,{grp:'A'}),
+                               D(640,470,['B'],ROLL,{grp:'B'}), D(820,520,['R','Y'],ROLL,{grp:'B'}), D(520,560,['Y','-B'],'x...x...',{grp:'B'}) ] },
+  { name:{ru:'Оркестр', en:'The orchestra'}, part3:true, budget:3, drown:true, solution:[1,2,3],
+    tip:{ru:'Экзамен оркестра: дирижёр за решёткой, ходок с гасителем и ловушка. Сбить можно троих.',
+         en:'Orchestra exam: a caged conductor, a walker with an off-string and a trap. Knock three.'},
+    hero:[480,600], drummers:[ C(480,290,'A','x.x.x.x.',{caged:true}), W([180,262],[380,262],8,0,[0,'-B'],'xx..xx..'),
+                               D(250,470,['R','Y'],ROLL), D(700,470,['B'],ROLL), D(480,450,['R','Y','B',5],'x...x...'),
+                               D(830,300,['-R'],'x...x...',{caged:true}) ] },
 ];
 
 /* ---------- тексты RU/EN ---------- */
@@ -130,7 +161,8 @@ const S = {
        step1:['Кликни на барабанщика —','подбежишь и хлопнешь'],
        step2:['Хлопай в ПАУЗУ: в удар','хлопок тонет в шуме'],
        step3:['Три лампочки горят ВМЕСТЕ —','дверь открыта!'],
-       play:'▶  ИГРАТЬ', level:'Уровень', of:'из', part1:'Учимся', part2:'Думаем',
+       play:'▶  ИГРАТЬ', level:'Уровень', of:'из', part1:'Учимся', part2:'Думаем', part3:'Оркестр',
+       toastSilence:'ТИШИНА! Оркестр молчит — хлопай кого хочешь!', silence:'тишина', together:'♪ снова вместе', conductor:'дирижёр', willHush:'замолчат',
        goal:'ЦЕЛЬ: 3 лампочки горят ВМЕСТЕ',
        claps:'Сбито', canDo:'можно за', budget:'Сбить можно', attempt:'попытка',
        got:'Понятно ▶', next:'Дальше ▶', again:'↺ Ещё раз', restart:'▶ Играть снова', hintBtn:'💡 Подсказка',
@@ -156,14 +188,16 @@ const S = {
        helpLines:['Полоска над барабанщиком — его песенка: оранжевый — удар, тёмный — пауза.',
                   'Хлопок в ПАУЗУ сбивает его. В удар — тонет, и на секунду закладывает уши.',
                   'Сплошная ниточка зажигает, пунктир с крестиком — гасит, фиолетовая — сбивает другого.',
-                  'В клетку не войти — достать можно только искрой. В части 2 сбивать можно ограниченно.'] },
+                  'В клетку не войти — достать можно только искрой. В части 2 сбивать можно ограниченно.',
+                  'Дирижёр: сбей его — его оркестр замолчит на 4 секунды, потом все начнут песенку вместе.'] },
   en:{ title:'LEITMOTIF',
        sub1:'Every drummer has his own little tune — a leitmotif.',
        sub2:'Break it with a clap in the pause — and the stumble runs along the strings!',
        step1:['Click a drummer —','you run up and clap'],
        step2:['Clap in the PAUSE: on a beat','your clap is drowned out'],
        step3:['All three lamps lit TOGETHER —','the door opens!'],
-       play:'▶  PLAY', level:'Level', of:'of', part1:'Learn', part2:'Think',
+       play:'▶  PLAY', level:'Level', of:'of', part1:'Learn', part2:'Think', part3:'Orchestra',
+       toastSilence:'SILENCE! The orchestra stops — clap anyone!', silence:'silence', together:'♪ together again', conductor:'conductor', willHush:'go quiet',
        goal:'GOAL: all 3 lamps lit TOGETHER',
        claps:'Knocked', canDo:'possible in', budget:'You may knock', attempt:'try',
        got:'Got it ▶', next:'Next ▶', again:'↺ Again', restart:'▶ Play again', hintBtn:'💡 Hint',
@@ -189,7 +223,8 @@ const S = {
        helpLines:['The strip above a drummer is his tune: orange — a beat, dark — a pause.',
                   'A clap in the PAUSE knocks him off. On a beat it drowns, and your ears ring for a second.',
                   'A solid string lights, a dashed one with a cross turns off, a purple one knocks another drummer.',
-                  'You cannot enter a cage — only a spark gets in. In part 2 knocks are limited.'] },
+                  'You cannot enter a cage — only a spark gets in. In part 2 knocks are limited.',
+                  'Conductor: knock him and his orchestra falls silent for 4 seconds, then all restart together.'] },
 };
 let LANG = 'ru';
 const navRu = (navigator.language||'ru').toLowerCase().startsWith('ru');
@@ -283,9 +318,10 @@ function loadLevel(n){
     n, lv, time:0, knocks:0, claps:0, drowned:0, chain:[], wave:0, open:false, openK:0, hold:0, done:false, failT:0,
     hero:{x:lv.hero[0], y:lv.hero[1], tx:null, ty:null, chase:-1, cd:0, deaf:0, clapT:0, lookX:0, lookY:-1, walk:0, moving:false},
     drummers: lv.drummers.map((d,i)=>({ ...d, i, clock:(d.ph||0)*d.T, x:d.a[0], y:d.a[1], stun:0, lastWave:-1,
-      hitT:0, alt:false, color:DCOLORS[i%DCOLORS.length], pattern:d.pat||'x...x...', kind:i })),
+      hitT:0, alt:false, color:DCOLORS[i%DCOLORS.length], pattern:d.pat||'x...x...', kind:d.cond?3:i, off:d.off||0, grp:d.grp||'A', wasStun:false })),
     cages:[], lamps:LAMPS.map(()=>({t:0, flash:0, off:0})),
-    sparks:[], fx:[], notes:[], glow:{}, toast:null, hl:null, lastMiss:-99, drownToasts:0, lastDeaf:-99,
+    sparks:[], fx:[], notes:[], glow:{}, toast:null, hl:null, lastMiss:-99, drownToasts:0, lastDeaf:-99, silenceToasts:0,
+    nCond:lv.drummers.filter(d=>d.cond).length,
     beatClock:0, step:0,
   };
   for(const d of G.drummers){
@@ -329,7 +365,9 @@ function cascadeTree(i){ // что зажжёт / погасит сбой бар
   }
   return {strings,lamps,offs};
 }
-const onBeat = d => d.stun<=0 && d.pattern[G.step]==='x';   // сейчас он бьёт в барабан
+const patIdx = d => (G.step+d.off)%8;                         // такт песенки этого барабанщика
+const silenced = d => !d.cond && G.drummers.some(c=>c.cond===d.grp && c.stun>0);   // его дирижёр сбит — оркестр молчит
+const onBeat = d => d.stun<=0 && !silenced(d) && d.pattern[patIdx(d)]==='x';       // сейчас он бьёт в барабан
 const budgetLeft = () => G.lv.budget ? G.lv.budget-G.knocks : Infinity;
 
 /* ---------- действия ---------- */
@@ -356,7 +394,11 @@ function doClap(d){
   return true;
 }
 function stunDrummer(d,wave,depth){
-  d.stun=CONFIG.STUN_TIME;
+  if(d.cond && d.stun<=0){                  // дирижёр сбит — его оркестр замолкает
+    G.fx.push({type:'ring', x:d.x, y:d.y-4, r:30, vr:420, life:0.9, max:0.9, color:GROUPC[d.cond]});
+    if(G.silenceToasts<2){ G.silenceToasts++; toast(t('toastSilence'),GROUPC[d.cond],2.6); }
+  }
+  d.stun=d.cond?CONFIG.COND_STUN:CONFIG.STUN_TIME;
   SFX.stumble(depth===0?1:0.6);
   G.fx.push({type:'ring', x:d.x, y:d.y-4, r:18, vr:180, life:0.5, max:0.5, color:depth===0?'#ffffff':STRING_DRUM});
   if(d.lastWave===wave) return;             // одна передача на волну
@@ -390,7 +432,7 @@ function openDoor(){
   }
 }
 function starsFor(){
-  if(G.lv.part2){ if(HINT[G.n]) return 1; const tr=TRIES[G.n]; return tr<=1?3:(tr<=3?2:1); }
+  if(G.lv.budget){ if(HINT[G.n]) return 1; const tr=TRIES[G.n]; return tr<=1?3:(tr<=3?2:1); }
   const par=G.lv.par; return G.knocks<=par?3:(G.knocks<=par+1?2:1);
 }
 function logAttempt(result){
@@ -500,6 +542,11 @@ function update(dt){
 
   for(const d of G.drummers){
     if(d.stun>0) d.stun=Math.max(0,d.stun-dt); else d.clock+=dt;
+    if(d.cond && d.wasStun && d.stun<=0){    // дирижёр очнулся — его оркестр начинает песенку заново, все вместе
+      for(const m of G.drummers) if(m===d || (!m.cond && m.grp===d.cond)){ m.off=(8-G.step)%8; }
+      G.fx.push({type:'txt', x:d.x, y:d.y-70, s:t('together'), color:GROUPC[d.cond], size:18, life:1.2, max:1.2});
+    }
+    d.wasStun=d.stun>0;
     const p=routePos(d); d.x=p.x; d.y=p.y;
     d.hitT=Math.max(0,d.hitT-dt);
   }
@@ -508,7 +555,7 @@ function update(dt){
   const step=Math.floor(G.beatClock/CONFIG.STEP)%8;
   if(step!==G.step){
     G.step=step;
-    for(const d of G.drummers) if(d.stun<=0 && d.pattern[step]==='x'){
+    for(const d of G.drummers) if(d.stun<=0 && !silenced(d) && d.pattern[patIdx(d)]==='x'){
       d.hitT=CONFIG.STEP*0.9; d.alt=!d.alt;
       if(Math.random()<0.6) G.notes.push({x:d.x+(d.alt?22:-22), y:d.y-30, vx:(Math.random()-0.5)*20, vy:-40, life:1, color:d.color, ch:Math.random()<0.5?'♪':'♫'});
       const v=0.11*clamp(1-(dist(d,G.hero)-140)/360,0,1);
@@ -678,9 +725,13 @@ function drawDoor(cx,top,openK,lampStates,k,hold){
   LAMPS.forEach((l,i)=>drawLamp(l.x-480,34,l.color,lampStates[i]));
   ctx.restore();
 }
-function drawStrip(x,y,pattern,step,big,scaffold){ // песенка: 8 тактов над головой
+function drawStrip(x,y,pattern,step,big,scaffold,hush){ // песенка: 8 тактов над головой; hush — оркестр молчит
   const n=8, cw=big?10:7, gap=2, w=n*cw+(n-1)*gap, x0=x-w/2, yy=y-(big?66:60);
   ctx.fillStyle='rgba(13,10,18,.55)'; rr(x0-4,yy-4,w+8,cw+8,4); ctx.fill();
+  if(hush){
+    for(let i=0;i<n;i++){ ctx.fillStyle='rgba(94,224,122,.35)'; rr(x0+i*(cw+gap), yy, cw, cw, 2); ctx.fill(); }
+    text('🤫 '+t('silence'), x, yy-7, big?15:12, '#5ee07a', 'center', '900'); return;
+  }
   for(let i=0;i<n;i++){
     const on=pattern[i]==='x', cur=i===step;
     ctx.fillStyle = on ? (cur?'#ffffff':BEATC) : (cur?'#5ee07a':'rgba(255,255,255,.14)');
@@ -688,14 +739,47 @@ function drawStrip(x,y,pattern,step,big,scaffold){ // песенка: 8 такт
   }
   if(scaffold){ const on=pattern[step]==='x'; text(on?t('tum'):t('now'), x, yy-8, big?16:13, on?BEATC:'#5ee07a', 'center', '900'); }
 }
+function drawConductorBody(o){
+  const sash=GROUPC[o.cond]||'#b8e986';
+  ctx.fillStyle='#1d1828'; ctx.beginPath(); ctx.moveTo(-15,-6); ctx.lineTo(15,-6); ctx.lineTo(19,24); ctx.lineTo(4,18); ctx.lineTo(0,24); ctx.lineTo(-4,18); ctx.lineTo(-19,24); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#f2efe8'; ctx.beginPath(); ctx.moveTo(-6,-6); ctx.lineTo(6,-6); ctx.lineTo(0,10); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=sash; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(-13,-4); ctx.lineTo(13,18); ctx.stroke();
+  ctx.fillStyle=sash; ctx.beginPath(); ctx.moveTo(-6,-7); ctx.lineTo(0,-4); ctx.lineTo(6,-7); ctx.lineTo(6,-1); ctx.lineTo(0,-4); ctx.lineTo(-6,-1); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#f2d2b6'; circ(0,-19,12); ctx.fill();
+  ctx.fillStyle='#3a3050'; ctx.beginPath(); ctx.arc(0,-21,12.5,Math.PI*1.05,Math.PI*1.95); ctx.closePath(); ctx.fill();
+  if(o.stun){
+    ctx.strokeStyle='#2a2238'; ctx.lineWidth=2;
+    for(const ex of [-5,5]){ ctx.beginPath(); ctx.moveTo(ex-3,-22); ctx.lineTo(ex+3,-16); ctx.moveTo(ex+3,-22); ctx.lineTo(ex-3,-16); ctx.stroke(); }
+    ctx.strokeStyle='#f2efe8'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(10,28); ctx.lineTo(32,24); ctx.stroke();   // палочка упала
+  } else {
+    ctx.fillStyle='#2a2238'; for(const ex of [-5,5]){ circ(ex+(o.lookX||0)*1.2,-19,2.2); ctx.fill(); }
+    const down=o.hit>0, a=down?0.25:-0.9+0.15*Math.sin(now*3);
+    ctx.strokeStyle='#1d1828'; ctx.lineWidth=5; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(12,0); ctx.lineTo(18,-6+(down?8:-4)); ctx.stroke();
+    ctx.strokeStyle='#f2efe8'; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(18,-6+(down?8:-4)); ctx.lineTo(18+Math.cos(a)*26,-6+(down?8:-4)+Math.sin(a)*26); ctx.stroke();
+    ctx.strokeStyle='#1d1828'; ctx.lineWidth=5; ctx.beginPath(); ctx.moveTo(-12,0); ctx.lineTo(-20,-10); ctx.stroke(); ctx.lineCap='butt';
+  }
+  text(t('conductor'),0,40,12,sash,'center','900');
+}
 function drawDrummer(x,y,o){
   ctx.save(); ctx.translate(x,y);
   ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(0,27,22,7,0,0,TAU); ctx.fill();
+  if(o.stun && o.cond && o.condLeft>0){ ctx.strokeStyle=GROUPC[o.cond]; ctx.lineWidth=5; ctx.beginPath(); ctx.arc(0,0,44,-Math.PI/2,-Math.PI/2+TAU*o.condLeft); ctx.stroke(); }
+  if(o.hushRing){ ctx.strokeStyle=o.hushRing; ctx.lineWidth=2.5; ctx.setLineDash([5,4]); circ(0,0,34); ctx.stroke(); ctx.setLineDash([]); }
   if(o.hitting && !o.stun){ ctx.fillStyle=hexA(BEATC,0.22); circ(0,14,30); ctx.fill(); }
   if(o.ring){ ctx.strokeStyle=o.ring; ctx.lineWidth=3; circ(0,0,36+3*Math.sin(now*7)); ctx.stroke(); }
+  if(o.cond){
+    drawConductorBody(o);
+    if(o.stun){ for(let k=0;k<3;k++){ const a=now*4+k*TAU/3; ctx.fillStyle='#ffd166'; starShape(Math.cos(a)*16,-38+Math.sin(a)*5,5); ctx.fill(); }
+      ctx.fillStyle='#ffffff'; rr(12,-62,30,22,8); ctx.fill(); text('?!',27,-45,16,'#8a2be2'); }
+    ctx.restore();
+    if(!o.stun && o.pattern && o.showStrip) drawStrip(x,y+8,o.pattern,o.step,o.big,o.scaffold,false);
+    if(o.hintN){ let xx=x, yy=y-88+Math.sin(now*5)*3; if(yy<CONFIG.ROOM.y0+14){ xx=x+44; yy=y-30; }
+      ctx.fillStyle='#b26bff'; circ(xx,yy,15); ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke(); text(String(o.hintN),xx,yy+6,17,'#ffffff'); }
+    return;
+  }
   ctx.fillStyle=o.color; circ(0,-4,19); ctx.fill(); ctx.strokeStyle='rgba(0,0,0,.28)'; ctx.lineWidth=2; ctx.stroke();
   ctx.fillStyle='#3a3050'; rr(-11,-39,22,16,3); ctx.fill();
-  ctx.fillStyle='#ffd166'; ctx.fillRect(-11,-28,22,3);
+  ctx.fillStyle=o.ribbon||'#ffd166'; ctx.fillRect(-11,o.ribbon?-31:-28,22,o.ribbon?7:3);
   ctx.fillStyle=o.color; circ(0,-42,4.5); ctx.fill();
   if(o.stun){
     ctx.strokeStyle='#2a2238'; ctx.lineWidth=2.2;
@@ -729,7 +813,7 @@ function drawDrummer(x,y,o){
     text('?!',29,-53,16,'#8a2be2');
   }
   ctx.restore();
-  if(!o.stun && o.pattern && o.showStrip) drawStrip(x,y,o.pattern,o.step,o.big,o.scaffold);
+  if(!o.stun && o.pattern && o.showStrip) drawStrip(x,y,o.pattern,o.step,o.big,o.scaffold&&!o.hush,o.hush);
   if(o.hintN){ let xx=x, yy=y-(o.showStrip?96:70)+Math.sin(now*5)*3; if(yy<CONFIG.ROOM.y0+14){ xx=x+44; yy=y-30; } // не залезать на стену
     ctx.fillStyle='#b26bff'; circ(xx,yy,15); ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke(); text(String(o.hintN),xx,yy+6,17,'#ffffff'); }
 }
@@ -846,10 +930,12 @@ function drawWorld(){
   // барабанщики и герой — по глубине
   const sol=HINT[G.n]&&G.lv.solution?G.lv.solution:null;
   const ents=G.drummers.map(d=>({y:d.y, f:()=>drawDrummer(d.x,d.y,{
-    color:d.color, stun:d.stun>0, hit:d.hitT, alt:d.alt, lookX:Math.sign(h.x-d.x), hitting:d.pattern[G.step]==='x'&&G.lv.drown,
+    color:d.color, stun:d.stun>0, hit:d.hitT, alt:d.alt, lookX:Math.sign(h.x-d.x), hitting:onBeat(d)&&G.lv.drown,
+    cond:d.cond, condLeft:d.cond?d.stun/CONFIG.COND_STUN:0, hush:silenced(d), ribbon:G.nCond>1&&!d.cond?GROUPC[d.grp]:null,
+    hushRing:hover&&hover.cond&&!d.cond&&d.grp===hover.cond?GROUPC[hover.cond]:null,
     lamps:d.links.filter(k=>typeof k==='string'&&!isOff(k)).map(k=>LAMPS[lampOf(k)].color),
     offs:d.links.filter(k=>isOff(k)).map(k=>LAMPS[lampOf(k)].color),
-    pattern:d.pattern, step:G.step, showStrip:G.lv.drown, big:inReach===d||hover===d, scaffold:G.lv.scaffold&&inReach===d,
+    pattern:d.pattern, step:patIdx(d), showStrip:G.lv.drown, big:inReach===d||hover===d, scaffold:G.lv.scaffold&&inReach===d,
     hintN:sol&&sol.includes(d.i)?sol.indexOf(d.i)+1:0,
     ring:(hover===d)?'#ffffff':(inReach===d?'rgba(94,224,122,.9)':(G.hero.chase===d.i?'rgba(255,255,255,.6)':null)) })}));
   ents.push({y:h.y, f:()=>drawHero(h.x,h.y,{lookX:h.lookX, lookY:h.lookY, clap:h.clapT, moving:h.moving, walk:h.walk, deaf:h.deaf})});
@@ -913,8 +999,8 @@ function button(label,cx,cy,w,h,act,primary,size){
 }
 function levelDot(i,x,y,r,cur){ // кружок уровня: номер, цвет части, звёзды
   const lv=LEVELS[i], best=BEST[i]||0;
-  ctx.fillStyle=cur?'#b26bff':(best?(lv.part2?'#c77b2c':'#3d3157'):'#241c31'); circ(x,y,r); ctx.fill();
-  ctx.strokeStyle=lv.part2?'#ff9a3c':'#7a62a8'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle=cur?'#b26bff':(best?hexA(PARTC[partOf(lv)],0.55):'#241c31'); circ(x,y,r); ctx.fill();
+  ctx.strokeStyle=PARTC[partOf(lv)]; ctx.lineWidth=2; ctx.stroke();
   text(String(i+1),x,y+r*0.38,r*1.05,'#e8e6f0');
   uiButtons.push({x:x-r,y:y-r,w:2*r,h:2*r,act:()=>goLevel(i)});
   return best;
@@ -925,9 +1011,9 @@ function drawTopBar(){
     const s=`${G.n+1}/${LEVELS.length}`;
     text(s,16,29,16,'#8f86a8','left'); ctx.font=`bold 16px ${FONT}`;
     const w=ctx.measureText(s).width;
-    text(L(G.lv.name),16+w+10,29,20,G.lv.part2?'#ffb066':'#e8e6f0','left');
+    text(L(G.lv.name),16+w+10,29,20,PARTT[partOf(G.lv)],'left');
     ctx.font=`bold 20px ${FONT}`; const w2=ctx.measureText(L(G.lv.name)).width;
-    for(let i=0;i<LEVELS.length;i++){ const x=16+w+10+w2+20+i*19+(LEVELS[i].part2?8:0); levelDot(i,x,22,8,i===G.n); }
+    for(let i=0;i<LEVELS.length;i++){ const x=16+w+10+w2+18+i*17+(partOf(LEVELS[i])-1)*7; levelDot(i,x,22,7,i===G.n); }
   } else text('idea_generator · '+(LANG==='ru'?'прототип механики':'mechanic prototype'),16,28,14,'#5b5372','left','normal');
   const bw=44, bh=34, y=5; let x=CONFIG.W-8-bw;
   const btns=[{l:'?', a:()=>{ if(mode==='help') mode=helpReturn; else openHelp(); }}, {l:muted?'🔇':'🔊', a:toggleMute}, {l:LANG==='ru'?'EN':'RU', a:toggleLang}];
@@ -960,11 +1046,12 @@ function drawSteps(top){ // три картинки «как играть» (с�
   });
 }
 function drawLevelRow(y){
-  const n1=LEVELS.filter(l=>!l.part2).length, sp=38, gapP=26, total=(LEVELS.length-1)*sp+gapP, x0=480-total/2;
-  text(t('part1'),x0+(n1-1)*sp/2,y-24,14,'#b2a9c1');
-  text(t('part2'),x0+n1*sp+gapP+(LEVELS.length-n1-1)*sp/2,y-24,14,'#ffb066');
+  const sp=36, gapP=22, total=(LEVELS.length-1)*sp+2*gapP, x0=480-total/2;
+  const xs=LEVELS.map((lv,i)=>x0+i*sp+(partOf(lv)-1)*gapP);
+  for(const pt of [1,2,3]){ const idx=LEVELS.map((lv,i)=>partOf(lv)===pt?i:-1).filter(i=>i>=0);
+    if(idx.length) text(t('part'+pt),(xs[idx[0]]+xs[idx[idx.length-1]])/2,y-24,14,PARTT[pt]); }
   LEVELS.forEach((lv,i)=>{
-    const x=x0+i*sp+(lv.part2?gapP:0), best=levelDot(i,x,y,15,false);
+    const x=xs[i], best=levelDot(i,x,y,15,false);
     for(let s=0;s<3;s++){ ctx.fillStyle=s<best?'#ffd166':'#3a3050'; starShape(x-9+s*9,y+24,4.2); ctx.fill(); }
   });
 }
@@ -978,9 +1065,9 @@ function drawStart(){
   drawLevelRow(536);
 }
 function drawIntro(){
-  const p2=G.lv.part2;
-  dim(); panel(160,236,640,300,p2?'#ff9a3c':null);
-  text(`${t('level')} ${G.n+1}`+(p2?` · ${t('part2')}`:''),480,280,18,p2?'#ffb066':'#8f86a8');
+  const pt=partOf(G.lv);
+  dim(); panel(160,236,640,300,pt>1?PARTC[pt]:null);
+  text(`${t('level')} ${G.n+1}`+(pt>1?` · ${t('part'+pt)}`:''),480,280,18,pt>1?PARTT[pt]:'#8f86a8');
   text(L(G.lv.name),480,326,42,'#e8e6f0','center','900');
   const tip=wrapLines(L(G.lv.tip),580,21);
   tip.slice(0,3).forEach((s,i)=>text(s,480,370+i*29,21,'#cfcbe0'));
@@ -995,7 +1082,7 @@ function drawDone(){
     drawStar(400+i*80,318,r,i<G.stars&&k>0);
   }
   let msg;
-  if(G.lv.part2){
+  if(G.lv.budget){
     text(`${t('claps')}: ${G.knocks} · ${t('attempt')} ${TRIES[G.n]}`,480,382,21,'#e8e6f0');
     msg=HINT[G.n]?t('withHint'):(TRIES[G.n]<=1?t('firstTry'):(TRIES[G.n]<=3?t('fewTries'):t('manyTries')));
   } else {
@@ -1020,24 +1107,24 @@ function drawFinal(){
   text(t('allDone'),480,112,32,'#e8e6f0','center','900');
   const total=RESULTS.reduce((s,r)=>s+(r?r.stars:0),0);
   text(`${t('stars')}: ${total} / ${LEVELS.length*3}`,480,148,21,'#ffd166');
-  const col=(i)=>i<7?0:1;
+  const half=Math.ceil(LEVELS.length/2);
   LEVELS.forEach((lv,i)=>{
-    const r=RESULTS[i], c=col(i), row=c?i-7:i, x=150+c*350, y=196+row*56;
-    text(`${i+1}. ${L(lv.name)}`,x,y,17,lv.part2?'#ffb066':'#e8e6f0','left');
-    const info=r?(lv.part2?`${t('attempt')} ${r.tries}${r.hint?' · 💡':''}`:`${r.knocks} (${t('min')} ${r.par})`):'—';
-    text(info,x,y+22,14,'#8f86a8','left','normal');
+    const r=RESULTS[i], c=i<half?0:1, row=c?i-half:i, x=150+c*350, y=182+row*44;
+    text(`${i+1}. ${L(lv.name)}`,x,y,16,PARTT[partOf(lv)],'left');
+    const info=r?(lv.budget?`${t('attempt')} ${r.tries}${r.hint?' · 💡':''}`:`${r.knocks} (${t('min')} ${r.par})`):'—';
+    text(info,x,y+18,13,'#8f86a8','left','normal');
     for(let s=0;s<3;s++) drawStar(x+250+s*24,y-6,9,r&&s<r.stars);
   });
-  button(t('restart'),480,586,280,52,startGame,true,22);
+  button(t('restart'),480,596,280,48,startGame,true,22);
 }
 function drawHelp(){
   dim(); panel(14,52,932,580);
   text(t('help'),480,92,30,'#e8e6f0','center','900');
   drawSteps(110);
   text(t('goal'),480,352,19,'#ffd166');
-  t('helpLines').forEach((s,i)=>text(s,480,384+i*27,16,'#cfcbe0','center','normal'));
-  text(isTouch?t('controlsTouch'):t('controls'),480,500,15,'#8f86a8','center','normal');
-  if(!isTouch) text(t('hover'),480,522,15,'#8f86a8','center','normal');
+  t('helpLines').forEach((s,i)=>text(s,480,380+i*25,15,'#cfcbe0','center','normal'));
+  text(isTouch?t('controlsTouch'):t('controls'),480,512,15,'#8f86a8','center','normal');
+  if(!isTouch) text(t('hover'),480,534,15,'#8f86a8','center','normal');
   button(t('got'),480,580,240,50,()=>{ mode=helpReturn; },true,22);
 }
 
@@ -1065,7 +1152,7 @@ function loop(ts){
 requestAnimationFrame(loop);
 
 // для автотестов в headless-браузере
-window.LEIT={ get G(){return G;}, get mode(){return mode;}, set mode(v){mode=v;}, loadLevel, goLevel, update, render, completeLevel, doClap, onBeat, LEVELS, CONFIG, TRIES, HINT, RESULTS:()=>RESULTS };
+window.LEIT={ get G(){return G;}, get mode(){return mode;}, set mode(v){mode=v;}, loadLevel, goLevel, update, render, completeLevel, doClap, onBeat, silenced, LEVELS, CONFIG, TRIES, HINT, RESULTS:()=>RESULTS };
 </script>
 </body>
 </html>
