@@ -21,7 +21,7 @@ SCORES = {
     "widen": 15, "captivate": 15, "cultivate": 15, "ignite": 15, "comedy": 15, "weave": 15,
     "queue": 15, "panic": 15,
     "farewell": 15, "tideland": 15, "echo": 16, "ferment": 15, "scar": 15,
-    "unseal": 15,
+    "unseal": 15, "distance": 15,
     "pursuit": 14, "cuckoo": 14,
     "promise": 13, "silence": 13, "pillar": 13, "starch": 13,
     "tilt": 13, "shadowswap": 12, "night": 12, "warmth": 12, "signature": 12,
