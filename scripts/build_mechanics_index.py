@@ -15,8 +15,9 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 SCORES = {
     "ladle": 16, "avert": 16, "acquaint": 16, "suppose": 16, "herald": 16, "charter": 16,
     "footsteps": 16,
+    "haunt": 16,
     "chronicle": 15, "infill": 15, "swarm": 15, "settle": 15,
-    "widen": 15, "captivate": 15, "cultivate": 15, "ignite": 15, "comedy": 15, "weave": 15,
+    "widen": 15, "captivate": 15, "cultivate": 15, "ignite": 15, "comedy": 15, "weave": 15, "tideland": 15, "echo": 16,
     "pursuit": 14, "cuckoo": 14,
     "promise": 13, "silence": 13, "pillar": 13, "starch": 13,
     "tilt": 13, "shadowswap": 12, "night": 12, "warmth": 12, "signature": 12,
