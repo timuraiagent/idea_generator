@@ -54,22 +54,24 @@ const TAU = Math.PI*2;
 const GREEN = '#5ee07a', RED = '#ff5d5d', BRASS = '#c9973f', WOOD = '#d9a066';
 // палки трёх видов: толстая держит дольше, тонкая — меньше; берутся из очереди слева направо
 const STICKS = { L:{life:10, w:14, color:'#b87f45'}, N:{life:6, w:9, color:WOOD}, S:{life:3, w:5, color:'#f0d9b5'} };
-const WORLDS = [ {ru:'Палка',en:'The stick',c:'#e9c46a'}, {ru:'Решётка',en:'The gate',c:'#aeb6c8'},
-                 {ru:'Шестерни',en:'Gears',c:'#ff9a3c'}, {ru:'Двойное колесо',en:'Double wheel',c:'#4fd1c5'},
-                 {ru:'Узкая дырка',en:'Narrow hole',c:'#6ab7ff'}, {ru:'Заслонка',en:'The shutter',c:'#ff7eb6'},
-                 {ru:'Жертва',en:'Sacrifice',c:'#b8e986'}, {ru:'Циферблат',en:'The dial',c:'#f4a261'},
-                 {ru:'Составное колесо',en:'Split wheel',c:'#c08bff'}, {ru:'Мастер',en:'Master',c:'#ff5d5d'} ];
+// Главы — ступени общей сложности (а не фичи): в каждой пять уровней, от передышки к пику.
+const WORLDS = [ {ru:'Ученик',en:'Apprentice',c:'#e9c46a'}, {ru:'Подмастерье',en:'Journeyman',c:'#aeb6c8'},
+                 {ru:'Механик',en:'Mechanic',c:'#ff9a3c'}, {ru:'Наладчик',en:'Fitter',c:'#4fd1c5'},
+                 {ru:'Мастер',en:'Master',c:'#6ab7ff'}, {ru:'Часовщик',en:'Clockmaker',c:'#ff7eb6'},
+                 {ru:'Инженер',en:'Engineer',c:'#b8e986'}, {ru:'Изобретатель',en:'Inventor',c:'#c08bff'},
+                 {ru:'Гроссмейстер',en:'Grandmaster',c:'#ff5d5d'} ];
+const DIALC = '#f4a261';
 const INNERC = '#d9845a';
 const NARROW = '#6ab7ff', KEYC = '#ff7eb6';
 
-/* Уровни. wheels: x,y,r — где и какого размера; holes — сколько дырок (0 — заклинить нельзя);
+/* Библиотека уровней (порядок показа задаёт ORDER ниже). wheels: x,y,r — где и какого размера; holes — сколько дырок (0 — заклинить нельзя);
    rps — оборотов в секунду; drv — индекс колеса, которое крутит это ремнём (нет — свой мотор);
    ham — x молота под колесом; gate — x решётки, которую колесо держит открытой.
    sticks — сколько палок; par — минимум; life — сколько держит палка; solution — порядок для подсказки.
    Миры 8–10: dial — циферблат (деление = 1 с, точность под стрелкой строже); sync:[i,c] — дырка приходит через c секунд после дырки колеса i;
    dbl+idrv — составное колесо: внутренний диск крутит колесо idrv (ioff — диск на столько секунд позже внешней дырки;
    isync — диск под стрелкой вместе с дыркой колеса idrv, idel — на столько секунд позже ближайшей). */
-const LEVELS = [
+const LEVEL_LIB = [
   { name:{ru:'Палка в колесо', en:'A stick in the wheel'}, sticks:5, par:1, scaffold:true, solution:[0],
     tip:{ru:'Мышонок боится молота. Ткни в колесо, когда дырка под зелёной стрелкой, — молот замрёт.',
          en:'The mouse fears the hammer. Tap the wheel when a hole is under the green arrow — the hammer freezes.'},
@@ -113,14 +115,14 @@ const LEVELS = [
     wheels:[ {x:480,y:168,r:38,holes:2,rps:.2}, {x:300,y:262,r:38,holes:2,rps:.24,drv:0}, {x:660,y:262,r:38,holes:2,rps:.24,drv:0},
              {x:200,y:375,r:38,holes:0,rps:.3,drv:1,ham:200}, {x:380,y:375,r:38,holes:0,rps:.27,drv:1,ham:380},
              {x:580,y:375,r:38,holes:1,rps:.3,drv:2,ham:580}, {x:770,y:375,r:38,holes:0,rps:.2,drv:2,gate:770} ] },
-  { name:{ru:'Экзамен', en:'Final exam'}, sticks:4, par:3, life:5, solution:[0,4,6],
+  { name:{ru:'Короткие палки', en:'Short sticks'}, sticks:4, par:3, life:5, solution:[0,4,6],
     tip:{ru:'Всё вместе: ремни, решётка, одна дырка и короткие палки. Сначала посмотри, потом тыкай.',
          en:'Everything at once: belts, a gate, single holes and short sticks. Look first, tap later.'},
     wheels:[ {x:255,y:195,r:44,holes:2,rps:.2}, {x:180,y:345,r:44,holes:0,rps:.3,drv:0,ham:180},
              {x:330,y:345,r:44,holes:0,rps:.26,drv:0,ham:330}, {x:570,y:195,r:44,holes:2,rps:.22},
              {x:500,y:345,r:44,holes:1,rps:.28,drv:3,ham:500}, {x:640,y:345,r:44,holes:0,rps:.2,drv:3,gate:640},
              {x:790,y:330,r:50,holes:1,rps:.3,ham:790} ] },
-  // ---------- мир 3: разные палки и шестерни ----------
+  // ---------- фича 3: разные палки и шестерни ----------
   { name:{ru:'Толстая и тонкая', en:'Thick and thin'}, sticks:3, queue:['L','S','S'], par:2, solution:[0,1],
     tip:{ru:'Палки разные: толстая держит 10 секунд, тонкая — всего 3. Берутся по очереди, слева направо.',
          en:'Sticks differ: a thick one holds 10 seconds, a thin one only 3. They are used in order, left to right.'},
@@ -139,13 +141,13 @@ const LEVELS = [
     wheels:[ {x:600,y:185,r:44,holes:0,rps:.2}, {x:508,y:185,r:40,holes:2,rps:.22,drv:0,mesh:true},
              {x:340,y:345,r:46,holes:2,rps:.26,drv:1,ham:340}, {x:520,y:345,r:46,holes:2,rps:.24,drv:1,ham:520},
              {x:740,y:345,r:46,holes:0,rps:.2,drv:0,gate:740} ] },
-  { name:{ru:'Экзамен 2', en:'Exam 2'}, sticks:4, queue:['N','S','L','N'], par:3, solution:[3,1,5],
+  { name:{ru:'Шестерни и три палки', en:'Gears and three sticks'}, sticks:4, queue:['N','S','L','N'], par:3, solution:[3,1,5],
     tip:{ru:'Шестерни, решётка и разные палки. Тонкую — туда, где мышонок пробежит сразу.',
          en:'Gears, a gate and different sticks. The thin one goes where the mouse passes right away.'},
     wheels:[ {x:190,y:300,r:54,holes:0,rps:.2,ham:190}, {x:298,y:300,r:46,holes:1,rps:.235,drv:0,mesh:true,ham:298},
              {x:610,y:185,r:44,holes:2,rps:.22}, {x:520,y:345,r:46,holes:2,rps:.26,drv:2,ham:520},
              {x:690,y:345,r:46,holes:0,rps:.2,drv:2,gate:690}, {x:830,y:320,r:50,holes:1,rps:.28,ham:830} ] },
-  // ---------- мир 4: двойное колесо ----------
+  // ---------- фича 4: двойное колесо ----------
   { name:{ru:'Двойное колесо', en:'Double wheel'}, sticks:4, par:1, scaffold:true, solution:[0],
     tip:{ru:'Тут два диска крутятся навстречу. Палка пройдёт, только когда ОБЕ дырки сойдутся под стрелкой.',
          en:'Two discs spin against each other. The stick goes in only when BOTH holes meet under the arrow.'},
@@ -165,14 +167,14 @@ const LEVELS = [
     tip:{ru:'Первая палка тонкая, а двойное колесо открывается редко. Что клинить первым?',
          en:'The first stick is thin, and the double wheel opens rarely. What do you jam first?'},
     wheels:[ {x:240,y:300,r:64,holes:1,rps:.25,dbl:.375,P:8,ham:240}, {x:740,y:310,r:54,holes:2,rps:.29,ham:740} ] },
-  { name:{ru:'Большой экзамен', en:'The big exam'}, sticks:4, queue:['L','S','N','N'], par:3, solution:[2,1,5],
+  { name:{ru:'Вся машина', en:'The whole machine'}, sticks:4, queue:['L','S','N','N'], par:3, solution:[2,1,5],
     tip:{ru:'Всё сразу. Сначала посмотри на всю машину и на очередь палок — и только потом тыкай.',
          en:'Everything at once. Look at the whole machine and at the stick queue first — and only then tap.'},
     wheels:[ {x:170,y:320,r:48,holes:0,rps:.2,ham:170}, {x:268,y:320,r:42,holes:2,rps:.229,drv:0,mesh:true,ham:268},
              {x:440,y:185,r:50,holes:1,rps:.25,dbl:.375,P:8}, {x:440,y:350,r:40,holes:0,rps:.28,drv:2,ham:440},
              {x:700,y:185,r:42,holes:2,rps:.22}, {x:610,y:350,r:40,holes:1,rps:.3,drv:4,ham:610},
              {x:770,y:350,r:40,holes:0,rps:.2,drv:4,gate:770} ] },
-  // ---------- мир 5: узкая дырка (запасных палок почти нет) ----------
+  // ---------- фича 5: узкая дырка (запасных палок почти нет) ----------
   { name:{ru:'Узкая дырка', en:'Narrow hole'}, sticks:3, queue:['N','S','N'], par:2, solution:[1,0],
     tip:{ru:'В узкую синюю дырку лезет только тонкая палка. Смотри, какая палка следующая!',
          en:'Only a thin stick fits a narrow blue hole. Check which stick is next!'},
@@ -193,13 +195,13 @@ const LEVELS = [
     wheels:[ {x:180,y:310,r:50,holes:0,rps:.2,ham:180}, {x:282,y:310,r:44,holes:2,rps:.227,drv:0,mesh:true,ham:282,narrow:true},
              {x:560,y:185,r:44,holes:2,rps:.22}, {x:480,y:345,r:44,holes:2,rps:.26,drv:2,ham:480},
              {x:640,y:345,r:44,holes:0,rps:.2,drv:2,gate:640}, {x:750,y:320,r:48,holes:2,rps:.26,ham:750,narrow:true} ] },
-  { name:{ru:'Экзамен 3', en:'Exam 3'}, sticks:3, queue:['L','S','N'], par:3, solution:[0,3,4],
+  { name:{ru:'Ни одной лишней', en:'None to spare'}, sticks:3, queue:['L','S','N'], par:3, solution:[0,3,4],
     tip:{ru:'Двойное колесо, узкая дырка и три разные палки. Ни одной лишней.',
          en:'A double wheel, a narrow hole and three different sticks. Not one to spare.'},
     wheels:[ {x:280,y:185,r:50,holes:1,rps:.25,dbl:.375,P:8}, {x:200,y:350,r:40,holes:0,rps:.3,drv:0,ham:200},
              {x:360,y:350,r:40,holes:0,rps:.26,drv:0,ham:360}, {x:540,y:320,r:48,holes:2,rps:.25,ham:540,narrow:true},
              {x:740,y:320,r:48,holes:3,rps:.25,ham:740} ] },
-  // ---------- мир 6: заслонка ----------
+  // ---------- фича 6: заслонка ----------
   { name:{ru:'Заслонка', en:'The shutter'}, sticks:3, par:2, solution:[0,1],
     tip:{ru:'Правое колесо закрыто заслонкой, пока крутится левое — к нему идёт цепь. Сначала останови левое.',
          en:'The right wheel is shuttered while the left one spins — the chain leads to it. Stop the left one first.'},
@@ -216,18 +218,18 @@ const LEVELS = [
              {x:280,y:350,r:42,holes:2,rps:.26,ham:280,lock:0}, {x:560,y:350,r:42,holes:0,rps:.2,drv:0,gate:560},
              {x:760,y:320,r:48,holes:1,rps:.28,ham:760} ] },
   { name:{ru:'В последний момент', en:'At the last moment'}, sticks:2, queue:['N','S'], par:2, solution:[1,2],
-    tip:{ru:'Знакомая машина, но палки наоборот. Тонкая должна дожить до сыра — вставь её в последний момент.',
-         en:'A familiar machine, but the sticks are swapped. The thin one must last till the cheese — put it in at the last moment.'},
+    tip:{ru:'Сначала обычная палка, потом тонкая. Тонкая должна дожить до сыра — вставь её в последний момент.',
+         en:'First a normal stick, then a thin one. The thin one must last till the cheese — put it in at the last moment.'},
     wheels:[ {x:440,y:185,r:44,holes:0,rps:.2}, {x:620,y:345,r:44,holes:2,rps:.22,drv:0,gate:620},
              {x:300,y:345,r:44,holes:2,rps:.26,drv:0,ham:300,lock:1} ] },
-  { name:{ru:'Последний экзамен', en:'The last exam'}, sticks:4, queue:['L','S','N','S'], par:4, solution:[2,5,6,1],
-    tip:{ru:'Всё, что было: шестерни, двойное колесо, узкая дырка, решётка и заслонка. Четыре палки, ни одной лишней.',
-         en:'Everything so far: gears, a double wheel, a narrow hole, a gate and a shutter. Four sticks, none to spare.'},
+  { name:{ru:'Большая машина', en:'The big machine'}, sticks:4, queue:['L','S','N','S'], par:4, solution:[2,5,6,1],
+    tip:{ru:'Всё сразу: шестерни, двойное колесо, узкая дырка, решётка и заслонка. Четыре палки, ни одной лишней.',
+         en:'Everything at once: gears, a double wheel, a narrow hole, a gate and a shutter. Four sticks, none to spare.'},
     wheels:[ {x:170,y:320,r:48,holes:0,rps:.2,ham:170}, {x:268,y:320,r:42,holes:2,rps:.229,drv:0,mesh:true,ham:268,narrow:true},
              {x:430,y:185,r:50,holes:1,rps:.25,dbl:.375,P:8}, {x:430,y:350,r:40,holes:0,rps:.28,drv:2,ham:430},
              {x:740,y:185,r:42,holes:0,rps:.2}, {x:652,y:185,r:38,holes:2,rps:.221,drv:4,mesh:true},
              {x:590,y:350,r:40,holes:2,rps:.27,ham:590,lock:4}, {x:790,y:350,r:40,holes:0,rps:.2,drv:4,gate:790} ] },
-  // ---------- мир 7: жертва (палка не на молот, а чтобы колесо отстало; в solution колесо повторяется, -1 — сломать палку) ----------
+  // ---------- фича 7: жертва (палка не на молот, а чтобы колесо отстало; в solution колесо повторяется, -1 — сломать палку) ----------
   { name:{ru:'Подожди!', en:'Wait for me!'}, sticks:4, queue:['S','S','S','S'], par:3, extra:1, solution:[1,0,1],
     tip:{ru:'Колёса крутятся ровно наоборот, а тонкая палка держит 3 секунды. Заклинь одно просто так — пусть подождёт.',
          en:'The wheels turn exactly opposite, and a thin stick holds 3 seconds. Jam one for nothing — let it wait.'},
@@ -251,7 +253,7 @@ const LEVELS = [
          en:'The narrow wheels are out of step: the far one is more than half a turn late. One must wait — but which? And where does the thick stick go?'},
     wheels:[ {x:220,y:310,r:52,holes:1,rps:.125,ham:220,narrow:true}, {x:450,y:320,r:50,holes:2,rps:.25,ham:450},
              {x:680,y:310,r:52,holes:1,rps:.125,ham:680,narrow:true,sync:[0,5.5]} ] },
-  // ---------- мир 8: циферблат (число у зубчика — через сколько секунд дырка под стрелкой; тонкая палка = 3 с) ----------
+  // ---------- фича 8: циферблат (число у зубчика — через сколько секунд дырка под стрелкой; тонкая палка = 3 с) ----------
   { name:{ru:'Циферблат', en:'The dial'}, dial:true, sticks:4, queue:['S','S','S','S'], par:3, extra:1, solution:[0,0,1],
     tip:{ru:'Число у белого зубчика — через сколько секунд дырка будет под стрелкой. Тонкая палка держит 3 секунды. Посчитай!',
          en:'The number at the white tooth is how many seconds until the hole is under the arrow. A thin stick holds 3 seconds. Count!'},
@@ -273,7 +275,7 @@ const LEVELS = [
     tip:{ru:'Круг за 8 секунд и круг за 12. Сами они не сойдутся никогда — проверь по числам. Кому ждать и на каком обороте?',
          en:'A turn in 8 seconds and a turn in 12. Left alone they never meet — check the numbers. Who waits, and on which turn?'},
     wheels:[ {x:420,y:320,r:58,holes:1,rps:.125,ham:420}, {x:700,y:320,r:62,holes:1,rps:1/12,ham:700,sync:[0,6.5]} ] },
-  // ---------- мир 9: составное колесо (внутренний диск крутит другое колесо медным ремнём: idrv) ----------
+  // ---------- фича 9: составное колесо (внутренний диск крутит другое колесо медным ремнём: idrv) ----------
   { name:{ru:'Составное колесо', en:'Split wheel'}, dial:true, sticks:3, queue:['S','S','S'], par:2, extra:1, solution:[1,0],
     tip:{ru:'Диск внутри большого колеса крутит маленькое — медным ремнём. Дырки диска и круга не сходятся. Заклинь маленькое — диск отстанет.',
          en:'The disc inside the big wheel is driven by the small one — through the copper belt. The holes of disc and ring never meet. Jam the small wheel — the disc falls behind.'},
@@ -297,15 +299,15 @@ const LEVELS = [
          en:'A shutter, a split wheel and a narrow hammer on the left. Sticks: 3, 6, 3, 3 seconds. One wheel comes too early — by how much?'},
     wheels:[ {x:690,y:320,r:62,holes:1,rps:.125,dbl:.125,idrv:1,isync:true,idel:4,sync:[1,8],ham:690,lock:1,narrow:true}, {x:450,y:200,r:42,holes:2,rps:.125},
              {x:230,y:330,r:52,holes:1,rps:.125,ham:230,narrow:true,sync:[1,4]} ] },
-  // ---------- мир 10: мастер ----------
+  // ---------- фича 10: мастер ----------
   { name:{ru:'Парад колёс', en:'Parade of wheels'}, dial:true, sticks:3, queue:['S','S','S'], par:3, solution:[0,1,2],
     tip:{ru:'Три колеса — три скорости: круг за 8, 6 и 12 секунд. Три тонкие палки. Парад бывает редко — смотри на числа и не спеши.',
          en:'Three wheels, three speeds: a turn in 8, 6 and 12 seconds. Three thin sticks. The parade is rare — watch the numbers and take your time.'},
     wheels:[ {x:220,y:320,r:52,holes:1,rps:.125,ham:220}, {x:450,y:320,r:52,holes:1,rps:1/6,ham:450,sync:[0,2.4]},
              {x:680,y:320,r:56,holes:1,rps:1/12,ham:680,sync:[0,8.9]} ] },
   { name:{ru:'Парад с жертвой', en:'Parade with a sacrifice'}, dial:true, sticks:4, queue:['S','S','S','S'], par:4, extra:1, solution:[1,0,1,2],
-    tip:{ru:'Те же три скорости, но парада не будет никогда: одно колесо всегда приходит на 3 секунды раньше. Четыре палки, лишней нет.',
-         en:'The same three speeds, but the parade never comes: one wheel is always 3 seconds early. Four sticks, none to spare.'},
+    tip:{ru:'Три скорости, как в «Параде колёс», но парада не будет никогда: одно колесо всегда приходит на 3 секунды раньше. Четыре палки, лишней нет.',
+         en:'Three speeds, as in “Parade of wheels”, but the parade never comes: one wheel is always 3 seconds early. Four sticks, none to spare.'},
     wheels:[ {x:220,y:320,r:52,holes:1,rps:.125,ham:220}, {x:450,y:320,r:52,holes:1,rps:1/6,ham:450,sync:[0,1.4]},
              {x:680,y:320,r:56,holes:1,rps:1/12,ham:680,sync:[0,4.9]} ] },
   { name:{ru:'Почини и дождись', en:'Fix it, then wait'}, dial:true, sticks:3, queue:['N','S','S'], par:3, extra:1, solution:[2,1,0],
@@ -324,6 +326,14 @@ const LEVELS = [
     wheels:[ {x:470,y:310,r:60,holes:1,rps:.125,dbl:.125,idrv:1,isync:true,sync:[1,5.6],ham:470,lock:1,narrow:true}, {x:720,y:200,r:44,holes:1,rps:.125},
              {x:810,y:360,r:34,holes:0,rps:.2,drv:1,gate:810}, {x:230,y:330,r:50,holes:1,rps:1/6,ham:230,narrow:true,sync:[1,3.2]} ] },
 ];
+/* Порядок уровней — по общей сложности, а не по фичам. Числа — номера уровней в LEVEL_LIB (с единицы; это же их id для
+   сохранённых звёзд). Вводный уровень фичи стоит перед первым уровнем, где она нужна; каждая пятёрка — глава:
+   начинается с передышки, кончается пиком. Индекс сложности и замеры — в mechanics/leitmotif-v2/spec.md.
+   Убраны как слишком лёгкие (проходятся «по зелёной стрелке», новой идеи не вводят): 2, 5, 12, 17, 19. */
+const ORDER = [  1,  3,  4,  6,  7,     13, 14,  8, 16, 18,     11,  9, 21, 22, 23,
+                26, 28, 27, 24, 10,     25, 20, 15, 31, 33,     36, 37, 35, 34, 32,
+                29, 30, 41, 44, 45,     38, 43, 49, 46, 42,     40, 48, 47, 39, 50 ];
+const LEVELS = ORDER.map(id=>Object.assign(LEVEL_LIB[id-1],{id}));
 
 /* ---------- тексты RU/EN ---------- */
 const S = {
@@ -333,7 +343,7 @@ const S = {
        step1:['Ткни в колесо, когда дырка','под зелёной стрелкой'],
        step2:['Палка заклинит колесо —','молот замрёт'],
        step3:['Всё стоит — мышонок','бежит за сыром'],
-       play:'▶  ИГРАТЬ', level:'Уровень', of:'из', world:'мир', nLevels:'уровней', nWorlds:'миров', goal:'ЦЕЛЬ: чтобы мышонок добежал до сыра',
+       play:'▶  ИГРАТЬ', level:'Уровень', of:'из', world:'глава', nLevels:'уровней', nWorlds:'глав', goal:'ЦЕЛЬ: чтобы мышонок добежал до сыра',
        sticks:'Палки', used:'Палок потрачено', canDo:'можно за', attempt:'попытка',
        got:'Понятно ▶', more:'Ещё правила ▶', next:'Дальше ▶', levels:'Уровни', back:'Назад', controlsT:'Одно действие: тапни по колесу', again:'↺ Ещё раз', restart:'▶ Играть снова', hintBtn:'💡 Подсказка',
        now:'СЕЙЧАС!', wait:'жди…', clack:'КЛАЦ!', ding:'ДЗЫНЬ!', crack:'ХРУСЬ!', bang:'БАМ',
@@ -375,7 +385,7 @@ const S = {
        step1:['Tap a wheel when a hole','is under the green arrow'],
        step2:['The stick jams the wheel —','the hammer freezes'],
        step3:['Everything stands still —','the mouse runs for the cheese'],
-       play:'▶  PLAY', level:'Level', of:'of', world:'world', nLevels:'levels', nWorlds:'worlds', goal:'GOAL: get the mouse to the cheese',
+       play:'▶  PLAY', level:'Level', of:'of', world:'chapter', nLevels:'levels', nWorlds:'chapters', goal:'GOAL: get the mouse to the cheese',
        sticks:'Sticks', used:'Sticks used', canDo:'possible with', attempt:'try',
        got:'Got it ▶', more:'More rules ▶', next:'Next ▶', levels:'Levels', back:'Back', controlsT:'One action: tap a wheel', again:'↺ Again', restart:'▶ Play again', hintBtn:'💡 Hint',
        now:'NOW!', wait:'wait…', clack:'CLACK!', ding:'DING!', crack:'SNAP!', bang:'BAM',
@@ -488,7 +498,9 @@ const SFX = {
 /* ---------- состояние ---------- */
 let mode='start', G=null, now=0, helpReturn='play', helpPage=0, levelsReturn='start';
 let RESULTS=[];
-let BEST=lsGet('sticks.best',[]);
+let BEST=lsGet('sticks.best2',null);       // звёзды по id уровня: порядок уровней может меняться
+if(!BEST||typeof BEST!=='object'||Array.isArray(BEST)){ BEST={}; const old=lsGet('sticks.best',[]); if(Array.isArray(old)) old.forEach((v,i)=>{ if(v) BEST[i+1]=v; }); }   // старое сохранение: по номеру
+const bestOf=i=>BEST[LEVELS[i].id]||0;
 const TRIES=[], HINT=[];
 const mouse={x:-99,y:-99,inside:false};
 let uiButtons=[];
@@ -596,7 +608,7 @@ function logAttempt(result){
 function winLevel(){
   G.done=true; G.stars=starsFor();
   RESULTS[G.n]={used:G.used, misses:G.misses, par:G.lv.par, stars:G.stars, seq:G.seq.join('→'), tries:TRIES[G.n], hint:!!HINT[G.n]};
-  if(!QUIET){ BEST[G.n]=Math.max(BEST[G.n]||0, G.stars); lsSet('sticks.best',BEST); SFX.win(); }
+  if(!QUIET){ BEST[G.lv.id]=Math.max(BEST[G.lv.id]||0, G.stars); lsSet('sticks.best2',BEST); SFX.win(); }
   logAttempt('победа');
   for(let k=0;k<40;k++){ const a=Math.random()*TAU, v=100+Math.random()*220;
     G.fx.push({type:'conf', x:CONFIG.CHEESE, y:CONFIG.FLOOR-30, vx:Math.cos(a)*v, vy:Math.sin(a)*v-120, color:['#ffd166',GREEN,'#4fc3f7','#ffffff'][k%4], life:1.4, max:1.4, rot:Math.random()*TAU}); }
@@ -737,7 +749,7 @@ function drawWheel(w,o){
     const n=Math.round(r/4.4); for(let k=0;k<n;k++){ ctx.save(); ctx.rotate(k*TAU/n); ctx.beginPath(); ctx.moveTo(-4.5,-r+2); ctx.lineTo(-3,-r-7); ctx.lineTo(3,-r-7); ctx.lineTo(4.5,-r+2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
     ctx.restore(); }
   ctx.fillStyle=solid?'#596174':'#b5842f'; circ(0,0,r); ctx.fill(); ctx.strokeStyle=solid?'#3d4352':'#6f5120'; ctx.lineWidth=4; ctx.stroke();
-  const dial=G&&G.lv.dial&&w.holes===1&&w.rps>0, dc=WORLDS[7].c;
+  const dial=G&&G.lv.dial&&w.holes===1&&w.rps>0, dc=DIALC;
   if(dial){ // число у дырки = через сколько секунд она придёт под стрелку
     const n=Math.round(1/w.rps), d=w.dir||1;
     for(let k=1;k<n;k++){ const a=-d*k*TAU/n, sx=Math.sin(a), cy=-Math.cos(a);
@@ -1049,9 +1061,9 @@ function drawSteps(top){ // три картинки «как играть»
 }
 function drawLevelRow(y){ // полоска миров: сколько уровней всего и сколько звёзд собрано; тап — к выбору уровня
   const nW=Math.ceil(LEVELS.length/5), cw=84, gap=6, x0=480-(nW*cw+(nW-1)*gap)/2;
-  const all=LEVELS.reduce((a,_,i)=>a+(BEST[i]||0),0);
+  const all=LEVELS.reduce((a,_,i)=>a+bestOf(i),0);
   text(`${LEVELS.length} ${t('nLevels')} · ${nW} ${t('nWorlds')} · ★ ${all}/${LEVELS.length*3}`,480,y-14,16,'#cfcbe0');
-  for(let wi=0;wi<nW;wi++){ const x=x0+wi*(cw+gap), a=wi*5, b=Math.min(LEVELS.length,a+5); let st=0; for(let i=a;i<b;i++) st+=BEST[i]||0;
+  for(let wi=0;wi<nW;wi++){ const x=x0+wi*(cw+gap), a=wi*5, b=Math.min(LEVELS.length,a+5); let st=0; for(let i=a;i<b;i++) st+=bestOf(i);
     ctx.fillStyle=st?hexA(WORLDS[wi].c,0.22):'#241c31'; rr(x,y,cw,50,9); ctx.fill(); ctx.strokeStyle=WORLDS[wi].c; ctx.lineWidth=2; ctx.stroke();
     text(`${a+1}–${b}`,x+cw/2,y+22,17,'#e8e6f0','center','900'); text(`★ ${st}/${(b-a)*3}`,x+cw/2,y+41,12,st?'#ffd166':'#8f86a8','center','normal');
     uiButtons.push({x,y,w:cw,h:50,act:openLevels}); }
@@ -1066,7 +1078,7 @@ function drawStart(){
   button('☰ '+t('levels'),672,isTouch?456:450,190,58,openLevels,false,22);
   drawLevelRow(isTouch?558:548);
 }
-function drawLevels(){ // выбор уровня крупными плитками: 10 миров в две колонки
+function drawLevels(){ // выбор уровня крупными плитками: главы в две колонки
   dim(); panel(20,50,920,582);
   text(`${t('levels')} · ${LEVELS.length}`,480,88,26,'#e8e6f0','center','900');
   const nW=Math.ceil(LEVELS.length/5), perCol=Math.ceil(nW/2), tw=80, th=62, gx=8;
@@ -1074,7 +1086,7 @@ function drawLevels(){ // выбор уровня крупными плитка�
     const col=wi<perCol?0:1, row=col?wi-perCol:wi, x0=44+col*452, y0=106+row*103;
     text(`${wi+1}. ${L(WORLDS[wi])}`,x0,y0+12,15,WORLDS[wi].c,'left');
     for(let k=0;k<5;k++){ const i=wi*5+k; if(i>=LEVELS.length) break;
-      const x=x0+k*(tw+gx), y=y0+20, best=BEST[i]||0, cur=G&&G.n===i;
+      const x=x0+k*(tw+gx), y=y0+20, best=bestOf(i), cur=G&&G.n===i;
       ctx.fillStyle=cur?'#3a3050':(best?hexA(WORLDS[wi].c,0.22):'#241c31'); rr(x,y,tw,th,10); ctx.fill();
       ctx.strokeStyle=cur?'#ffffff':WORLDS[wi].c; ctx.lineWidth=cur?3:2; ctx.stroke();
       text(String(i+1),x+tw/2,y+32,25,'#e8e6f0','center','900');
@@ -1170,7 +1182,7 @@ requestAnimationFrame(loop);
 
 // для автотестов в headless-браузере
 window.STK={ get G(){return G;}, set G(v){G=v;}, get mode(){return mode;}, set mode(v){mode=v;}, get quiet(){return QUIET;}, set quiet(v){QUIET=v;},
-  loadLevel, goLevel, update, render, tapWheel, canJam, fits, blockers, holeErr, holeErr2, tolOf, LEVELS, WORLDS, CONFIG, TRIES, HINT };
+  loadLevel, goLevel, update, render, tapWheel, canJam, fits, blockers, holeErr, holeErr2, tolOf, LEVELS, LEVEL_LIB, ORDER, WORLDS, CONFIG, TRIES, HINT };
 </script>
 </body>
 </html>
