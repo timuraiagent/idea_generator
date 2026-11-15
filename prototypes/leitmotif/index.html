@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-<title>Лейтмотив — читают ли игроки ниточки, или хлопают по всем подряд?</title>
+<title>Лейтмотив — читают ли игроки ниточки и ритм, или хлопают по всем подряд?</title>
 <style>
   html,body{margin:0;padding:0;height:100%;background:#0d0a12;overflow:hidden;}
   body{display:flex;align-items:center;justify-content:center;}
@@ -20,12 +20,13 @@
 <script>
 'use strict';
 /* ============================================================
-   ЛЕЙТМОТИВ v2 — «понятно ребёнку» (перебить × лейтмотив)
-   Суть: барабанщики ходят под свою песенку; хлопни рядом — он собьётся,
-   и сбой побежит по ниточкам к лампочкам и к другим барабанщикам.
-   Три лампочки горят СРАЗУ → дверь открыта.
-   Вопрос прототипа: читают ли игроки ниточки (пара и порядок хлопков) —
-   или хлопают по всем подряд? Звёзды = хлопки против минимума.
+   ЛЕЙТМОТИВ v2.1 — «понятно ребёнку» + ритм как ограничение
+   Суть: у каждого барабанщика своя песенка (полоска из 8 тактов).
+   Хлопни рядом с ним в ПАУЗУ — он собьётся, и сбой побежит по ниточкам
+   к лампочкам и к другим барабанщикам. Хлопок в момент удара тонет в шуме.
+   Три лампочки горят вместе 1 секунду → дверь открыта.
+   Часть 1 «Учимся» — по одной идее на уровень; часть 2 «Думаем» — лимит сбитых.
+   Вопрос прототипа: читают ли игроки ниточки и ритм — или хлопают по всем подряд?
    Спека: mechanics/leitmotif/spec.md. Всё рисуется кодом, ассетов нет.
    ============================================================ */
 
@@ -33,9 +34,9 @@ const CONFIG = {
   W:960, H:640, HUD_H:44,
   ROOM:{x0:22, y0:190, x1:938, y1:626},
   DOOR:{cx:480, top:50, gap0:420, gap1:540},
-  HERO_SPEED:180, HERO_R:16, REACH:90, CLAP_CD:0.35,
-  LAMP_TIME:5, SPARK_TIME:0.45, STUN_TIME:3, CASCADE_MAX:3,
-  STEP:0.25,                 // шаг ритма песенок (восьмые при 120 bpm)
+  HERO_SPEED:180, HERO_R:16, REACH:90, CLAP_CD:0.35, DEAF_CD:1.0,
+  LAMP_TIME:5, HOLD:1.0, SPARK_TIME:0.45, STUN_TIME:3, CASCADE_MAX:3,
+  STEP:0.3,                  // один такт песенки; полоска = 8 тактов
   CAGE_W:124, CAGE_H:112,
 };
 const FONT = 'system-ui,-apple-system,"Segoe UI",Roboto,sans-serif';
@@ -46,99 +47,149 @@ const LAMPS = [
   {id:'B', color:'#4fc3f7', x:526, y:84, note:783.99},
 ];
 const LIDX = {R:0, Y:1, B:2};
-const DCOLORS  = ['#ff8fc7','#c3a6ff','#ffb38a','#e3cfa4','#8fe3e0','#f2f0f7'];
-const PATTERNS = ['x...x...','..x...x.','x..x....','....x.x.','x.....x.','.x...x..'];
+const DCOLORS = ['#ff8fc7','#c3a6ff','#ffb38a','#e3cfa4','#8fe3e0','#f2f0f7','#b8e986','#ffc6e0'];
+const BEATC = '#ff9a3c';      // цвет удара на полоске
 const STRING_DRUM = '#b26bff';
 
-/* Уровни: каждый вводит одну новую идею. links: 'R'/'Y'/'B' — лампочка, число — индекс барабанщика.
-   a,b — концы маршрута (a==b — покачивается на месте), T — период песенки-маршрута, ph — стартовая фаза. */
+/* Уровни. links: 'R'/'Y'/'B' — зажечь лампочку, '-R' — погасить, число — индекс барабанщика (домино).
+   a,b — концы маршрута (a==b — покачивается на месте), T — период маршрута, ph — стартовая фаза,
+   pat — песенка: 8 тактов, 'x' — удар (хлопок тонет), '.' — пауза.
+   drown — действует ли правило «хлопок в удар тонет»; budget — сколько можно сбить (часть 2);
+   solution — порядок для подсказки. */
+const D=(x,y,links,pat,o)=>Object.assign({a:[x,y],b:[x,y],T:4+((x+y)%7)/5,ph:((x*7+y)%10)/10,pat:pat||'x...x...',links},o||{});
+const W=(a,b,T,ph,links,pat)=>({a,b,T,ph,links,pat:pat||'x...x...'});
 const LEVELS = [
-  { name:{ru:'Хлопни!', en:'Clap!'}, par:1, hand:true,
+  // ---------- Часть 1: учимся (одна новая идея на уровень) ----------
+  { name:{ru:'Хлопни!', en:'Clap!'}, par:1, hand:true, drown:false,
     tip:{ru:'Кликни на барабанщика — ты подбежишь и хлопнешь!', en:'Click the drummer — you run up and clap!'},
-    hero:[480,580],
-    drummers:[ {a:[380,390], b:[580,390], T:6, ph:0, links:['R','Y','B']} ] },
-  { name:{ru:'Сразу двое', en:'Two at once'}, par:2,
-    tip:{ru:'Лампочка горит только 5 секунд. Хлопни обоим быстро, одному за другим!',
-         en:'A lamp stays lit only 5 seconds. Clap both quickly, one after the other!'},
-    hero:[480,590],
-    drummers:[ {a:[220,300], b:[220,470], T:5,   ph:0,  links:['R','Y']},
-               {a:[740,470], b:[740,300], T:5.6, ph:.3, links:['B']} ] },
-  { name:{ru:'Домино', en:'Domino'}, par:1,
-    tip:{ru:'Барабанщик в клетке — не достать. Но к нему тянется ниточка: хлопок пройдёт по ней!',
-         en:'The caged drummer is out of reach. But a string leads to him — the clap travels along it!'},
-    hero:[790,590],
-    drummers:[ {a:[480,330], b:[480,330], T:3, ph:0, caged:true, links:['R','Y','B']},
-               {a:[130,520], b:[300,520], T:6, ph:0, links:[0]} ] },
-  { name:{ru:'Выбери пару', en:'Pick a pair'}, par:2,
-    tip:{ru:'Посмотри, куда ведут ниточки, и найди пару: хватит двух хлопков!',
-         en:'Follow the strings and find the pair: two claps are enough!'},
-    hero:[480,590],
-    drummers:[ {a:[110,270], b:[230,270], T:5,   ph:0,  links:['R']},
-               {a:[120,560], b:[260,560], T:5.5, ph:.5, links:['Y']},
-               {a:[850,260], b:[850,400], T:5,   ph:0,  links:['B']},
-               {a:[520,470], b:[640,470], T:4.5, ph:.2, links:['R','Y']} ] },
-  { name:{ru:'Лови ритм', en:'Catch the rhythm'}, par:2,
-    tip:{ru:'Барабанщики ходят под свою песенку. Поймай момент, когда они рядом, — и хлопни обоим!',
-         en:'Drummers walk to their own tune. Catch the moment they are close — and clap both!'},
-    hero:[480,600],
-    drummers:[ {a:[150,350], b:[810,350], T:12, ph:.3, links:['R','Y']},
-               {a:[810,430], b:[150,430], T:12, ph:.3, links:['B']} ] },
-  { name:{ru:'Большая цепь', en:'Big chain'}, par:2,
-    tip:{ru:'Хлопок бежит по цепочке: барабанщик → барабанщик → лампочка.',
-         en:'A clap runs down the chain: drummer → drummer → lamp.'},
-    hero:[480,600],
-    drummers:[ {a:[150,300], b:[150,300], T:3,   ph:0,  caged:true, links:['R']},
-               {a:[810,300], b:[810,300], T:3.4, ph:.5, caged:true, links:['B']},
-               {a:[330,300], b:[630,300], T:7,   ph:0,  links:[0,'Y']},
-               {a:[810,500], b:[810,560], T:4,   ph:0,  links:[1]},
-               {a:[150,500], b:[150,560], T:4.4, ph:.5, links:[0]},
-               {a:[430,520], b:[530,520], T:5,   ph:.3, links:['Y']} ] },
+    hero:[480,580], drummers:[ W([380,390],[580,390],6,0,['R','Y','B'],'x...x...') ] },
+  { name:{ru:'В паузу', en:'In the pause'}, par:1, drown:true, scaffold:true,
+    tip:{ru:'Пока он бьёт в барабан, хлопка не слышно! Смотри на полоску над ним и хлопай в ПАУЗУ.',
+         en:'While he beats the drum, your clap is drowned out! Watch the strip above him and clap in the PAUSE.'},
+    hero:[480,580], drummers:[ W([420,380],[540,380],6,0,['R','Y','B'],'xxxx....') ] },
+  { name:{ru:'Сразу двое', en:'Two at once'}, par:2, drown:true, scaffold:true,
+    tip:{ru:'Лампочка горит 5 секунд, а дверь ждёт, пока все три погорят ВМЕСТЕ. Сбей обоих быстро!',
+         en:'A lamp burns 5 seconds; the door waits until all three burn TOGETHER. Knock both quickly!'},
+    hero:[480,590], drummers:[ W([220,300],[220,470],5,0,['R','Y'],'xx..xx..'), W([740,470],[740,300],5.6,.3,['B'],'x...x...') ] },
+  { name:{ru:'Домино', en:'Domino'}, par:1, drown:true,
+    tip:{ru:'Барабанщик в клетке — не достать. Но к нему тянется ниточка: сбой пройдёт по ней!',
+         en:'The caged drummer is out of reach. But a string leads to him — the stumble travels along it!'},
+    hero:[790,590], drummers:[ D(480,330,['R','Y','B'],'x.x.x.x.',{caged:true,T:3,ph:0}), W([130,520],[300,520],6,0,[0],'xxx.....') ] },
+  { name:{ru:'Выбери пару', en:'Pick a pair'}, par:2, drown:true,
+    tip:{ru:'Посмотри, куда ведут ниточки, и найди пару: хватит двоих!',
+         en:'Follow the strings and find the pair: two are enough!'},
+    hero:[480,590], drummers:[ W([110,270],[230,270],5,0,['R'],'x...x...'), W([120,560],[260,560],5.5,.5,['Y'],'x...x...'),
+                               W([850,260],[850,400],5,0,['B'],'xx..xx..'), W([520,470],[640,470],4.5,.2,['R','Y'],'xxxx....') ] },
+  { name:{ru:'Лови ритм', en:'Catch the rhythm'}, par:2, drown:true,
+    tip:{ru:'Барабанщики ходят под свою песенку. Поймай момент, когда они рядом, — и сбей обоих!',
+         en:'Drummers walk to their own tune. Catch the moment they are close — and knock both!'},
+    hero:[480,600], drummers:[ W([150,350],[810,350],12,.3,['R','Y'],'x.x.....'), W([810,430],[150,430],12,.3,['B'],'....x.x.') ] },
+  { name:{ru:'Большая цепь', en:'Big chain'}, par:2, drown:true,
+    tip:{ru:'Сбой бежит по цепочке: барабанщик → барабанщик → лампочка.',
+         en:'A stumble runs down the chain: drummer → drummer → lamp.'},
+    hero:[480,600], drummers:[ D(150,300,['R'],'x...x...',{caged:true,T:3}), D(810,300,['B'],'x...x...',{caged:true,T:3.4}),
+                               W([330,300],[630,300],7,0,[0,'Y'],'xx..xx..'), D(810,530,[1],'xxxxx...',{T:4}),
+                               D(150,530,[0],'x...x...',{T:4.4}), W([430,520],[530,520],5,.3,['Y'],'x.x.x.x.') ] },
+  // ---------- Часть 2: думаем (сбить можно ограниченно) ----------
+  { name:{ru:'Только двое', en:'Only two'}, part2:true, budget:2, drown:true, solution:[3,6],
+    tip:{ru:'Часть 2 — думай! Сбить можно только двоих. Смотри, куда ведут ниточки — даже от пустого барабана.',
+         en:'Part 2 — think! You may knock only two. Follow the strings — even from an empty drum.'},
+    hero:[480,600], drummers:[ D(110,280,['R']), D(850,560,['Y']), D(850,280,['B'],'xx..xx..'), D(420,470,[4],'xx..xx..'),
+                               D(300,300,['R',5],'x...x...',{caged:true}), D(640,300,['B'],'x...x...',{caged:true}), D(560,520,['Y'],'x.x.....') ] },
+  { name:{ru:'Пунктир гасит', en:'Dashes switch off'}, part2:true, budget:2, drown:true, solution:[0,1],
+    tip:{ru:'Пунктирная ниточка с крестиком ГАСИТ лампочку. Кого сбить первым?',
+         en:'A dashed string with a cross TURNS A LAMP OFF. Who goes first?'},
+    hero:[480,600], drummers:[ D(330,420,['R','Y','-B'],'xx..xx..'), D(630,420,['B'],'x...x...'), D(480,290,['R'],'x.x.x.x.') ] },
+  { name:{ru:'Гаситель в клетке', en:'Hidden switch-off'}, part2:true, budget:2, drown:true, solution:[0,2],
+    tip:{ru:'Гаситель может прятаться в клетке. Проследи всю цепочку!',
+         en:'An off-string can hide in a cage. Trace the whole chain!'},
+    hero:[480,600], drummers:[ D(250,480,['R',1],'xx..xx..'), D(250,300,['Y','-B'],'x...x...',{caged:true}), D(560,480,['B'],'x...x...'),
+                               D(720,300,['Y','-R'],'x.x.....'), D(840,520,['B','-Y'],'xxx.....') ] },
+  { name:{ru:'Камень-ножницы', en:'Rock-paper-scissors'}, part2:true, budget:3, drown:true, solution:[2,0,3],
+    tip:{ru:'Каждый что-то зажигает и что-то гасит. Сбить можно троих — найди порядок.',
+         en:'Each one lights something and turns something off. Knock three — find the order.'},
+    hero:[480,600], drummers:[ D(290,350,['R','-Y'],'x...x...'), D(670,350,['Y','-B'],'xx..xx..'), D(480,520,['B','-R'],'x.x.....'), D(480,290,['Y'],'xxx.....') ] },
+  { name:{ru:'Ловушка', en:'The trap'}, part2:true, budget:2, drown:true, solution:[0,1],
+    tip:{ru:'Кто-то зажигает все три сразу… Не спеши: проверь его домино!',
+         en:'Someone lights all three at once… Wait: check his domino!'},
+    hero:[480,600], drummers:[ D(480,420,['R','Y','B',3],'xx..xx..'), D(820,560,['Y'],'x...x...'), D(620,560,['Y','-R'],'x...x...'),
+                               D(300,290,['-Y'],'x...x...',{caged:true}), D(800,290,['B','-Y'],'x.x.....'), D(150,420,['R','B',3],'xxx.....') ] },
+  { name:{ru:'Экзамен', en:'Final exam'}, part2:true, budget:3, drown:true, solution:[2,0,4],
+    tip:{ru:'Всё вместе: ритм, ходок, домино, гасители и ловушка. Сбить можно троих.',
+         en:'Everything at once: rhythm, a walker, domino, off-strings and a trap. Knock three.'},
+    hero:[480,600], drummers:[ W([220,262],[700,262],9,0,['R','-Y'],'xx..xx..'), D(140,320,[5],'x...x...'), D(330,520,['B',6],'xxx.....'),
+                               D(480,420,['R','Y','B',7],'x.x.x.x.'), D(630,520,['Y'],'xx..xx..'),
+                               D(150,480,['Y','-B'],'x...x...',{caged:true}), D(810,470,['-R'],'x...x...',{caged:true}), D(810,300,['-B'],'x...x...',{caged:true}) ] },
 ];
 
 /* ---------- тексты RU/EN ---------- */
 const S = {
   ru:{ title:'ЛЕЙТМОТИВ',
        sub1:'У каждого барабанщика своя песенка — лейтмотив.',
-       sub2:'Перебей её хлопком — и сбой побежит по ниточкам!',
+       sub2:'Перебей её хлопком в паузу — и сбой побежит по ниточкам!',
        step1:['Кликни на барабанщика —','подбежишь и хлопнешь'],
-       step2:['Он собьётся, и искра','побежит по ниточкам'],
-       step3:['Три лампочки горят СРАЗУ —','дверь открыта!'],
-       play:'▶  ИГРАТЬ', level:'Уровень', of:'из',
-       goal:'ЦЕЛЬ: зажги 3 лампочки СРАЗУ',
-       claps:'Хлопков', canDo:'можно за', got:'Понятно ▶', next:'Дальше ▶', again:'↺ Ещё раз', restart:'▶ Играть снова',
+       step2:['Хлопай в ПАУЗУ: в удар','хлопок тонет в шуме'],
+       step3:['Три лампочки горят ВМЕСТЕ —','дверь открыта!'],
+       play:'▶  ИГРАТЬ', level:'Уровень', of:'из', part1:'Учимся', part2:'Думаем',
+       goal:'ЦЕЛЬ: 3 лампочки горят ВМЕСТЕ',
+       claps:'Сбито', canDo:'можно за', budget:'Сбить можно', attempt:'попытка',
+       got:'Понятно ▶', next:'Дальше ▶', again:'↺ Ещё раз', restart:'▶ Играть снова', hintBtn:'💡 Подсказка',
        toastCage:'Он в клетке — не достать. Найди ниточку к нему!',
        toastReach:'Подойди ближе к барабанщику — или кликни на него',
-       toastMiss:'Лампочка погасла! Нужно, чтобы три горели СРАЗУ',
+       toastMiss:'Лампочка погасла! Нужно, чтобы три горели ВМЕСТЕ',
        toastOpen:'ДВЕРЬ ОТКРЫТА! Иди в дверь',
-       toastLocked:'Дверь откроется, когда загорятся все три лампочки',
-       clickHint:'кликни!', tapHint:'тапни!', goDoor:'в дверь!',
-       hooray:'УРА! Уровень пройден', perfect:'Идеально!', good:'Хорошо! А можно и меньше хлопков.',
+       toastLocked:'Дверь откроется, когда все три лампочки погорят вместе',
+       toastDrown:'ТУМ! Хлопок утонул в барабане — хлопай в ПАУЗУ',
+       toastDeaf:'Уши заложило — секунду!',
+       toastBudget:'Больше сбивать нельзя',
+       toastStunned:'Он и так сбит — подожди',
+       clickHint:'кликни!', tapHint:'тапни!', goDoor:'в дверь!', now:'СЕЙЧАС!', tum:'ТУМ',
+       hooray:'УРА! Уровень пройден', perfect:'Идеально!', good:'Хорошо! А можно и меньше.',
        ok:'Получилось! Посмотри на ниточки — хватит и ', allDone:'Все уровни пройдены!', stars:'Звёзд',
+       firstTry:'С первой попытки!', fewTries:'Хорошо подумал!', manyTries:'Получилось!', withHint:'С подсказкой — тоже победа!',
+       failTitle:'Не вышло', failText:'Лампочки не погорели вместе. Подумай и попробуй ещё раз!',
+       hintText:'Подсказка: цифры над барабанщиками — в каком порядке сбивать.',
        controls:'Клик — идти или хлопнуть · Пробел — хлопнуть · R — заново',
-       controlsTouch:'Тап по полу — идти · тап по барабанщику — хлопнуть',
+       controlsTouch:'Тап по полу — идти · тап по барабанщику — хлопнуть · держи палец — что он зажжёт',
        hover:'Наведи мышь на барабанщика — подсветится, что он зажжёт',
-       help:'Как играть', clap:'ХЛОП!', min:'мин.', lvlCol:'Уровень', clapCol:'Хлопки' },
+       help:'Как играть', clap:'ХЛОП!', min:'мин.', lvlCol:'Уровень', clapCol:'Сбито',
+       helpLines:['Полоска над барабанщиком — его песенка: оранжевый — удар, тёмный — пауза.',
+                  'Хлопок в ПАУЗУ сбивает его. В удар — тонет, и на секунду закладывает уши.',
+                  'Сплошная ниточка зажигает, пунктир с крестиком — гасит, фиолетовая — сбивает другого.',
+                  'В клетку не войти — достать можно только искрой. В части 2 сбивать можно ограниченно.'] },
   en:{ title:'LEITMOTIF',
        sub1:'Every drummer has his own little tune — a leitmotif.',
-       sub2:'Break it with a clap — and the stumble runs along the strings!',
+       sub2:'Break it with a clap in the pause — and the stumble runs along the strings!',
        step1:['Click a drummer —','you run up and clap'],
-       step2:['He loses the beat and a spark','runs along his strings'],
-       step3:['All three lamps lit AT ONCE —','the door opens!'],
-       play:'▶  PLAY', level:'Level', of:'of',
-       goal:'GOAL: light all 3 lamps AT ONCE',
-       claps:'Claps', canDo:'possible in', got:'Got it ▶', next:'Next ▶', again:'↺ Again', restart:'▶ Play again',
+       step2:['Clap in the PAUSE: on a beat','your clap is drowned out'],
+       step3:['All three lamps lit TOGETHER —','the door opens!'],
+       play:'▶  PLAY', level:'Level', of:'of', part1:'Learn', part2:'Think',
+       goal:'GOAL: all 3 lamps lit TOGETHER',
+       claps:'Knocked', canDo:'possible in', budget:'You may knock', attempt:'try',
+       got:'Got it ▶', next:'Next ▶', again:'↺ Again', restart:'▶ Play again', hintBtn:'💡 Hint',
        toastCage:'He is in a cage — out of reach. Find a string to him!',
        toastReach:'Get closer to a drummer — or click him',
-       toastMiss:'A lamp went out! All three must be lit AT ONCE',
+       toastMiss:'A lamp went out! All three must burn TOGETHER',
        toastOpen:'DOOR OPEN! Walk in',
-       toastLocked:'The door opens when all three lamps are lit',
-       clickHint:'click!', tapHint:'tap!', goDoor:'go in!',
-       hooray:'HOORAY! Level complete', perfect:'Perfect!', good:'Good! You can do it with fewer claps.',
+       toastLocked:'The door opens when all three lamps burn together',
+       toastDrown:'BOOM! Your clap drowned in the drum — clap in the PAUSE',
+       toastDeaf:'Ears ringing — one second!',
+       toastBudget:'No more knocks allowed',
+       toastStunned:'He is already knocked off',
+       clickHint:'click!', tapHint:'tap!', goDoor:'go in!', now:'NOW!', tum:'BOOM',
+       hooray:'HOORAY! Level complete', perfect:'Perfect!', good:'Good! You can do it with fewer.',
        ok:'Done! Follow the strings — this takes only ', allDone:'All levels complete!', stars:'Stars',
+       firstTry:'First try!', fewTries:'Well thought!', manyTries:'Done!', withHint:'With a hint — still a win!',
+       failTitle:'Not this time', failText:'The lamps did not burn together. Think and try again!',
+       hintText:'Hint: the numbers above the drummers show the order.',
        controls:'Click — walk or clap · Space — clap · R — restart',
-       controlsTouch:'Tap the floor — walk · tap a drummer — clap',
+       controlsTouch:'Tap the floor — walk · tap a drummer — clap · hold — see what he lights',
        hover:'Hover a drummer — you will see what he lights',
-       help:'How to play', clap:'CLAP!', min:'min', lvlCol:'Level', clapCol:'Claps' },
+       help:'How to play', clap:'CLAP!', min:'min', lvlCol:'Level', clapCol:'Knocked',
+       helpLines:['The strip above a drummer is his tune: orange — a beat, dark — a pause.',
+                  'A clap in the PAUSE knocks him off. On a beat it drowns, and your ears ring for a second.',
+                  'A solid string lights, a dashed one with a cross turns off, a purple one knocks another drummer.',
+                  'You cannot enter a cage — only a spark gets in. In part 2 knocks are limited.'] },
 };
 let LANG = 'ru';
 const navRu = (navigator.language||'ru').toLowerCase().startsWith('ru');
@@ -155,6 +206,8 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 function hexA(hex,a){ const n=parseInt(hex.slice(1),16); return `rgba(${n>>16},${(n>>8)&255},${n&255},${a})`; }
 function lsGet(k,def){ try{ const v=localStorage.getItem(k); return v===null?def:JSON.parse(v); }catch(e){ return def; } }
 function lsSet(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
+const isOff = k => typeof k==='string' && k[0]==='-';
+const lampOf = k => LIDX[isOff(k)?k[1]:k];
 
 /* ---------- холст под экран ---------- */
 const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
@@ -194,10 +247,13 @@ function noise(dur,vol,freq,q){
 }
 const SFX = {
   clap(){ noise(0.12,0.9,1400,0.8); noise(0.06,0.5,2600,1.2); },
+  drown(){ tone(110,0.35,'sine',0.5,45); noise(0.18,0.35,300,0.7); },
   stumble(v){ tone(330,0.28,'triangle',0.22*(v||1),110); },
   lamp(i){ tone(LAMPS[i].note,0.55,'sine',0.3); tone(LAMPS[i].note*2,0.3,'sine',0.07); },
+  off(){ noise(0.3,0.25,900,0.6); tone(300,0.25,'sine',0.08,150); },
   open(){ [523.25,659.25,783.99,1046.5].forEach((f,k)=>tone(f,0.7,'triangle',0.22,null,k*0.09)); },
   done(){ [783.99,1046.5,1318.5,1567.98].forEach((f,k)=>tone(f,0.45,'sine',0.22,null,k*0.11)); },
+  fail(){ [392,349.23,293.66].forEach((f,k)=>tone(f,0.4,'triangle',0.18,null,k*0.16)); },
   miss(){ tone(392,0.25,'sine',0.12,330); },
   beat(kind,v){ // у каждого барабанщика своя «партия» — вместе получается песенка
     switch(kind%6){
@@ -213,34 +269,38 @@ const SFX = {
 
 /* ---------- состояние ---------- */
 let mode='start', G=null, now=0, helpReturn='play';
-let RESULTS=[]; // по уровням: {claps, par, stars, chain}
+let RESULTS=[];                         // по уровням: {knocks, par, stars, chain, tries, hint}
 let BEST=lsGet('leit.best',[]);
+const TRIES=[], HINT=[];                // попытки и подсказка — в пределах сессии
 const keys={up:false,down:false,left:false,right:false};
 const mouse={x:-99,y:-99,inside:false};
 let uiButtons=[];
 
 function loadLevel(n){
   const lv=LEVELS[n];
+  TRIES[n]=(TRIES[n]||0)+1;
   G = {
-    n, lv, time:0, claps:0, chain:[], wave:0, open:false, openK:0, done:false,
-    hero:{x:lv.hero[0], y:lv.hero[1], tx:null, ty:null, chase:-1, cd:0, clapT:0, lookX:0, lookY:-1, walk:0, moving:false},
-    drummers: lv.drummers.map((d,i)=>({ ...d, i, clock:d.ph*d.T, x:d.a[0], y:d.a[1], stun:0, lastWave:-1,
-      hitT:0, alt:false, color:DCOLORS[i%DCOLORS.length], pattern:PATTERNS[i%PATTERNS.length], kind:i })),
-    cages:[], lamps:LAMPS.map(()=>({t:0, flash:0})),
-    sparks:[], fx:[], notes:[], glow:{}, toast:null, hl:null, lastMiss:-99,
-    beatClock:0, step:-1,
+    n, lv, time:0, knocks:0, claps:0, drowned:0, chain:[], wave:0, open:false, openK:0, hold:0, done:false, failT:0,
+    hero:{x:lv.hero[0], y:lv.hero[1], tx:null, ty:null, chase:-1, cd:0, deaf:0, clapT:0, lookX:0, lookY:-1, walk:0, moving:false},
+    drummers: lv.drummers.map((d,i)=>({ ...d, i, clock:(d.ph||0)*d.T, x:d.a[0], y:d.a[1], stun:0, lastWave:-1,
+      hitT:0, alt:false, color:DCOLORS[i%DCOLORS.length], pattern:d.pat||'x...x...', kind:i })),
+    cages:[], lamps:LAMPS.map(()=>({t:0, flash:0, off:0})),
+    sparks:[], fx:[], notes:[], glow:{}, toast:null, hl:null, lastMiss:-99, drownToasts:0, lastDeaf:-99,
+    beatClock:0, step:0,
   };
   for(const d of G.drummers){
     if(d.caged) G.cages.push({x:d.a[0]-CONFIG.CAGE_W/2, y:d.a[1]-CONFIG.CAGE_H/2, w:CONFIG.CAGE_W, h:CONFIG.CAGE_H, d:d.i});
     const p=routePos(d); d.x=p.x; d.y=p.y;
   }
 }
-function startGame(){ RESULTS=[]; loadLevel(0); mode='intro'; }
+function goLevel(n){ loadLevel(n); mode='intro'; }
+function startGame(){ RESULTS=[]; goLevel(0); }
 function restartLevel(){ loadLevel(G.n); mode='play'; }
-function nextLevel(){ if(G.n+1<LEVELS.length){ loadLevel(G.n+1); mode='intro'; } else mode='final'; }
+function nextLevel(){ if(G.n+1<LEVELS.length) goLevel(G.n+1); else mode='final'; }
 function openHelp(){ helpReturn=mode; mode='help'; }
+function useHint(){ HINT[G.n]=true; restartLevel(); }
 
-/* маршрут-петля барабанщика: туда-сюда с периодом T (это и есть его «лейтмотив») */
+/* маршрут-петля барабанщика: туда-сюда с периодом T; сбитый стоит — его фаза сдвигается */
 function routePos(d){
   const p=(((d.clock/d.T)%1)+1)%1;
   const tri=p<0.5?p*2:2-p*2, cosu=(1-Math.cos(p*TAU))/2, u=0.7*tri+0.3*cosu;
@@ -249,36 +309,51 @@ function routePos(d){
   return {x,y};
 }
 function linkPos(k){ // куда ведёт ниточка
-  if(typeof k==='string'){ const l=LAMPS[LIDX[k]]; return {x:l.x, y:l.y+18}; }
+  if(typeof k==='string'){ const l=LAMPS[lampOf(k)]; return {x:l.x, y:l.y+18}; }
   const d=G.drummers[k]; return {x:d.x, y:d.y-4};
 }
-function linkColor(k){ return typeof k==='string' ? LAMPS[LIDX[k]].color : STRING_DRUM; }
+function linkColor(k){ return typeof k==='string' ? LAMPS[lampOf(k)].color : STRING_DRUM; }
 function bez(A,B,s){ // ниточка провисает вниз
   const len=Math.hypot(B.x-A.x,B.y-A.y), C={x:(A.x+B.x)/2, y:(A.y+B.y)/2+18+len*0.08};
   const u=1-s; return {x:u*u*A.x+2*u*s*C.x+s*s*B.x, y:u*u*A.y+2*u*s*C.y+s*s*B.y, C};
 }
-function cascadeTree(i){ // что зажжёт хлопок по барабанщику i (для подсветки)
-  const strings=new Set(), lamps=new Set(), seen=new Set([i]); const q=[[i,0]];
+function cascadeTree(i){ // что зажжёт / погасит сбой барабанщика i (для подсветки)
+  const strings=new Set(), lamps=new Set(), offs=new Set(), seen=new Set([i]); const q=[[i,0]];
   while(q.length){
     const [j,dep]=q.shift(); if(dep>=CONFIG.CASCADE_MAX) continue;
     for(const k of G.drummers[j].links){
       strings.add(j+'>'+k);
-      if(typeof k==='string') lamps.add(LIDX[k]);
+      if(typeof k==='string') (isOff(k)?offs:lamps).add(lampOf(k));
       else if(!seen.has(k)){ seen.add(k); q.push([k,dep+1]); }
     }
   }
-  return {strings,lamps};
+  return {strings,lamps,offs};
 }
+const onBeat = d => d.stun<=0 && d.pattern[G.step]==='x';   // сейчас он бьёт в барабан
+const budgetLeft = () => G.lv.budget ? G.lv.budget-G.knocks : Infinity;
 
 /* ---------- действия ---------- */
 function doClap(d){
-  const h=G.hero; if(h.cd>0) return;
-  h.cd=CONFIG.CLAP_CD; h.clapT=0.35;
-  G.claps++; G.chain.push(d.i+1); G.wave++;
+  const h=G.hero; if(h.cd>0) return false;
+  h.clapT=0.35; G.claps++;
   SFX.clap();
   G.fx.push({type:'ring', x:h.x, y:h.y, r:14, vr:260, life:0.4, max:0.4, color:'#ffffff'});
+  if(G.lv.drown && onBeat(d)){                  // хлопок в удар тонет в шуме
+    h.cd=CONFIG.DEAF_CD; h.deaf=CONFIG.DEAF_CD; G.drowned++;
+    SFX.drown();
+    G.fx.push({type:'txt', x:d.x, y:d.y-62, s:t('tum')+'!', color:BEATC, size:26, life:0.9, max:0.9});
+    G.fx.push({type:'ring', x:d.x, y:d.y+12, r:16, vr:200, life:0.5, max:0.5, color:BEATC});
+    if(G.drownToasts<3){ G.drownToasts++; toast(t('toastDrown'),BEATC,2.8); }
+    return true;
+  }
+  h.cd=CONFIG.CLAP_CD;
+  if(d.stun>0){ toast(t('toastStunned'),'#c3a6ff',1.6); return true; }       // сбитый не играет — перебивать нечего
+  if(budgetLeft()<=0){ toast(t('toastBudget'),'#ff9d9d'); return true; }
   G.fx.push({type:'txt', x:(h.x+d.x)/2, y:Math.min(h.y,d.y)-40, s:t('clap'), color:'#ffffff', size:22, life:0.9, max:0.9});
+  G.knocks++; G.chain.push(d.i+1);
+  G.wave++;
   stunDrummer(d, G.wave, 0);
+  return true;
 }
 function stunDrummer(d,wave,depth){
   d.stun=CONFIG.STUN_TIME;
@@ -291,13 +366,20 @@ function stunDrummer(d,wave,depth){
 }
 function arrive(sp){
   G.glow[sp.from+'>'+sp.to]=0.7;
-  if(typeof sp.to==='string') lightLamp(LIDX[sp.to]);
+  if(typeof sp.to==='string'){ if(isOff(sp.to)) lampOff(lampOf(sp.to)); else lightLamp(lampOf(sp.to)); }
   else stunDrummer(G.drummers[sp.to], sp.wave, sp.depth);
 }
 function lightLamp(i){
   if(G.open) return;
   const l=G.lamps[i]; l.t=CONFIG.LAMP_TIME; l.flash=0.5;
   SFX.lamp(i);
+}
+function lampOff(i){
+  if(G.open) return;
+  const l=G.lamps[i]; const was=l.t>0; l.t=0; l.off=0.8;
+  SFX.off();
+  for(let k=0;k<10;k++) G.fx.push({type:'smoke', x:LAMPS[i].x+(Math.random()-0.5)*16, y:LAMPS[i].y, vx:(Math.random()-0.5)*30, vy:-30-Math.random()*30, life:0.9, max:0.9});
+  if(was && !G.lv.budget) toast(t('toastMiss'),'#ff9d9d',2.5);
 }
 function openDoor(){
   G.open=true; SFX.open(); toast(t('toastOpen'),'#ffd166',3.5);
@@ -307,31 +389,38 @@ function openDoor(){
                color:[...LAMPS.map(l=>l.color),'#ffffff'][k%4], life:1.6, max:1.6, rot:Math.random()*TAU});
   }
 }
+function starsFor(){
+  if(G.lv.part2){ if(HINT[G.n]) return 1; const tr=TRIES[G.n]; return tr<=1?3:(tr<=3?2:1); }
+  const par=G.lv.par; return G.knocks<=par?3:(G.knocks<=par+1?2:1);
+}
+function logAttempt(result){
+  console.log('[leitmotif] уровень', G.n+1, result, JSON.stringify({knocks:G.knocks, claps:G.claps, drowned:G.drowned,
+    par:G.lv.par||G.lv.budget, tries:TRIES[G.n], hint:!!HINT[G.n], chain:G.chain.join('→'), time:+G.time.toFixed(1)}));
+}
 function completeLevel(){
   G.done=true; mode='done'; G.doneT=0;
-  const par=G.lv.par, stars=G.claps<=par?3:(G.claps<=par+1?2:1);
-  G.stars=stars;
-  RESULTS[G.n]={claps:G.claps, par, stars, chain:G.chain.join('→')};
-  BEST[G.n]=Math.max(BEST[G.n]||0, stars); lsSet('leit.best',BEST);
-  SFX.done();
-  console.log('[leitmotif] уровень', G.n+1, JSON.stringify({claps:G.claps, par, stars, chain:G.chain.join('→'), time:+G.time.toFixed(1)}));
+  G.stars=starsFor();
+  RESULTS[G.n]={knocks:G.knocks, par:G.lv.par||G.lv.budget, stars:G.stars, chain:G.chain.join('→'), tries:TRIES[G.n], hint:!!HINT[G.n], drowned:G.drowned};
+  BEST[G.n]=Math.max(BEST[G.n]||0, G.stars); lsSet('leit.best',BEST);
+  SFX.done(); logAttempt('победа');
 }
+function failLevel(){ mode='fail'; G.doneT=0; SFX.fail(); logAttempt('неудача'); }
 function toast(s,color,dur){ G.toast={s, color:color||'#e8e6f0', t:dur||2.6, max:dur||2.6}; }
 function clapNearest(){
   let best=null, bd=1e9;
   for(const d of G.drummers){ if(d.caged) continue; const dd=dist(d,G.hero); if(dd<=CONFIG.REACH&&dd<bd){bd=dd;best=d;} }
-  if(best) doClap(best); else toast(t('toastReach'));
+  if(!best){ toast(t('toastReach')); return; }
+  if(G.hero.cd>0){ deafToast(); return; }
+  doClap(best);
 }
+function deafToast(){ if(G.hero.deaf>0 && G.time-G.lastDeaf>1.5){ G.lastDeaf=G.time; toast(t('toastDeaf'),BEATC,1.2); } }
 function drummerAt(p,r){
   let best=null, bd=r;
   for(const d of G.drummers){ const dd=Math.hypot(p.x-d.x,p.y-(d.y-4)); if(dd<bd){bd=dd;best=d;} }
   return best;
 }
 function cageAt(p){ return G.cages.find(c=>p.x>c.x&&p.x<c.x+c.w&&p.y>c.y&&p.y<c.y+c.h)||null; }
-function cagedClick(d){
-  toast(t('toastCage'),'#c3a6ff');
-  G.hl={to:d.i, t:1.8};
-}
+function cagedClick(d){ toast(t('toastCage'),'#c3a6ff'); G.hl={to:d.i, t:1.8}; }
 
 /* ---------- движение героя ---------- */
 function blocked(x,y){
@@ -359,6 +448,7 @@ function waypoint(h,goal){ // обход клетки через ближайш�
     for(const [cx,cy] of corners){
       if(Math.hypot(cx-h.x,cy-h.y)<3) continue;
       if(segRect(h.x,h.y,cx,cy,c,R-1)) continue;
+      if(blocked(cx,cy)) continue;
       const s=Math.hypot(cx-h.x,cy-h.y)+Math.hypot(goal.x-cx,goal.y-cy);
       if(s<bs){bs=s;best={x:cx,y:cy};}
     }
@@ -368,7 +458,7 @@ function waypoint(h,goal){ // обход клетки через ближайш�
 }
 function updateHero(dt){
   const h=G.hero;
-  h.cd=Math.max(0,h.cd-dt); h.clapT=Math.max(0,h.clapT-dt);
+  h.cd=Math.max(0,h.cd-dt); h.deaf=Math.max(0,h.deaf-dt); h.clapT=Math.max(0,h.clapT-dt);
   const ix=(keys.right?1:0)-(keys.left?1:0), iy=(keys.down?1:0)-(keys.up?1:0);
   let vx=0, vy=0, maxStep=Infinity;
   if(ix||iy){ h.tx=null; h.chase=-1; const l=Math.hypot(ix,iy); vx=ix/l; vy=iy/l; }
@@ -402,7 +492,7 @@ function update(dt){
   now+=dt;
   if(!G) return;
   updateFx(dt);
-  if(mode==='done') G.doneT+=dt;
+  if(mode==='done'||mode==='fail') G.doneT+=dt;
   if(mode!=='play') return;
   G.time+=dt;
   updateHero(dt);
@@ -413,14 +503,14 @@ function update(dt){
     const p=routePos(d); d.x=p.x; d.y=p.y;
     d.hitT=Math.max(0,d.hitT-dt);
   }
-  // ритм: у каждого барабанщика своя партия, сбитый молчит
+  // ритм: у каждого барабанщика своя партия на общей сетке, сбитый молчит
   G.beatClock+=dt;
   const step=Math.floor(G.beatClock/CONFIG.STEP)%8;
   if(step!==G.step){
     G.step=step;
     for(const d of G.drummers) if(d.stun<=0 && d.pattern[step]==='x'){
-      d.hitT=0.16; d.alt=!d.alt;
-      if(Math.random()<0.7) G.notes.push({x:d.x+(d.alt?14:-14), y:d.y-30, vx:(Math.random()-0.5)*20, vy:-40, life:1, color:d.color, ch:Math.random()<0.5?'♪':'♫'});
+      d.hitT=CONFIG.STEP*0.9; d.alt=!d.alt;
+      if(Math.random()<0.6) G.notes.push({x:d.x+(d.alt?22:-22), y:d.y-30, vx:(Math.random()-0.5)*20, vy:-40, life:1, color:d.color, ch:Math.random()<0.5?'♪':'♫'});
       const v=0.11*clamp(1-(dist(d,G.hero)-140)/360,0,1);
       if(v>0.004) SFX.beat(d.kind,v);
     }
@@ -433,11 +523,17 @@ function update(dt){
   if(!G.open){
     for(const l of G.lamps){
       if(l.t>0){ l.t-=dt; if(l.t<=0){ l.t=0;
-        if(G.time-G.lastMiss>4){ G.lastMiss=G.time; toast(t('toastMiss'),'#ff9d9d',3); SFX.miss(); } } }
+        if(!G.lv.budget && G.time-G.lastMiss>4){ G.lastMiss=G.time; toast(t('toastMiss'),'#ff9d9d',3); SFX.miss(); } } }
     }
-    if(G.lamps.every(l=>l.t>0)) openDoor();
+    const allLit=G.lamps.every(l=>l.t>0);
+    G.hold=allLit?G.hold+dt:0;                 // все три должны погореть вместе HOLD секунд
+    if(G.hold>=CONFIG.HOLD) openDoor();
+    // часть 2: сбивать больше нельзя и ничего уже не изменится → неудача
+    if(!G.open && G.lv.budget && G.knocks>=G.lv.budget && G.sparks.length===0 && !allLit){
+      G.failT+=dt; if(G.failT>0.8) failLevel();
+    } else G.failT=0;
   } else G.openK=Math.min(1,G.openK+dt*1.5);
-  for(const l of G.lamps) l.flash=Math.max(0,l.flash-dt);
+  for(const l of G.lamps){ l.flash=Math.max(0,l.flash-dt); l.off=Math.max(0,l.off-dt); }
 }
 function updateFx(dt){
   for(const e of G.fx){
@@ -445,6 +541,7 @@ function updateFx(dt){
     if(e.type==='ring') e.r+=e.vr*dt;
     if(e.type==='txt') e.y-=30*dt;
     if(e.type==='conf'){ e.x+=e.vx*dt; e.y+=e.vy*dt; e.vy+=380*dt; e.rot+=6*dt; }
+    if(e.type==='smoke'){ e.x+=e.vx*dt; e.y+=e.vy*dt; }
   }
   G.fx=G.fx.filter(e=>e.life>0);
   for(const n of G.notes){ n.life-=dt*1.1; n.x+=n.vx*dt; n.y+=n.vy*dt; }
@@ -467,7 +564,10 @@ cv.addEventListener('pointerdown',e=>{
   if(mode==='help'){ mode=helpReturn; return; }
   if(mode!=='play') return;
   const d=drummerAt(p, touchy?46:32);
-  if(d){ if(d.caged) cagedClick(d); else { G.hero.chase=d.i; G.hero.tx=null; } return; }
+  if(d){
+    if(touchy){ G.press={d, t0:now}; return; }   // тач: короткий тап — действие, удержание — подсветка цепочки
+    drummerTap(d); return;
+  }
   const c=cageAt(p); if(c){ cagedClick(G.drummers[c.d]); return; }
   if(p.y<CONFIG.ROOM.y0){
     if(Math.abs(p.x-CONFIG.DOOR.cx)<90){
@@ -478,6 +578,19 @@ cv.addEventListener('pointerdown',e=>{
   }
   G.hero.tx=p.x; G.hero.ty=p.y; G.hero.chase=-1;
 });
+function drummerTap(d){
+  if(d.caged){ cagedClick(d); return; }
+  const h=G.hero;
+  if(dist(h,d)<=CONFIG.REACH){ if(h.cd>0) deafToast(); else doClap(d); h.chase=-1; h.tx=null; }  // рядом — хлопок сейчас (момент выбираешь ты)
+  else { h.chase=d.i; h.tx=null; }                                                              // далеко — подбежать и хлопнуть
+}
+const PRESS_PREVIEW=0.3;
+cv.addEventListener('pointerup',()=>{
+  if(!G||!G.press) return;
+  const pr=G.press; G.press=null;
+  if(mode==='play' && now-pr.t0<PRESS_PREVIEW) drummerTap(pr.d);
+});
+cv.addEventListener('pointercancel',()=>{ if(G) G.press=null; });
 cv.addEventListener('pointermove',e=>{ const p=toWorld(e); mouse.x=p.x; mouse.y=p.y; mouse.inside=e.pointerType==='mouse'; });
 cv.addEventListener('pointerleave',()=>{ mouse.inside=false; });
 cv.addEventListener('contextmenu',e=>e.preventDefault());
@@ -496,6 +609,7 @@ addEventListener('keydown',e=>{
   else if(mode==='intro'){ if(ok) mode='play'; }
   else if(mode==='help'){ if(ok||k==='KeyH'||k==='Escape') mode=helpReturn; }
   else if(mode==='done'){ if(ok||k==='KeyN') nextLevel(); else if(k==='KeyR') restartLevel(); }
+  else if(mode==='fail'){ if(ok||k==='KeyR') restartLevel(); }
   else if(mode==='final'){ if(ok) startGame(); }
   else if(mode==='play'){
     if(k==='Space') clapNearest();
@@ -518,6 +632,7 @@ function wrapLines(str,maxW,size,weight){
 }
 function starShape(x,y,r){ ctx.beginPath(); for(let k=0;k<10;k++){ const a=-Math.PI/2+k*Math.PI/5, rad=k%2?r*0.45:r; ctx.lineTo(x+Math.cos(a)*rad,y+Math.sin(a)*rad); } ctx.closePath(); }
 function drawStar(x,y,r,on){ starShape(x,y,r); ctx.fillStyle=on?'#ffd166':'#2b2140'; ctx.fill(); ctx.strokeStyle=on?'#b8862a':'#4f4068'; ctx.lineWidth=2; ctx.stroke(); }
+function drawCross(x,y,r,color,w){ ctx.strokeStyle=color; ctx.lineWidth=w||3; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(x-r,y-r); ctx.lineTo(x+r,y+r); ctx.moveTo(x+r,y-r); ctx.lineTo(x-r,y+r); ctx.stroke(); ctx.lineCap='butt'; }
 
 function drawLamp(x,y,color,st){
   ctx.fillStyle='#6d6480'; ctx.fillRect(x-7,y+14,14,8);
@@ -536,8 +651,9 @@ function drawLamp(x,y,color,st){
     ctx.beginPath(); ctx.arc(x,y,24,-Math.PI/2,-Math.PI/2+TAU*clamp(st.frac,0,1)); ctx.stroke();
   }
   if(st.flash>0){ ctx.strokeStyle=hexA(color,st.flash*1.6); ctx.lineWidth=3; circ(x,y,24+(0.5-st.flash)*50); ctx.stroke(); }
+  if(st.previewOff||st.off>0) drawCross(x,y,11,st.previewOff?'#ffffff':`rgba(255,255,255,${st.off})`,4);
 }
-function drawDoor(cx,top,openK,lampStates,k){
+function drawDoor(cx,top,openK,lampStates,k,hold){
   ctx.save(); ctx.translate(cx,top); if(k) ctx.scale(k,k);
   ctx.fillStyle='#4a3b60'; ctx.fillRect(-78,0,16,140); ctx.fillRect(62,0,16,140);
   if(openK>0){
@@ -552,18 +668,30 @@ function drawDoor(cx,top,openK,lampStates,k){
     for(let x=-62+14;x<-62+lw;x+=14){ ctx.beginPath(); ctx.moveTo(x,68); ctx.lineTo(x,138); ctx.stroke(); }
     for(let x=62-14;x>62-lw;x-=14){ ctx.beginPath(); ctx.moveTo(x,68); ctx.lineTo(x,138); ctx.stroke(); }
   }
-  if(openK<0.05){ // замок
+  if(openK<0.05){ // замок + кольцо «держим вместе»
     ctx.strokeStyle='#ffd166'; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(0,94,8,Math.PI,0); ctx.stroke();
     ctx.fillStyle='#ffd166'; rr(-12,93,24,19,4); ctx.fill();
     ctx.fillStyle='#3a2d22'; circ(0,101,3); ctx.fill(); ctx.fillRect(-1.5,101,3,6);
+    if(hold>0){ ctx.strokeStyle='#ffffff'; ctx.lineWidth=5; ctx.beginPath(); ctx.arc(0,100,24,-Math.PI/2,-Math.PI/2+TAU*clamp(hold,0,1)); ctx.stroke(); }
   }
   ctx.fillStyle='#33284a'; rr(-82,0,164,66,10); ctx.fill(); ctx.strokeStyle='#5a4a78'; ctx.lineWidth=2; ctx.stroke();
   LAMPS.forEach((l,i)=>drawLamp(l.x-480,34,l.color,lampStates[i]));
   ctx.restore();
 }
+function drawStrip(x,y,pattern,step,big,scaffold){ // песенка: 8 тактов над головой
+  const n=8, cw=big?10:7, gap=2, w=n*cw+(n-1)*gap, x0=x-w/2, yy=y-(big?66:60);
+  ctx.fillStyle='rgba(13,10,18,.55)'; rr(x0-4,yy-4,w+8,cw+8,4); ctx.fill();
+  for(let i=0;i<n;i++){
+    const on=pattern[i]==='x', cur=i===step;
+    ctx.fillStyle = on ? (cur?'#ffffff':BEATC) : (cur?'#5ee07a':'rgba(255,255,255,.14)');
+    const hh=cur?cw+4:cw; rr(x0+i*(cw+gap), yy-(cur?2:0), cw, hh, 2); ctx.fill();
+  }
+  if(scaffold){ const on=pattern[step]==='x'; text(on?t('tum'):t('now'), x, yy-8, big?16:13, on?BEATC:'#5ee07a', 'center', '900'); }
+}
 function drawDrummer(x,y,o){
   ctx.save(); ctx.translate(x,y);
   ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(0,27,22,7,0,0,TAU); ctx.fill();
+  if(o.hitting && !o.stun){ ctx.fillStyle=hexA(BEATC,0.22); circ(0,14,30); ctx.fill(); }
   if(o.ring){ ctx.strokeStyle=o.ring; ctx.lineWidth=3; circ(0,0,36+3*Math.sin(now*7)); ctx.stroke(); }
   ctx.fillStyle=o.color; circ(0,-4,19); ctx.fill(); ctx.strokeStyle='rgba(0,0,0,.28)'; ctx.lineWidth=2; ctx.stroke();
   ctx.fillStyle='#3a3050'; rr(-11,-39,22,16,3); ctx.fill();
@@ -578,15 +706,16 @@ function drawDrummer(x,y,o){
     ctx.fillStyle='#2a2238'; for(const ex of [-7,7]){ circ(ex+(o.lookX||0)*1.6,-7,2.4); ctx.fill(); }
     ctx.strokeStyle='#2a2238'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,1,5,0.15*Math.PI,0.85*Math.PI); ctx.stroke();
   }
-  // барабан; на боку — цвета лампочек, которые он зажигает напрямую
+  // барабан; на боку — что он делает напрямую: точка — зажигает, крестик — гасит
   ctx.fillStyle='#ece4d0'; rr(-17,9,34,15,4); ctx.fill();
   ctx.fillStyle='#fff8ea'; ctx.beginPath(); ctx.ellipse(0,9,17,5.5,0,0,TAU); ctx.fill(); ctx.strokeStyle='#8a7f9e'; ctx.lineWidth=1.5; ctx.stroke();
-  (o.lamps||[]).forEach((c,k,arr)=>{ ctx.fillStyle=c; circ((k-(arr.length-1)/2)*10,17,3.8); ctx.fill(); });
+  const marks=[...(o.lamps||[]).map(c=>({c,off:false})),...(o.offs||[]).map(c=>({c,off:true}))];
+  marks.forEach((m,k)=>{ const mx=(k-(marks.length-1)/2)*10; if(m.off) drawCross(mx,17,3.2,m.c,2.4); else { ctx.fillStyle=m.c; circ(mx,17,3.8); ctx.fill(); } });
   ctx.strokeStyle='#7a5230'; ctx.lineWidth=3; ctx.lineCap='round';
   if(o.stun){
     ctx.beginPath(); ctx.moveTo(-26,24); ctx.lineTo(-12,28); ctx.moveTo(14,30); ctx.lineTo(27,22); ctx.stroke();
   } else {
-    for(const s of [-1,1]){ // палочки сбоку от лица: поднята — снаружи вверху, удар — по барабану
+    for(const s of [-1,1]){ // палочки: поднята — снаружи вверху, удар — по барабану
       const active=(s<0)===!!o.alt, down=active&&o.hit>0, tx=down?s*8:s*25, ty=down?8:-6;
       ctx.beginPath(); ctx.moveTo(s*17,10); ctx.lineTo(tx,ty); ctx.stroke();
       ctx.fillStyle='#7a5230'; circ(tx,ty,2.8); ctx.fill();
@@ -600,16 +729,23 @@ function drawDrummer(x,y,o){
     text('?!',29,-53,16,'#8a2be2');
   }
   ctx.restore();
+  if(!o.stun && o.pattern && o.showStrip) drawStrip(x,y,o.pattern,o.step,o.big,o.scaffold);
+  if(o.hintN){ let xx=x, yy=y-(o.showStrip?96:70)+Math.sin(now*5)*3; if(yy<CONFIG.ROOM.y0+14){ xx=x+44; yy=y-30; } // не залезать на стену
+    ctx.fillStyle='#b26bff'; circ(xx,yy,15); ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke(); text(String(o.hintN),xx,yy+6,17,'#ffffff'); }
 }
 function drawHero(x,y,o){
   ctx.save(); ctx.translate(x,y);
   ctx.fillStyle='rgba(0,0,0,.35)'; ctx.beginPath(); ctx.ellipse(0,20,18,6,0,0,TAU); ctx.fill();
   ctx.translate(0,o.moving?Math.sin(o.walk*16)*1.6:0);
-  ctx.fillStyle='#5ee07a'; circ(0,-2,17); ctx.fill(); ctx.strokeStyle='#2f9a4b'; ctx.lineWidth=2.5; ctx.stroke();
+  ctx.fillStyle=o.deaf>0?'#8fc79a':'#5ee07a'; circ(0,-2,17); ctx.fill(); ctx.strokeStyle='#2f9a4b'; ctx.lineWidth=2.5; ctx.stroke();
   ctx.fillStyle='#2f9a4b'; ctx.beginPath(); ctx.arc(0,-4,17,Math.PI*1.1,Math.PI*1.9); ctx.closePath(); ctx.fill();
   const lx=clamp(o.lookX||0,-1,1)*2, ly=clamp(o.lookY||0,-1,1)*1.5;
   ctx.fillStyle='#fff'; for(const ex of [-6,6]){ ctx.beginPath(); ctx.ellipse(ex,-3,4.5,5.4,0,0,TAU); ctx.fill(); }
   ctx.fillStyle='#17131f'; for(const ex of [-6,6]){ circ(ex+lx,-2+ly,2.4); ctx.fill(); }
+  if(o.deaf>0){ // уши заложило
+    ctx.strokeStyle=hexA(BEATC,0.9); ctx.lineWidth=2.5;
+    for(const s of [-1,1]) for(let k=0;k<2;k++){ ctx.beginPath(); ctx.arc(s*20,-2,5+k*6+Math.sin(now*20)*1.5,s<0?Math.PI*0.65:-Math.PI*0.35,s<0?Math.PI*1.35:Math.PI*0.35); ctx.stroke(); }
+  }
   if(o.clap>0){
     const k=o.clap/0.35;
     ctx.fillStyle='#ffd9b0'; circ(-4,11,5.5); ctx.fill(); circ(4,11,5.5); ctx.fill();
@@ -629,10 +765,16 @@ function drawCage(c){
   ctx.fillStyle='#ffd166'; rr(-9,-3,18,14,3); ctx.fill();
   ctx.restore();
 }
-function drawString(A,B,color,hot,arrow){
+function drawString(A,B,color,hot,arrow,off){
   const C=bez(A,B,0.5).C;
-  ctx.strokeStyle=hot?color:hexA(color,0.5); ctx.lineWidth=hot?4.5:2.5;
+  ctx.strokeStyle=hot?color:hexA(color,off?0.7:0.5); ctx.lineWidth=hot?4.5:(off?3:2.5);
+  if(off) ctx.setLineDash([9,7]);
   ctx.beginPath(); ctx.moveTo(A.x,A.y); ctx.quadraticCurveTo(C.x,C.y,B.x,B.y); ctx.stroke();
+  ctx.setLineDash([]);
+  if(off){ // крестик посередине: эта ниточка ГАСИТ
+    const p=bez(A,B,0.5); ctx.fillStyle='#17131f'; circ(p.x,p.y,10); ctx.fill(); ctx.strokeStyle=color; ctx.lineWidth=2; ctx.stroke();
+    drawCross(p.x,p.y,4.5,color,2.6);
+  }
   if(arrow){ // стрелка: куда бежит сбой
     const p=bez(A,B,0.55), q=bez(A,B,0.6), a=Math.atan2(q.y-p.y,q.x-p.x);
     ctx.save(); ctx.translate(q.x,q.y); ctx.rotate(a); ctx.fillStyle=hot?color:hexA(color,0.8);
@@ -641,8 +783,9 @@ function drawString(A,B,color,hot,arrow){
 }
 
 /* ---------- рендер мира ---------- */
-function lampStates(preview){
-  return G.lamps.map((l,i)=>({ lit:G.open||l.t>0, open:G.open, frac:l.t/CONFIG.LAMP_TIME, left:l.t, flash:l.flash, preview:preview&&preview.has(i) }));
+function lampStates(tree){
+  return G.lamps.map((l,i)=>({ lit:G.open||l.t>0, open:G.open, frac:l.t/CONFIG.LAMP_TIME, left:l.t, flash:l.flash, off:l.off,
+    preview:tree&&tree.lamps.has(i), previewOff:tree&&tree.offs.has(i) }));
 }
 function drawWorld(){
   const W=CONFIG.W, H=CONFIG.H, R=CONFIG.ROOM;
@@ -655,23 +798,31 @@ function drawWorld(){
   for(let y=R.y0;y<H;y+=48) for(let x=((y-R.y0)/48%2)*48;x<W;x+=96) ctx.fillRect(x,y,48,48);
   ctx.fillStyle='#120e19'; ctx.fillRect(0,R.y0-4,W,8); ctx.fillRect(0,R.y1+4,W,H-R.y1); ctx.fillRect(0,R.y0,R.x0-4,H); ctx.fillRect(R.x1+4,R.y0,W,H);
 
-  // табличка-подсказка слева, счёт хлопков справа
+  // табличка-подсказка слева, счёт справа
   ctx.fillStyle='#2b2140'; rr(20,54,370,128,12); ctx.fill(); ctx.strokeStyle='#433759'; ctx.lineWidth=2; ctx.stroke();
   text(t('goal'),205,80,16,'#ffd166');
-  const tip=wrapLines(L(G.lv.tip),340,18);
-  tip.slice(0,3).forEach((s,i)=>text(s,205,110+i*25,18,'#e8e6f0'));
+  const tip=wrapLines(L(G.lv.tip),344,17);
+  tip.slice(0,3).forEach((s,i)=>text(s,205,108+i*24,17,'#e8e6f0'));
   ctx.fillStyle='#2b2140'; rr(570,54,370,128,12); ctx.fill(); ctx.strokeStyle='#433759'; ctx.lineWidth=2; ctx.stroke();
-  text('👏 '+t('claps')+': '+G.claps,755,96,26,'#e8e6f0');
-  text(t('canDo')+' '+G.lv.par,755,124,17,'#8f86a8');
-  const proj=G.claps<=G.lv.par?3:(G.claps<=G.lv.par+1?2:1);
-  for(let i=0;i<3;i++) drawStar(715+i*40,157,13,i<proj);
+  if(G.lv.budget){
+    text(t('budget')+':',755,88,19,'#e8e6f0');
+    const n=G.lv.budget, left=budgetLeft();
+    for(let i=0;i<n;i++){ const x=755+(i-(n-1)/2)*44, used=i>=left; ctx.globalAlpha=used?0.28:1; text('🥁',x,128,30,'#fff'); ctx.globalAlpha=1; if(used) drawCross(x,118,12,'#ff5d5d',4); }
+    text(`${t('attempt')} ${TRIES[G.n]||1}`+(HINT[G.n]?' · 💡':''),755,166,15,'#8f86a8','center','normal');
+  } else {
+    text('👏 '+t('claps')+': '+G.knocks,755,96,26,'#e8e6f0');
+    text(t('canDo')+' '+G.lv.par,755,124,17,'#8f86a8');
+    const proj=G.knocks<=G.lv.par?3:(G.knocks<=G.lv.par+1?2:1);
+    for(let i=0;i<3;i++) drawStar(715+i*40,157,13,i<proj);
+  }
 
-  // подсветка: что зажжёт барабанщик под мышью
+  // подсветка: что зажжёт / погасит барабанщик под мышью
   let hover=null;
   if(mode==='play'&&mouse.inside){ const d=drummerAt(mouse,32); if(d) hover=d; }
+  if(mode==='play'&&G.press&&now-G.press.t0>=PRESS_PREVIEW) hover=G.press.d;
   const tree=hover?cascadeTree(hover.i):null;
 
-  drawDoor(CONFIG.DOOR.cx,CONFIG.DOOR.top,G.openK,lampStates(tree&&tree.lamps));
+  drawDoor(CONFIG.DOOR.cx,CONFIG.DOOR.top,G.openK,lampStates(tree),1,G.hold/CONFIG.HOLD);
   for(const c of G.cages) drawCage(c);
 
   // ниточки
@@ -681,7 +832,7 @@ function drawWorld(){
     for(const k of d.links){
       const key=d.i+'>'+k;
       const hot=hotSpark.has(key)||G.glow[key]>0||(tree&&tree.strings.has(key))||(G.hl&&G.hl.to===k);
-      drawString(A,linkPos(k),linkColor(k),hot,typeof k!=='string');
+      drawString(A,linkPos(k),linkColor(k),hot,typeof k!=='string',isOff(k));
     }
   }
 
@@ -693,11 +844,15 @@ function drawWorld(){
   circ(h.x,h.y,CONFIG.REACH); ctx.stroke(); ctx.setLineDash([]);
 
   // барабанщики и герой — по глубине
+  const sol=HINT[G.n]&&G.lv.solution?G.lv.solution:null;
   const ents=G.drummers.map(d=>({y:d.y, f:()=>drawDrummer(d.x,d.y,{
-    color:d.color, stun:d.stun>0, hit:d.hitT, alt:d.alt, lookX:Math.sign(h.x-d.x),
-    lamps:d.links.filter(k=>typeof k==='string').map(k=>LAMPS[LIDX[k]].color),
+    color:d.color, stun:d.stun>0, hit:d.hitT, alt:d.alt, lookX:Math.sign(h.x-d.x), hitting:d.pattern[G.step]==='x'&&G.lv.drown,
+    lamps:d.links.filter(k=>typeof k==='string'&&!isOff(k)).map(k=>LAMPS[lampOf(k)].color),
+    offs:d.links.filter(k=>isOff(k)).map(k=>LAMPS[lampOf(k)].color),
+    pattern:d.pattern, step:G.step, showStrip:G.lv.drown, big:inReach===d||hover===d, scaffold:G.lv.scaffold&&inReach===d,
+    hintN:sol&&sol.includes(d.i)?sol.indexOf(d.i)+1:0,
     ring:(hover===d)?'#ffffff':(inReach===d?'rgba(94,224,122,.9)':(G.hero.chase===d.i?'rgba(255,255,255,.6)':null)) })}));
-  ents.push({y:h.y, f:()=>drawHero(h.x,h.y,{lookX:h.lookX, lookY:h.lookY, clap:h.clapT, moving:h.moving, walk:h.walk})});
+  ents.push({y:h.y, f:()=>drawHero(h.x,h.y,{lookX:h.lookX, lookY:h.lookY, clap:h.clapT, moving:h.moving, walk:h.walk, deaf:h.deaf})});
   ents.sort((a,b)=>a.y-b.y).forEach(e=>e.f());
 
   // искры на ниточках
@@ -707,7 +862,7 @@ function drawWorld(){
       const p=bez(A,B,clamp(sp.s-g*0.05,0,1));
       ctx.fillStyle=g?hexA(col,0.25*(4-g)/4):col; circ(p.x,p.y,g?7-g:10); ctx.fill();
     }
-    const p=bez(A,B,clamp(sp.s,0,1)); ctx.fillStyle='#fff'; circ(p.x,p.y,4.5); ctx.fill();
+    const p=bez(A,B,clamp(sp.s,0,1)); ctx.fillStyle=isOff(sp.to)?'#17131f':'#fff'; circ(p.x,p.y,4.5); ctx.fill();
   }
   for(const n of G.notes){ ctx.globalAlpha=clamp(n.life,0,1); text(n.ch,n.x,n.y,20,n.color); ctx.globalAlpha=1; }
   for(const e of G.fx){
@@ -715,10 +870,11 @@ function drawWorld(){
     if(e.type==='ring'){ ctx.strokeStyle=e.color; ctx.globalAlpha=a; ctx.lineWidth=3; circ(e.x,e.y,e.r); ctx.stroke(); ctx.globalAlpha=1; }
     if(e.type==='txt'){ ctx.globalAlpha=a; ctx.lineWidth=4; ctx.strokeStyle='#17131f'; ctx.font=`900 ${e.size}px ${FONT}`; ctx.textAlign='center'; ctx.strokeText(e.s,e.x,e.y); text(e.s,e.x,e.y,e.size,e.color,'center','900'); ctx.globalAlpha=1; }
     if(e.type==='conf'){ ctx.save(); ctx.globalAlpha=a; ctx.translate(e.x,e.y); ctx.rotate(e.rot); ctx.fillStyle=e.color; ctx.fillRect(-4,-2.5,8,5); ctx.restore(); }
+    if(e.type==='smoke'){ ctx.fillStyle=`rgba(180,170,200,${a*0.5})`; circ(e.x,e.y,5+(1-a)*8); ctx.fill(); }
   }
 
   // обучение на первом уровне: рука «кликни!»
-  if(G.lv.hand && G.claps===0 && mode==='play'){
+  if(G.lv.hand && G.knocks===0 && mode==='play'){
     const d=G.drummers[0], b=Math.sin(now*6)*6;
     text('👆',d.x,d.y+82+b,40,'#fff');
     text(isTouch?t('tapHint'):t('clickHint'),d.x,d.y+118+b,22,'#ffd166');
@@ -734,9 +890,10 @@ function drawWorld(){
   if(G.toast){
     const a=clamp(G.toast.t/0.3,0,1)*clamp((G.toast.max-G.toast.t)/0.15,0,1);
     ctx.globalAlpha=a; ctx.font=`bold 19px ${FONT}`; const w=ctx.measureText(G.toast.s).width+36;
-    ctx.fillStyle='rgba(13,10,18,.88)'; rr(480-w/2,G.open?262:206,w,38,19); ctx.fill();
+    const ty=G.open?262:206;
+    ctx.fillStyle='rgba(13,10,18,.9)'; rr(480-w/2,ty,w,38,19); ctx.fill();
     ctx.strokeStyle=G.toast.color; ctx.lineWidth=2; ctx.stroke();
-    text(G.toast.s,480,(G.open?262:206)+26,19,G.toast.color); ctx.globalAlpha=1;
+    text(G.toast.s,480,ty+26,19,G.toast.color); ctx.globalAlpha=1;
   }
   if(mode==='play'){
     text(isTouch?t('controlsTouch'):t('controls'),30,CONFIG.ROOM.y1-8,13,'#5b5372','left','normal');
@@ -754,16 +911,23 @@ function button(label,cx,cy,w,h,act,primary,size){
   text(label,cx,cy+(size||22)*0.36,size||22,primary?'#17131f':'#e8e6f0');
   uiButtons.push({x,y,w,h,act});
 }
+function levelDot(i,x,y,r,cur){ // кружок уровня: номер, цвет части, звёзды
+  const lv=LEVELS[i], best=BEST[i]||0;
+  ctx.fillStyle=cur?'#b26bff':(best?(lv.part2?'#c77b2c':'#3d3157'):'#241c31'); circ(x,y,r); ctx.fill();
+  ctx.strokeStyle=lv.part2?'#ff9a3c':'#7a62a8'; ctx.lineWidth=2; ctx.stroke();
+  text(String(i+1),x,y+r*0.38,r*1.05,'#e8e6f0');
+  uiButtons.push({x:x-r,y:y-r,w:2*r,h:2*r,act:()=>goLevel(i)});
+  return best;
+}
 function drawTopBar(){
   ctx.fillStyle='#0f0b16'; ctx.fillRect(0,0,CONFIG.W,CONFIG.HUD_H);
   if(G&&mode!=='start'){
-    const s=`${t('level')} ${G.n+1} ${t('of')} ${LEVELS.length}`;
+    const s=`${G.n+1}/${LEVELS.length}`;
     text(s,16,29,16,'#8f86a8','left'); ctx.font=`bold 16px ${FONT}`;
     const w=ctx.measureText(s).width;
-    text(L(G.lv.name),16+w+12,29,20,'#e8e6f0','left');
+    text(L(G.lv.name),16+w+10,29,20,G.lv.part2?'#ffb066':'#e8e6f0','left');
     ctx.font=`bold 20px ${FONT}`; const w2=ctx.measureText(L(G.lv.name)).width;
-    for(let i=0;i<LEVELS.length;i++){ const x=16+w+12+w2+22+i*18;
-      ctx.fillStyle=i===G.n?'#b26bff':(RESULTS[i]?'#ffd166':'#2f2540'); circ(x,22,6); ctx.fill(); }
+    for(let i=0;i<LEVELS.length;i++){ const x=16+w+10+w2+20+i*19+(LEVELS[i].part2?8:0); levelDot(i,x,22,8,i===G.n); }
   } else text('idea_generator · '+(LANG==='ru'?'прототип механики':'mechanic prototype'),16,28,14,'#5b5372','left','normal');
   const bw=44, bh=34, y=5; let x=CONFIG.W-8-bw;
   const btns=[{l:'?', a:()=>{ if(mode==='help') mode=helpReturn; else openHelp(); }}, {l:muted?'🔇':'🔊', a:toggleMute}, {l:LANG==='ru'?'EN':'RU', a:toggleLang}];
@@ -771,7 +935,7 @@ function drawTopBar(){
   for(const b of btns){ button(b.l,x+bw/2,y+bh/2,bw,bh,b.a,false,18); x-=bw+8; }
 }
 function dim(){ ctx.fillStyle='rgba(10,8,15,.66)'; ctx.fillRect(0,CONFIG.HUD_H,CONFIG.W,CONFIG.H-CONFIG.HUD_H); }
-function panel(x,y,w,h){ ctx.fillStyle='#211a2e'; rr(x,y,w,h,18); ctx.fill(); ctx.strokeStyle='#b26bff'; ctx.lineWidth=2; ctx.stroke(); }
+function panel(x,y,w,h,color){ ctx.fillStyle='#211a2e'; rr(x,y,w,h,18); ctx.fill(); ctx.strokeStyle=color||'#b26bff'; ctx.lineWidth=2; ctx.stroke(); }
 
 function drawSteps(top){ // три картинки «как играть» (стартовый экран и помощь)
   const cxs=[170,480,790], tt=now;
@@ -785,37 +949,43 @@ function drawSteps(top){ // три картинки «как играть» (с�
       if(clap>0) text(t('clap'),cx,top+50,20,'#ffffff','center','900');
       text('👆',cx+70,top+150+Math.sin(tt*6)*4,30,'#fff');
     } else if(i===1){
-      const ph=(tt%2)/2, A={x:cx-70,y:top+118}, B={x:cx+76,y:top+70};
-      const s=clamp(ph/0.5,0,1), lit=ph>0.5;
-      drawString(A,B,'#ff5d5d',true,false);
-      drawLamp(B.x,B.y-18,'#ff5d5d',{lit,open:false,frac:1-(ph-0.5)/0.5*0.5,left:9,flash:0});
-      drawDrummer(A.x,A.y,{color:DCOLORS[1],stun:true,lamps:['#ff5d5d']});
-      if(!lit){ const p=bez(A,B,s); ctx.fillStyle=hexA('#ff5d5d',0.5); circ(p.x,p.y,11); ctx.fill(); ctx.fillStyle='#fff'; circ(p.x,p.y,5); ctx.fill(); }
+      const st=Math.floor(tt/CONFIG.STEP)%8, pat='xxxx....', on=pat[st]==='x';
+      drawDrummer(cx,top+120,{color:DCOLORS[2],stun:false,hit:on?1:0,alt:st%2===0,lamps:['#4fc3f7'],pattern:pat,step:st,showStrip:true,big:true,scaffold:true,hitting:on});
     } else {
-      const ph=(tt%3.5)/3.5, openK=clamp((ph-0.5)/0.12,0,1); // лампочки по одной → дверь открылась
-      drawDoor(cx,top+28,openK,LAMPS.map((l,j)=>({lit:ph>0.1+j*0.13,open:true,frac:1,left:9,flash:0})),0.95);
+      const ph=(tt%3.5)/3.5, openK=clamp((ph-0.62)/0.12,0,1), hold=clamp((ph-0.46)/0.16,0,1);
+      drawDoor(cx,top+28,openK,LAMPS.map((l,j)=>({lit:ph>0.1+j*0.12,open:true,frac:1,left:9,flash:0})),0.95,openK>0?0:hold);
     }
     const cap=t('step'+(i+1));
     text(cap[0],cx,top+178,16,'#e8e6f0'); text(cap[1],cx,top+200,16,'#e8e6f0');
   });
 }
+function drawLevelRow(y){
+  const n1=LEVELS.filter(l=>!l.part2).length, sp=38, gapP=26, total=(LEVELS.length-1)*sp+gapP, x0=480-total/2;
+  text(t('part1'),x0+(n1-1)*sp/2,y-24,14,'#b2a9c1');
+  text(t('part2'),x0+n1*sp+gapP+(LEVELS.length-n1-1)*sp/2,y-24,14,'#ffb066');
+  LEVELS.forEach((lv,i)=>{
+    const x=x0+i*sp+(lv.part2?gapP:0), best=levelDot(i,x,y,15,false);
+    for(let s=0;s<3;s++){ ctx.fillStyle=s<best?'#ffd166':'#3a3050'; starShape(x-9+s*9,y+24,4.2); ctx.fill(); }
+  });
+}
 function drawStart(){
   ctx.fillStyle='#17131f'; ctx.fillRect(0,CONFIG.HUD_H,CONFIG.W,CONFIG.H-CONFIG.HUD_H);
-  ctx.save(); ctx.shadowColor='#b26bff'; ctx.shadowBlur=24; text(t('title'),480,118,62,'#e8e6f0','center','900'); ctx.restore();
-  text(t('sub1'),480,160,19,'#cfcbe0','center','normal');
-  text(t('sub2'),480,186,19,'#cfcbe0','center','normal');
-  drawSteps(222);
-  button(t('play'),480,522,300,68,startGame,true,30);
-  text(LANG==='ru'?'6 коротких уровней · в каждом одна новая штука':'6 short levels · one new idea in each',480,584,15,'#8f86a8','center','normal');
+  ctx.save(); ctx.shadowColor='#b26bff'; ctx.shadowBlur=24; text(t('title'),480,108,58,'#e8e6f0','center','900'); ctx.restore();
+  text(t('sub1'),480,146,18,'#cfcbe0','center','normal');
+  text(t('sub2'),480,170,18,'#cfcbe0','center','normal');
+  drawSteps(192);
+  button(t('play'),480,446,280,58,startGame,true,28);
+  drawLevelRow(536);
 }
 function drawIntro(){
-  dim(); panel(160,236,640,300);
-  text(`${t('level')} ${G.n+1}`,480,280,18,'#8f86a8');
+  const p2=G.lv.part2;
+  dim(); panel(160,236,640,300,p2?'#ff9a3c':null);
+  text(`${t('level')} ${G.n+1}`+(p2?` · ${t('part2')}`:''),480,280,18,p2?'#ffb066':'#8f86a8');
   text(L(G.lv.name),480,326,42,'#e8e6f0','center','900');
-  const tip=wrapLines(L(G.lv.tip),580,22);
-  tip.slice(0,3).forEach((s,i)=>text(s,480,372+i*30,22,'#cfcbe0'));
-  text(t('goal'),480,372+Math.min(3,tip.length)*30+6,17,'#ffd166');
-  button(t('got'),480,496,240,54,()=>{ mode='play'; },true,24);
+  const tip=wrapLines(L(G.lv.tip),580,21);
+  tip.slice(0,3).forEach((s,i)=>text(s,480,370+i*29,21,'#cfcbe0'));
+  text(t('goal'),480,370+Math.min(3,tip.length)*29+6,17,'#ffd166');
+  button(t('got'),480,500,240,52,()=>{ mode='play'; },true,24);
 }
 function drawDone(){
   dim(); panel(220,200,520,330);
@@ -824,48 +994,64 @@ function drawDone(){
     const k=clamp((G.doneT-0.15-i*0.2)/0.25,0,1), r=30*(i<G.stars?(k<1?0.6+0.6*k:1):1);
     drawStar(400+i*80,318,r,i<G.stars&&k>0);
   }
-  text(`${t('claps')}: ${G.claps} · ${t('canDo')} ${G.lv.par}`,480,382,21,'#e8e6f0');
-  const msg=G.stars===3?t('perfect'):(G.stars===2?t('good'):t('ok')+G.lv.par);
+  let msg;
+  if(G.lv.part2){
+    text(`${t('claps')}: ${G.knocks} · ${t('attempt')} ${TRIES[G.n]}`,480,382,21,'#e8e6f0');
+    msg=HINT[G.n]?t('withHint'):(TRIES[G.n]<=1?t('firstTry'):(TRIES[G.n]<=3?t('fewTries'):t('manyTries')));
+  } else {
+    text(`${t('claps')}: ${G.knocks} · ${t('canDo')} ${G.lv.par}`,480,382,21,'#e8e6f0');
+    msg=G.stars===3?t('perfect'):(G.stars===2?t('good'):t('ok')+G.lv.par);
+  }
   text(msg,480,414,17,G.stars===3?'#9fe8b0':'#ffd166','center','normal');
-  button(t('again'),370,480,180,52,restartLevel,false,20);
+  button(t('again'),370,480,180,52,()=>{ TRIES[G.n]=0; restartLevel(); },false,20);
   button(G.n+1<LEVELS.length?t('next'):'🏁 '+t('next'),590,480,200,52,nextLevel,true,22);
 }
+function drawFail(){
+  dim(); panel(220,210,520,300,'#ff9a3c');
+  text(t('failTitle'),480,262,34,'#e8e6f0','center','900');
+  wrapLines(t('failText'),440,19,'normal').forEach((s,i)=>text(s,480,306+i*26,19,'#cfcbe0','center','normal'));
+  if(HINT[G.n]) text(t('hintText'),480,372,16,'#ffd166','center','normal');
+  const canHint=!HINT[G.n] && TRIES[G.n]>=2 && G.lv.solution;
+  if(canHint){ button(t('hintBtn'),360,446,190,52,useHint,false,20); button(t('again'),600,446,200,52,restartLevel,true,22); }
+  else button(t('again'),480,446,240,52,restartLevel,true,22);
+}
 function drawFinal(){
-  dim(); panel(200,70,560,540);
-  text(t('allDone'),480,122,34,'#e8e6f0','center','900');
+  dim(); panel(120,64,720,560);
+  text(t('allDone'),480,112,32,'#e8e6f0','center','900');
   const total=RESULTS.reduce((s,r)=>s+(r?r.stars:0),0);
-  text(`${t('stars')}: ${total} / ${LEVELS.length*3}`,480,160,22,'#ffd166');
-  text(t('lvlCol'),250,204,15,'#8f86a8','left'); text(t('clapCol'),560,204,15,'#8f86a8','center');
+  text(`${t('stars')}: ${total} / ${LEVELS.length*3}`,480,148,21,'#ffd166');
+  const col=(i)=>i<7?0:1;
   LEVELS.forEach((lv,i)=>{
-    const r=RESULTS[i], y=240+i*44;
-    text(`${i+1}. ${L(lv.name)}`,250,y,19,'#e8e6f0','left');
-    text(r?`${r.claps} (${t('min')} ${r.par})`:'—',560,y,18,'#cfcbe0');
-    for(let s=0;s<3;s++) drawStar(650+s*28,y-7,10,r&&s<r.stars);
+    const r=RESULTS[i], c=col(i), row=c?i-7:i, x=150+c*350, y=196+row*56;
+    text(`${i+1}. ${L(lv.name)}`,x,y,17,lv.part2?'#ffb066':'#e8e6f0','left');
+    const info=r?(lv.part2?`${t('attempt')} ${r.tries}${r.hint?' · 💡':''}`:`${r.knocks} (${t('min')} ${r.par})`):'—';
+    text(info,x,y+22,14,'#8f86a8','left','normal');
+    for(let s=0;s<3;s++) drawStar(x+250+s*24,y-6,9,r&&s<r.stars);
   });
-  button(t('restart'),480,558,280,56,startGame,true,24);
+  button(t('restart'),480,586,280,52,startGame,true,22);
 }
 function drawHelp(){
-  dim(); panel(14,60,932,568);
-  text(t('help'),480,104,32,'#e8e6f0','center','900');
-  drawSteps(126);
-  text(t('goal'),480,376,20,'#ffd166');
-  text(isTouch?t('controlsTouch'):t('controls'),480,412,17,'#cfcbe0','center','normal');
-  if(!isTouch) text(t('hover'),480,438,17,'#cfcbe0','center','normal');
-  text(LANG==='ru'?'Барабанщик в клетке недосягаем — до него дойдёт только искра по ниточке.':'A caged drummer is out of reach — only a spark along a string gets to him.',480,470,17,'#cfcbe0','center','normal');
-  text(LANG==='ru'?'Меньше хлопков — больше звёзд ★':'Fewer claps — more stars ★',480,500,17,'#cfcbe0','center','normal');
-  button(t('got'),480,566,240,54,()=>{ mode=helpReturn; },true,24);
+  dim(); panel(14,52,932,580);
+  text(t('help'),480,92,30,'#e8e6f0','center','900');
+  drawSteps(110);
+  text(t('goal'),480,352,19,'#ffd166');
+  t('helpLines').forEach((s,i)=>text(s,480,384+i*27,16,'#cfcbe0','center','normal'));
+  text(isTouch?t('controlsTouch'):t('controls'),480,500,15,'#8f86a8','center','normal');
+  if(!isTouch) text(t('hover'),480,522,15,'#8f86a8','center','normal');
+  button(t('got'),480,580,240,50,()=>{ mode=helpReturn; },true,22);
 }
 
 function render(){
   ctx.setTransform(SCALE,0,0,SCALE,0,0);
   uiButtons=[];
   ctx.fillStyle='#17131f'; ctx.fillRect(0,0,CONFIG.W,CONFIG.H);
-  if(mode==='start'||(mode==='help'&&!G)){ drawStart(); }
+  if(mode==='start'||(mode==='help'&&!G)) drawStart();
   else drawWorld();
   if(mode==='intro') drawIntro();
   if(mode==='done') drawDone();
+  if(mode==='fail') drawFail();
   if(mode==='final') drawFinal();
-  if(mode==='help'){ if(!G){ uiButtons=[]; } drawHelp(); }
+  if(mode==='help'){ uiButtons=[]; drawHelp(); }
   drawTopBar();
   if(mode==='start'&&!G) cv.style.cursor=mouseOverButton()?'pointer':'default';
 }
@@ -879,7 +1065,7 @@ function loop(ts){
 requestAnimationFrame(loop);
 
 // для автотестов в headless-браузере
-window.LEIT={ get G(){return G;}, get mode(){return mode;}, set mode(v){mode=v;}, loadLevel, update, render, completeLevel, doClap, LEVELS, CONFIG, RESULTS:()=>RESULTS };
+window.LEIT={ get G(){return G;}, get mode(){return mode;}, set mode(v){mode=v;}, loadLevel, goLevel, update, render, completeLevel, doClap, onBeat, LEVELS, CONFIG, TRIES, HINT, RESULTS:()=>RESULTS };
 </script>
 </body>
 </html>
