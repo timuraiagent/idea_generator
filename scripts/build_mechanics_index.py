@@ -27,7 +27,7 @@ SCORES = {
     "tilt": 13, "shadowswap": 12, "night": 12, "warmth": 12, "signature": 12,
     "furniture": 10, "windrope": 9, "feedchain": 8, "merit": 7,
     "gaze": 16, "preposition": 16, "pathos": 16, "acid": 15, "closet": 15, "chip": 15, "settle": 15,
-    "sharpen-evening": 15, "screen-rebuff": 15,
+    "sharpen-evening": 15, "screen-rebuff": 15, "deny-path": 16,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
