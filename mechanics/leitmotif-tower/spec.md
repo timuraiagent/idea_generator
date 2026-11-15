@@ -203,7 +203,7 @@ design, сделать играбельной: рост сложности с ч
 дошёл, сколько не хватило, остаток времени, попытки, подсказка, пропуск.
 
 ## Сборка
-`prototypes/leitmotif-tower/build/`: `base.html` — движок (снимок v3), `chapters.py` — главы и уровни узорами,
+`prototypes/leitmotif-tower/src/`: `base.html` — движок (снимок v3), `chapters.py` — главы и уровни узорами,
 `tower_layer.js` — вертикальная раскладка и экраны, `build.py` — сборка в `../index.html` (`NOTIME=1` — без таймеров,
 чтобы мерить время), `bots.py` — боты и запись `meta.json`, `pool_test.py` — глава «Запас» цепочкой, `spec.py` — эта спека.
 Порядок: `NOTIME=1 python3 build.py && python3 bots.py all 5 1 && python3 build.py && python3 bots.py all 5 0 && python3 spec.py`.
