@@ -29,7 +29,7 @@ SCORES = {
     "gaze": 16, "preposition": 16, "pathos": 16, "acid": 15, "closet": 15, "chip": 15, "settle": 15,
     "sharpen-evening": 15, "screen-rebuff": 15,
     "soak-stage": 16, "deny-path": 16, "waft-credit": 16, "glorify-touch": 16,
-    "spill-detail": 16, "pour-algorithm": 16, "circumnavigate-policy": 16,
+    "spill-detail": 16, "pour-algorithm": 16, "circumnavigate-policy": 16, "death-stamp": 16,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
