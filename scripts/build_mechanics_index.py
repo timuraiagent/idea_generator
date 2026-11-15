@@ -16,7 +16,7 @@ SCORES = {
     "ladle": 16, "avert": 16, "acquaint": 16, "suppose": 16, "herald": 16, "charter": 16,
     "footsteps": 16,
     "haunt": 16,
-    "pierce": 16,
+    "pierce": 16, "halfword": 16,
     "chronicle": 15, "infill": 15, "swarm": 15, "settle": 15,
     "widen": 15, "captivate": 15, "cultivate": 15, "ignite": 15, "comedy": 15, "weave": 15,
     "queue": 15, "panic": 15,
