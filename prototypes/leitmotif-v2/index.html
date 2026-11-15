@@ -57,13 +57,18 @@ const STICKS = { L:{life:10, w:14, color:'#b87f45'}, N:{life:6, w:9, color:WOOD}
 const WORLDS = [ {ru:'Палка',en:'The stick',c:'#e9c46a'}, {ru:'Решётка',en:'The gate',c:'#aeb6c8'},
                  {ru:'Шестерни',en:'Gears',c:'#ff9a3c'}, {ru:'Двойное колесо',en:'Double wheel',c:'#4fd1c5'},
                  {ru:'Узкая дырка',en:'Narrow hole',c:'#6ab7ff'}, {ru:'Заслонка',en:'The shutter',c:'#ff7eb6'},
-                 {ru:'Жертва',en:'Sacrifice',c:'#b8e986'} ];
+                 {ru:'Жертва',en:'Sacrifice',c:'#b8e986'}, {ru:'Циферблат',en:'The dial',c:'#f4a261'},
+                 {ru:'Составное колесо',en:'Split wheel',c:'#c08bff'}, {ru:'Мастер',en:'Master',c:'#ff5d5d'} ];
+const INNERC = '#d9845a';
 const NARROW = '#6ab7ff', KEYC = '#ff7eb6';
 
 /* Уровни. wheels: x,y,r — где и какого размера; holes — сколько дырок (0 — заклинить нельзя);
    rps — оборотов в секунду; drv — индекс колеса, которое крутит это ремнём (нет — свой мотор);
    ham — x молота под колесом; gate — x решётки, которую колесо держит открытой.
-   sticks — сколько палок; par — минимум; life — сколько держит палка; solution — порядок для подсказки. */
+   sticks — сколько палок; par — минимум; life — сколько держит палка; solution — порядок для подсказки.
+   Миры 8–10: dial — циферблат (деление = 1 с, точность под стрелкой строже); sync:[i,c] — дырка приходит через c секунд после дырки колеса i;
+   dbl+idrv — составное колесо: внутренний диск крутит колесо idrv (ioff — диск на столько секунд позже внешней дырки;
+   isync — диск под стрелкой вместе с дыркой колеса idrv, idel — на столько секунд позже ближайшей). */
 const LEVELS = [
   { name:{ru:'Палка в колесо', en:'A stick in the wheel'}, sticks:5, par:1, scaffold:true, solution:[0],
     tip:{ru:'Мышонок боится молота. Ткни в колесо, когда дырка под зелёной стрелкой, — молот замрёт.',
@@ -246,6 +251,78 @@ const LEVELS = [
          en:'The narrow wheels are out of step: the far one is more than half a turn late. One must wait — but which? And where does the thick stick go?'},
     wheels:[ {x:220,y:310,r:52,holes:1,rps:.125,ham:220,narrow:true}, {x:450,y:320,r:50,holes:2,rps:.25,ham:450},
              {x:680,y:310,r:52,holes:1,rps:.125,ham:680,narrow:true,sync:[0,5.5]} ] },
+  // ---------- мир 8: циферблат (число у зубчика — через сколько секунд дырка под стрелкой; тонкая палка = 3 с) ----------
+  { name:{ru:'Циферблат', en:'The dial'}, dial:true, sticks:4, queue:['S','S','S','S'], par:3, extra:1, solution:[0,0,1],
+    tip:{ru:'Число у белого зубчика — через сколько секунд дырка будет под стрелкой. Тонкая палка держит 3 секунды. Посчитай!',
+         en:'The number at the white tooth is how many seconds until the hole is under the arrow. A thin stick holds 3 seconds. Count!'},
+    wheels:[ {x:260,y:320,r:58,holes:1,rps:.125,ham:260}, {x:640,y:320,r:58,holes:1,rps:.125,ham:640,sync:[0,3]} ] },
+  { name:{ru:'Кто подождёт?', en:'Who waits?'}, dial:true, sticks:3, queue:['S','S','S'], par:3, extra:1, solution:[1,0,1],
+    tip:{ru:'Три палки, лишней нет. Заклиненное колесо ОТСТАЁТ на 3 секунды. Какое из двух должно отстать, чтобы они сошлись?',
+         en:'Three sticks, none to spare. A jammed wheel FALLS BEHIND by 3 seconds. Which of the two must fall behind for them to meet?'},
+    wheels:[ {x:260,y:320,r:58,holes:1,rps:.125,ham:260}, {x:640,y:320,r:58,holes:1,rps:.125,ham:640,sync:[0,6]} ] },
+  { name:{ru:'Разные скорости', en:'Different speeds'}, dial:true, sticks:2, queue:['S','S'], par:2, solution:[0,1],
+    tip:{ru:'Левое колесо делает круг за 8 секунд, правое — за 6. Они сами сходятся и расходятся. Две палки — дождись своего оборота.',
+         en:'The left wheel takes 8 seconds per turn, the right one 6. They drift together and apart on their own. Two sticks — wait for your turn.'},
+    wheels:[ {x:260,y:320,r:58,holes:1,rps:.125,ham:260}, {x:640,y:320,r:58,holes:1,rps:1/6,ham:640,sync:[0,3]} ] },
+  { name:{ru:'Двое и торопыга', en:'Two and a hasty one'}, dial:true, sticks:4, queue:['S','S','S','S'], par:4, extra:1, solution:[0,0,1,2],
+    tip:{ru:'Два левых колеса ходят в ногу, но не вместе. Правое быстрее — круг за 6 секунд. Сначала своди пару, потом лови третье.',
+         en:'The two left wheels keep the same pace, but not together. The right one is faster — a turn in 6 seconds. First bring the pair together, then catch the third.'},
+    wheels:[ {x:220,y:320,r:52,holes:1,rps:.125,ham:220}, {x:450,y:320,r:52,holes:1,rps:.125,ham:450,sync:[0,3]},
+             {x:680,y:320,r:52,holes:1,rps:1/6,ham:680,sync:[0,6]} ] },
+  { name:{ru:'Экзамен циферблатов', en:'Dial exam'}, dial:true, sticks:3, queue:['S','S','S'], par:3, extra:1, solution:[1,0,1],
+    tip:{ru:'Круг за 8 секунд и круг за 12. Сами они не сойдутся никогда — проверь по числам. Кому ждать и на каком обороте?',
+         en:'A turn in 8 seconds and a turn in 12. Left alone they never meet — check the numbers. Who waits, and on which turn?'},
+    wheels:[ {x:420,y:320,r:58,holes:1,rps:.125,ham:420}, {x:700,y:320,r:62,holes:1,rps:1/12,ham:700,sync:[0,6.5]} ] },
+  // ---------- мир 9: составное колесо (внутренний диск крутит другое колесо медным ремнём: idrv) ----------
+  { name:{ru:'Составное колесо', en:'Split wheel'}, dial:true, sticks:3, queue:['S','S','S'], par:2, extra:1, solution:[1,0],
+    tip:{ru:'Диск внутри большого колеса крутит маленькое — медным ремнём. Дырки диска и круга не сходятся. Заклинь маленькое — диск отстанет.',
+         en:'The disc inside the big wheel is driven by the small one — through the copper belt. The holes of disc and ring never meet. Jam the small wheel — the disc falls behind.'},
+    wheels:[ {x:620,y:310,r:64,holes:1,rps:.125,dbl:.125,idrv:1,ioff:5,ham:620}, {x:300,y:250,r:46,holes:2,rps:.125} ] },
+  { name:{ru:'Круг и ещё два', en:'A turn plus two'}, dial:true, sticks:3, queue:['L','S','S'], par:3, extra:1, solution:[2,1,0],
+    tip:{ru:'Медный зубчик отстаёт от белого на 6 делений. Круг — 8 секунд. Толстая палка держит 10. Куда её?',
+         en:'The copper tooth is 6 marks behind the white one. A turn is 8 seconds. The thick stick holds 10. Where does it go?'},
+    wheels:[ {x:660,y:310,r:64,holes:1,rps:.125,dbl:.125,idrv:2,ioff:6,ham:660,narrow:true}, {x:240,y:330,r:52,holes:1,rps:.125,ham:240,sync:[0,7]},
+             {x:440,y:200,r:42,holes:2,rps:.125,sync:[0,0]} ] },
+  { name:{ru:'Заморозь вовремя', en:'Freeze in time'}, dial:true, sticks:2, queue:['S','S'], par:2, solution:[1,0],
+    tip:{ru:'Круг и диск крутятся с разной скоростью. Заклинь маленькое колесо — диск замрёт дыркой вверх и подождёт круг. Но всего 3 секунды…',
+         en:'Ring and disc turn at different speeds. Jam the small wheel — the disc freezes hole-up and waits for the ring. But only for 3 seconds…'},
+    wheels:[ {x:650,y:310,r:64,holes:1,rps:1/6,dbl:.125,idrv:1,isync:true,ham:650,sync:[1,3]}, {x:330,y:210,r:46,holes:1,rps:.125},
+             {x:330,y:368,r:34,holes:0,rps:.2,drv:1,ham:330} ] },
+  { name:{ru:'Ключ под заслонкой', en:'The key under the shutter'}, dial:true, sticks:2, queue:['S','S'], par:2, solution:[1,0],
+    tip:{ru:'Заслонка поднимется, только пока маленькое колесо стоит. У него четыре дырки — но диск смотрит дыркой вверх лишь у одной. Следи за медным зубчиком.',
+         en:'The shutter lifts only while the small wheel stands still. It has four holes — but the disc is hole-up at just one of them. Watch the copper tooth.'},
+    wheels:[ {x:620,y:320,r:64,holes:1,rps:.125,dbl:.125,idrv:1,isync:true,idel:4,sync:[1,6],ham:620,lock:1}, {x:300,y:260,r:46,holes:4,rps:.125} ] },
+  { name:{ru:'Экзамен составных', en:'Split-wheel exam'}, dial:true, sticks:4, queue:['S','N','S','S'], par:4, extra:1, solution:[2,1,2,0],
+    tip:{ru:'Заслонка, составное колесо и узкий молот слева. Палки: 3, 6, 3, 3 секунды. Одно колесо приходит слишком рано — на сколько?',
+         en:'A shutter, a split wheel and a narrow hammer on the left. Sticks: 3, 6, 3, 3 seconds. One wheel comes too early — by how much?'},
+    wheels:[ {x:690,y:320,r:62,holes:1,rps:.125,dbl:.125,idrv:1,isync:true,idel:4,sync:[1,8],ham:690,lock:1,narrow:true}, {x:450,y:200,r:42,holes:2,rps:.125},
+             {x:230,y:330,r:52,holes:1,rps:.125,ham:230,narrow:true,sync:[1,4]} ] },
+  // ---------- мир 10: мастер ----------
+  { name:{ru:'Парад колёс', en:'Parade of wheels'}, dial:true, sticks:3, queue:['S','S','S'], par:3, solution:[0,1,2],
+    tip:{ru:'Три колеса — три скорости: круг за 8, 6 и 12 секунд. Три тонкие палки. Парад бывает редко — смотри на числа и не спеши.',
+         en:'Three wheels, three speeds: a turn in 8, 6 and 12 seconds. Three thin sticks. The parade is rare — watch the numbers and take your time.'},
+    wheels:[ {x:220,y:320,r:52,holes:1,rps:.125,ham:220}, {x:450,y:320,r:52,holes:1,rps:1/6,ham:450,sync:[0,2.4]},
+             {x:680,y:320,r:56,holes:1,rps:1/12,ham:680,sync:[0,8.9]} ] },
+  { name:{ru:'Парад с жертвой', en:'Parade with a sacrifice'}, dial:true, sticks:4, queue:['S','S','S','S'], par:4, extra:1, solution:[1,0,1,2],
+    tip:{ru:'Те же три скорости, но парада не будет никогда: одно колесо всегда приходит на 3 секунды раньше. Четыре палки, лишней нет.',
+         en:'The same three speeds, but the parade never comes: one wheel is always 3 seconds early. Four sticks, none to spare.'},
+    wheels:[ {x:220,y:320,r:52,holes:1,rps:.125,ham:220}, {x:450,y:320,r:52,holes:1,rps:1/6,ham:450,sync:[0,1.4]},
+             {x:680,y:320,r:56,holes:1,rps:1/12,ham:680,sync:[0,4.9]} ] },
+  { name:{ru:'Почини и дождись', en:'Fix it, then wait'}, dial:true, sticks:3, queue:['N','S','S'], par:3, extra:1, solution:[2,1,0],
+    tip:{ru:'Медный зубчик отстаёт на 2 деления, а молот слева бегает быстрее — круг за 6 секунд. Палки: 6, 3, 3. Сначала почини, потом лови оборот.',
+         en:'The copper tooth is 2 marks behind, and the hammer on the left runs faster — a turn in 6 seconds. Sticks: 6, 3, 3. Fix it first, then catch the turn.'},
+    wheels:[ {x:660,y:310,r:64,holes:1,rps:.125,dbl:.125,idrv:2,ioff:2,ham:660,narrow:true}, {x:240,y:330,r:52,holes:1,rps:1/6,ham:240,sync:[0,5]},
+             {x:440,y:200,r:42,holes:2,rps:.125} ] },
+  { name:{ru:'Ключ по часам', en:'The key on the clock'}, dial:true, sticks:2, queue:['N','S'], par:2, solution:[1,0],
+    tip:{ru:'Маленькое колесо держит решётку — и заслонку. Пока оно стоит, решётка закрыта. Тонкая палка должна дожить до сыра: вставь её в самом конце.',
+         en:'The small wheel holds the gate — and the shutter. While it stands still, the gate is shut. The thin stick must last till the cheese: put it in at the very end.'},
+    wheels:[ {x:400,y:310,r:62,holes:1,rps:1/6,dbl:.125,idrv:1,isync:true,sync:[1,1.6],ham:400,lock:1}, {x:640,y:210,r:46,holes:1,rps:.125},
+             {x:780,y:360,r:36,holes:0,rps:.2,drv:1,gate:780} ] },
+  { name:{ru:'Большая синхронизация', en:'The great sync'}, dial:true, sticks:3, queue:['N','S','S'], par:3, solution:[1,0,3],
+    tip:{ru:'Всё сразу: составное колесо под заслонкой, решётка и быстрый узкий молот. Палки: 6, 3, 3. Один оборот из трёх — твой.',
+         en:'Everything at once: a split wheel under a shutter, a gate and a fast narrow hammer. Sticks: 6, 3, 3. One turn in three is yours.'},
+    wheels:[ {x:470,y:310,r:60,holes:1,rps:.125,dbl:.125,idrv:1,isync:true,sync:[1,5.6],ham:470,lock:1,narrow:true}, {x:720,y:200,r:44,holes:1,rps:.125},
+             {x:810,y:360,r:34,holes:0,rps:.2,drv:1,gate:810}, {x:230,y:330,r:50,holes:1,rps:1/6,ham:230,narrow:true,sync:[1,3.2]} ] },
 ];
 
 /* ---------- тексты RU/EN ---------- */
@@ -256,7 +333,7 @@ const S = {
        step1:['Ткни в колесо, когда дырка','под зелёной стрелкой'],
        step2:['Палка заклинит колесо —','молот замрёт'],
        step3:['Всё стоит — мышонок','бежит за сыром'],
-       play:'▶  ИГРАТЬ', level:'Уровень', goal:'ЦЕЛЬ: чтобы мышонок добежал до сыра',
+       play:'▶  ИГРАТЬ', level:'Уровень', of:'из', world:'мир', nLevels:'уровней', nWorlds:'миров', goal:'ЦЕЛЬ: чтобы мышонок добежал до сыра',
        sticks:'Палки', used:'Палок потрачено', canDo:'можно за', attempt:'попытка',
        got:'Понятно ▶', more:'Ещё правила ▶', next:'Дальше ▶', levels:'Уровни', back:'Назад', controlsT:'Одно действие: тапни по колесу', again:'↺ Ещё раз', restart:'▶ Играть снова', hintBtn:'💡 Подсказка',
        now:'СЕЙЧАС!', wait:'жди…', clack:'КЛАЦ!', ding:'ДЗЫНЬ!', crack:'ХРУСЬ!', bang:'БАМ',
@@ -288,14 +365,17 @@ const S = {
                   'Узкая синяя дырка: лезет только тонкая палка. Стрелка оранжевая с крестиком — следующая палка не подходит.',
                   'Заслонка закрыта, пока крутится колесо на другом конце цепи. Останови его — заслонка поднимется.',
                   'Жертва: заклиненное колесо потом крутится с того же места — отстаёт от остальных. Так можно свести дырки двух колёс.',
-                  'Ненужную палку можно сломать нарочно: ткни в колесо, когда стрелка не зелёная.'] },
+                  'Ненужную палку можно сломать нарочно: ткни в колесо, когда стрелка не зелёная.',
+                  'Циферблат: число у белого зубчика — через сколько секунд дырка будет под стрелкой. Цифра над палкой — сколько секунд она держит: на столько колесо и отстанет.',
+                  'Колёса разной скорости сами сходятся и расходятся. Иногда палки не нужны — нужен правильный оборот.',
+                  'Составное колесо: внутренний диск крутит другое колесо медным ремнём. Заклинишь то колесо — диск замрёт, а внешний круг поедет дальше.'] },
   en:{ title:'STICKS IN THE WHEELS',
        sub1:'The mouse wants the cheese but fears the hammers.',
        sub2:'Jam a stick into a wheel — the hammer freezes. When it is quiet, the mouse runs.',
        step1:['Tap a wheel when a hole','is under the green arrow'],
        step2:['The stick jams the wheel —','the hammer freezes'],
        step3:['Everything stands still —','the mouse runs for the cheese'],
-       play:'▶  PLAY', level:'Level', goal:'GOAL: get the mouse to the cheese',
+       play:'▶  PLAY', level:'Level', of:'of', world:'world', nLevels:'levels', nWorlds:'worlds', goal:'GOAL: get the mouse to the cheese',
        sticks:'Sticks', used:'Sticks used', canDo:'possible with', attempt:'try',
        got:'Got it ▶', more:'More rules ▶', next:'Next ▶', levels:'Levels', back:'Back', controlsT:'One action: tap a wheel', again:'↺ Again', restart:'▶ Play again', hintBtn:'💡 Hint',
        now:'NOW!', wait:'wait…', clack:'CLACK!', ding:'DING!', crack:'SNAP!', bang:'BAM',
@@ -327,7 +407,10 @@ const S = {
                   'Narrow blue hole: only a thin stick fits. An orange arrow with a cross means the next stick does not fit.',
                   'A shutter stays closed while the wheel at the other end of its chain spins. Stop that wheel and it lifts.',
                   'Sacrifice: a jammed wheel later spins on from where it stopped — it falls behind. That lets you line up the holes of two wheels.',
-                  'You may break a stick you do not need on purpose: tap a wheel while its arrow is not green.'] },
+                  'You may break a stick you do not need on purpose: tap a wheel while its arrow is not green.',
+                  'Dial: the number at the white tooth is how many seconds until the hole is under the arrow. The number above a stick is how long it holds — the wheel falls behind by exactly that.',
+                  'Wheels of different speeds drift together and apart on their own. Sometimes you need no stick — just the right turn.',
+                  'Split wheel: its inner disc is driven by another wheel through a copper belt. Jam that wheel and the disc freezes while the outer ring keeps turning.'] },
 };
 let LANG = 'ru';
 const navRu = (navigator.language||'ru').toLowerCase().startsWith('ru');
@@ -419,6 +502,7 @@ function loadLevel(n){
     wheels: lv.wheels.map((w,i)=>({ i, x:w.x, y:w.y, r:w.r||50, holes:w.holes===undefined?2:w.holes, rps:w.rps||0.24,
       drv:w.drv===undefined?-1:w.drv, mesh:!!w.mesh, ham:w.ham, gate:w.gate, dbl:w.dbl||0, dir:1,
       narrow:!!w.narrow, lock:w.lock===undefined?-1:w.lock, shut:w.lock===undefined?0:1,
+      idrv:w.idrv===undefined?-1:w.idrv,
       a:Math.random()*TAU, a2:0, on:true, flipT:0, jam:0, jamMax:1, stick:'N', spin:1, belt:0, open:1, slamT:0 })),
     mouse:{x:CONFIG.X0, state:'wait', clearT:0, face:1, t:0},
     fx:[], toast:null, missToasts:0, lastGateToast:-99, ranOnce:false,
@@ -430,6 +514,11 @@ function loadLevel(n){
     const sy=lv.wheels[w.i].sync;
     if(sy){ const o=G.wheels[sy[0]], step=TAU/o.holes, e=((o.a%step)+step)%step, ti=o.dbl?o.t0:((step-e)%step)/(TAU*o.rps);
       w.a=-TAU*w.rps*(ti+sy[1]); }                                // сдвиг постоянный, пока оба крутятся: заклинишь одно — оно отстанет
+    if(w.dbl && w.idrv>=0){                                       // составное колесо: внутренний диск крутит отдельный мотор
+      const lw=lv.wheels[w.i], d=G.wheels[w.idrv], sd=TAU/d.holes, ed=((d.a%sd)+sd)%sd, tD=((sd-ed)%sd)/(TAU*d.rps);
+      const eo=((w.a%TAU)+TAU)%TAU, tO=((TAU-eo)%TAU)/(TAU*w.rps);
+      w.a2=-TAU*w.dbl*(lw.isync?tD+(lw.idel||0):tO+(lw.ioff||0)); // isync — диск под стрелкой вместе с дыркой мотора (idel — на столько секунд позже ближайшей); ioff — на столько позже внешней
+    }
   }
 }
 const stickLife = type => type==='N' ? (G.lv.life||CONFIG.STICK_LIFE) : STICKS[type].life;
@@ -453,7 +542,8 @@ function toast(s,color,dur){ G.toast={s, color:color||'#e8e6f0', t:dur||2.6, max
 // насколько ближайшая дырка не дошла до стрелки (0 — ровно под стрелкой)
 function holeErr(w){ if(!w.holes) return Infinity; const step=TAU/w.holes; let e=((w.a%step)+step)%step; if(e>step/2) e-=step; return e; }
 function holeErr2(w){ let e=((w.a2%TAU)+TAU)%TAU; if(e>Math.PI) e-=TAU; return e; }      // внутренний диск двойного колеса
-const aligned = w => w.dbl ? (Math.abs(holeErr(w))<=CONFIG.TOL2 && Math.abs(holeErr2(w))<=CONFIG.TOL2) : Math.abs(holeErr(w))<=CONFIG.TOL;
+const tolOf = w => G.lv.dial ? (w.dbl?0.3:0.24) : (w.dbl?CONFIG.TOL2:CONFIG.TOL);
+const aligned = w => { const tl=tolOf(w); return w.dbl ? (Math.abs(holeErr(w))<=tl && Math.abs(holeErr2(w))<=tl) : Math.abs(holeErr(w))<=tl; };
 const shutClosed = w => w.lock>=0 && w.shut>0.15;                       // заслонка закрыта, пока крутится колесо-ключ
 const canJam = w => w.holes>0 && w.jam<=0 && w.on && w.spin>0.5 && !shutClosed(w) && aligned(w);
 const nextStick = () => G.queue[G.used]||'N';
@@ -474,7 +564,8 @@ function tapWheel(w){
     toast(t('tNoFit'),NARROW,3);
   } else if(canJam(w)){                      // палка вошла в дырку — колесо заклинило
     w.a-=holeErr(w); if(w.dbl) w.a2-=holeErr2(w);
-    w.stick=type; w.jam=w.jamMax=stickLife(type); w.on=false; w.flipT=0;
+    w.stick=type; w.jam=w.jamMax=stickLife(type); w.on=false; w.flipT=0; w.spin=0;
+    for(const c of G.wheels) if(c.dbl && c.idrv===w.i){ const e=holeErr2(c); if(Math.abs(e)<0.45) c.a2-=e; }
     G.seq.push(w.i+1); SFX.jam();
     G.fx.push({type:'txt', x:w.x-w.r-46, y:w.y-w.r-10, s:t('clack'), color:GREEN, size:24, life:0.9, max:0.9});
     G.fx.push({type:'ring', x:w.x, y:w.y, r:w.r, vr:160, life:0.45, max:0.45, color:GREEN});
@@ -524,7 +615,8 @@ function update(dt){
   for(const w of G.wheels){                 // ведущие колёса идут в списке раньше ведомых
     if(w.jam>0){ w.jam-=dt; if(w.jam<=0){ w.jam=0; SFX.snap();
       G.fx.push({type:'txt', x:w.x-w.r-46, y:w.y-w.r-10, s:t('crack'), color:WOOD, size:22, life:0.9, max:0.9});
-      for(const s of [-1,1]) G.fx.push({type:'stick', x:w.x, y:w.y-w.r-10, vx:s*90, vy:-160, rot:0, vr:s*10, life:0.8, max:0.8, half:true, st:w.stick}); } }
+      for(const s of [-1,1]) G.fx.push({type:'stick', x:w.x, y:w.y-w.r-10, vx:s*90, vy:-160, rot:0, vr:s*10, life:0.8, max:0.8, half:true, st:w.stick});
+      if(!stalled(w) && (w.drv<0 || G.wheels[w.drv].on)){ w.on=true; w.spin=1; w.flipT=0; } } }
     const st=stalled(w), want = w.jam<=0 && !st && (w.drv<0 || G.wheels[w.drv].on);
     if(want!==w.on){ w.flipT+=dt; if(w.flipT>=((st||w.mesh)?0.06:CONFIG.BELT_DELAY)){ w.on=want; w.flipT=0;   // по зубьям — сразу, по ремню — с задержкой
         if(!want && w.gate!==undefined && G.time-G.lastGateToast>3){ G.lastGateToast=G.time; toast(t('tGate'),'#ff9d9d',3); } } }
@@ -533,7 +625,7 @@ function update(dt){
     if(w.lock>=0) w.shut=clamp(w.shut+(G.wheels[w.lock].on?1:-1)*dt*4,0,1);
     const p0=frac(w.a/TAU);
     w.a+=w.dir*TAU*w.rps*dt*w.spin; w.belt+=w.spin*dt*70;
-    if(w.dbl) w.a2+=TAU*w.dbl*dt*w.spin;
+    if(w.dbl && w.jam<=0) w.a2+=TAU*w.dbl*dt*(w.idrv>=0?G.wheels[w.idrv].spin:w.spin);
     if(w.ham!==undefined){
       const p1=frac(w.a/TAU);
       if(w.spin>0.6 && (p0-0.5)*(p1-0.5)<0 && Math.abs(p1-p0)<0.4){ w.slamT=0.18; SFX.bang(w.i);
@@ -645,6 +737,14 @@ function drawWheel(w,o){
     const n=Math.round(r/4.4); for(let k=0;k<n;k++){ ctx.save(); ctx.rotate(k*TAU/n); ctx.beginPath(); ctx.moveTo(-4.5,-r+2); ctx.lineTo(-3,-r-7); ctx.lineTo(3,-r-7); ctx.lineTo(4.5,-r+2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
     ctx.restore(); }
   ctx.fillStyle=solid?'#596174':'#b5842f'; circ(0,0,r); ctx.fill(); ctx.strokeStyle=solid?'#3d4352':'#6f5120'; ctx.lineWidth=4; ctx.stroke();
+  const dial=G&&G.lv.dial&&w.holes===1&&w.rps>0, dc=WORLDS[7].c;
+  if(dial){ // число у дырки = через сколько секунд она придёт под стрелку
+    const n=Math.round(1/w.rps), d=w.dir||1;
+    for(let k=1;k<n;k++){ const a=-d*k*TAU/n, sx=Math.sin(a), cy=-Math.cos(a);
+      ctx.strokeStyle=hexA(dc,0.9); ctx.lineWidth=2.5; line(sx*(r+3),cy*(r+3),sx*(r+9),cy*(r+9));
+      text(String(k),sx*(r+20),cy*(r+20)+4.5,12.5,hexA(dc,0.95)); }
+    ctx.save(); ctx.rotate(w.a); ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.moveTo(0,-r-8); ctx.lineTo(-5.5,-r+3); ctx.lineTo(5.5,-r+3); ctx.closePath(); ctx.fill(); ctx.restore();   // белый зубчик: где сейчас дырка
+  }
   if(w.dbl){ // двойное колесо: внешнее кольцо и внутренний диск крутятся навстречу, у каждого своя дырка
     ctx.save(); ctx.rotate(w.a);
     ctx.fillStyle='#dbab52'; circ(0,0,r*0.94); ctx.fill();
@@ -653,13 +753,15 @@ function drawWheel(w,o){
     else { ctx.fillStyle='#120e19'; circ(0,-r*0.8,r*0.13); ctx.fill(); ctx.strokeStyle='#6f5120'; ctx.lineWidth=2.5; ctx.stroke(); }
     ctx.restore();
     ctx.fillStyle='#8a4a2a'; circ(0,0,r*0.63); ctx.fill();
-    ctx.save(); ctx.rotate(-w.a2);
+    if(dial && w.idrv>=0 && Math.abs(w.dbl-w.rps)<1e-6){ ctx.save(); ctx.rotate(w.a2); ctx.fillStyle=INNERC; ctx.strokeStyle='#17131f'; ctx.lineWidth=1.5;   // медный зубчик диска на том же циферблате
+      ctx.beginPath(); ctx.moveTo(0,-r-8); ctx.lineTo(-5.5,-r+3); ctx.lineTo(5.5,-r+3); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
+    ctx.save(); ctx.rotate(w.idrv>=0?w.a2:-w.a2);
     ctx.fillStyle='#d9845a'; circ(0,0,r*0.58); ctx.fill();
     ctx.strokeStyle='#b0633d'; ctx.lineWidth=r*0.07; line(-r*0.5,0,r*0.5,0); line(0,r*0.12,0,r*0.5);
     if(w.narrow){ ctx.fillStyle=NARROW; circ(0,-r*0.38,r*0.14); ctx.fill(); ctx.fillStyle='#120e19'; circ(0,-r*0.38,r*0.075); ctx.fill(); }
     else { ctx.fillStyle='#120e19'; circ(0,-r*0.38,r*0.13); ctx.fill(); ctx.strokeStyle='#8a4a2a'; ctx.lineWidth=2.5; ctx.stroke(); }
     ctx.restore();
-    ctx.fillStyle='#3a3346'; circ(0,0,r*0.13); ctx.fill();
+    ctx.fillStyle=w.idrv>=0?INNERC:'#3a3346'; circ(0,0,r*0.13); ctx.fill(); if(w.idrv>=0){ ctx.strokeStyle='#17131f'; ctx.lineWidth=2; ctx.stroke(); }
     ctx.restore(); return;
   }
   ctx.save(); ctx.rotate(w.a);
@@ -672,8 +774,19 @@ function drawWheel(w,o){
     if(w.narrow){ ctx.fillStyle=NARROW; circ(hx,hy,r*0.2); ctx.fill(); ctx.fillStyle='#120e19'; circ(hx,hy,r*0.1); ctx.fill(); }   // узкая дырка в синей втулке
     else { ctx.fillStyle='#120e19'; circ(hx,hy,r*0.2); ctx.fill(); ctx.strokeStyle='#6f5120'; ctx.lineWidth=2.5; ctx.stroke(); } }
   ctx.restore();
-  ctx.fillStyle='#3a3346'; circ(0,0,r*0.17); ctx.fill(); ctx.strokeStyle='#221c2b'; ctx.lineWidth=2; ctx.stroke();
+  const hub=G&&G.wheels&&G.wheels.some(c=>c.idrv===w.i);        // это колесо крутит чей-то внутренний диск: медная ось
+  ctx.fillStyle=hub?INNERC:'#3a3346'; circ(0,0,r*(hub?0.2:0.17)); ctx.fill(); ctx.strokeStyle='#221c2b'; ctx.lineWidth=2; ctx.stroke();
   ctx.restore();
+}
+function drawInnerBelt(D,W){ // медный ремень: от оси мотора к внутреннему диску составного колеса
+  const dx=W.x-D.x, dy=W.y-D.y, len=Math.hypot(dx,dy)||1, nx=-dy/len, ny=dx/len, off=4, moving=D.spin>0.08;
+  for(const s of [-1,1]){
+    const x1=D.x+nx*off*s, y1=D.y+ny*off*s, x2=W.x+nx*off*s, y2=W.y+ny*off*s;
+    ctx.strokeStyle='#15111c'; ctx.lineWidth=6; line(x1,y1,x2,y2);
+    ctx.strokeStyle=moving?'#a85f3a':'#4a4158'; ctx.lineWidth=3.5; line(x1,y1,x2,y2);
+    ctx.strokeStyle=moving?'#ffc9a8':'#6b6280'; ctx.lineWidth=1.5; ctx.setLineDash([6,8]); ctx.lineDashOffset=-D.belt*s;
+    line(x1,y1,x2,y2); ctx.setLineDash([]); ctx.lineDashOffset=0;
+  }
 }
 function drawBracket(w,o){ // неподвижная стрелка над колесом: зелёная — дырка под ней, можно вставлять
   if(!w.holes) return;
@@ -686,7 +799,9 @@ function drawBracket(w,o){ // неподвижная стрелка над ко�
     ctx.strokeStyle='#8a5a2b'; ctx.lineWidth=2; ctx.stroke();
     if(left<3){ ctx.strokeStyle='#6b3f18'; ctx.lineWidth=1.5; line(x-4+sh,top-28,x+3+sh,top-22); if(left<1.6) line(x+4+sh,top-14,x-3+sh,top-6); }
     ctx.strokeStyle=left<1.5?RED:'#ffffff'; ctx.lineWidth=5;        // кольцо: сколько ещё продержится палка
-    ctx.beginPath(); ctx.arc(w.x,w.y,w.r+11,-Math.PI/2,-Math.PI/2+TAU*frac01); ctx.stroke();
+    const dialLv=G&&G.lv&&G.lv.dial&&w.i!==undefined;              // картинки в помощи — без циферблата
+    ctx.beginPath(); ctx.arc(w.x,w.y,w.r+(dialLv?30:11),-Math.PI/2,-Math.PI/2+TAU*frac01); ctx.stroke();
+    if(dialLv){ ctx.fillStyle='#17131f'; circ(x+34,top-34,15); ctx.fill(); ctx.strokeStyle=left<1.5?RED:'#ffffff'; ctx.lineWidth=2; ctx.stroke(); text(String(Math.ceil(left)),x+34,top-28,18,left<1.5?RED:'#ffffff','center','900'); }
     return;
   }
   if(w.lock>=0 && w.shut>0.02){ // заслонка: стальная пластина над колесом и цепь к колесу-ключу
@@ -717,7 +832,9 @@ function drawBelt(D,W){
   }
 }
 function drawMotor(w){ // у колеса без ведущего ремня свой мотор
-  const side=G&&G.wheels.some(c=>c.mesh&&c.drv===w.i&&c.x<w.x)?1:-1, x=w.x+side*(w.r+(w.gear?27:20)), y=w.y+6;
+  const dial=G&&G.lv.dial&&w.holes===1;                            // у циферблата мотор отодвинут, чтобы не закрывать числа
+  const side=G&&G.wheels.some(c=>c.mesh&&c.drv===w.i&&c.x<w.x)?1:-1, x=w.x+side*(w.r+(dial?52:(w.gear?27:20))), y=w.y+6;
+  if(dial){ ctx.strokeStyle='#3a3346'; ctx.lineWidth=7; line(x,y,w.x,w.y); }
   ctx.fillStyle='#3a3346'; rr(x-16,y-18,34,36,6); ctx.fill(); ctx.strokeStyle='#51475f'; ctx.lineWidth=2; ctx.stroke();
   ctx.fillStyle=w.spin>0.3?'#ffd166':'#6b6280'; ctx.beginPath(); ctx.moveTo(x+3,y-12); ctx.lineTo(x-7,y+2); ctx.lineTo(x,y+2); ctx.lineTo(x-3,y+12); ctx.lineTo(x+8,y-3); ctx.lineTo(x+1,y-3); ctx.closePath(); ctx.fill();
 }
@@ -801,6 +918,7 @@ function drawWorld(){
   const sol=HINT[G.n]?G.lv.solution:null;
 
   for(const w of G.wheels) if(w.drv>=0) drawBelt(G.wheels[w.drv],w);
+  for(const w of G.wheels) if(w.idrv>=0) drawInnerBelt(G.wheels[w.idrv],w);
   for(const w of G.wheels) if(w.drv<0) drawMotor(w);
   for(const w of G.wheels){
     if(w.ham!==undefined) drawHammer(w.ham,hamOffset(w),w.on,w.x,w.y+w.r-4);
@@ -843,7 +961,8 @@ function drawWorld(){
       drawStickIcon(qx,F+58,36,used?0.16:1,q);
       if(mixed && i===G.used){ ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.moveTo(qx,F+60); ctx.lineTo(qx-6,F+67); ctx.lineTo(qx+6,F+67); ctx.closePath(); ctx.fill(); }
       if(sol && sol[i]===-1 && !used){ ctx.strokeStyle='#b26bff'; ctx.lineWidth=4; line(qx-8,F+26,qx+8,F+54); line(qx+8,F+26,qx-8,F+54); }   // подсказка: эту палку сломать нарочно
-      qx+=STICKS[q].w+12; });
+      if(G.lv.dial) text(String(stickLife(q)),qx,F+24,12,used?'#4a4158':'#e8e6f0');
+      qx+=STICKS[q].w+(G.lv.dial?18:12); });
     text(String(G.sticks),qx+8,F+50,26,G.sticks?'#ffd166':RED,'left','900'); }
   if(!G.toast) text(isTouch?t('controlsT'):t('controls'),CONFIG.W-24,F+48,13,'#5b5372','right','normal');
 
@@ -875,24 +994,15 @@ function button(label,cx,cy,w,h,act,primary,size,fixed){
   text(label,cx,cy+(size||22)*0.36,size||22,primary?'#17131f':'#e8e6f0');
   uiButtons.push({x,y,w,h,act});
 }
-function levelDot(i,x,y,r,cur){
-  const best=BEST[i]||0, wc=WORLDS[Math.floor(i/5)%WORLDS.length].c;
-  ctx.fillStyle=cur?'#ffffff':(best?hexA(wc,0.4):'#241c31'); circ(x,y,r); ctx.fill();
-  ctx.strokeStyle=wc; ctx.lineWidth=2; ctx.stroke();
-  text(String(i+1),x,y+r*0.38,r*1.05,cur?'#17131f':'#e8e6f0');
-  uiButtons.push({x:x-r,y:y-r,w:2*r,h:2*r,act:()=>goLevel(i)});
-  return best;
-}
 function drawTopBar(){
   ctx.fillStyle='#0f0b16'; ctx.fillRect(0,0,CONFIG.W,CONFIG.HUD_H);
   if(G&&mode!=='start'){
-    const s=`${G.n+1}/${LEVELS.length}`;
-    text(s,16,29,16,'#8f86a8','left'); ctx.font=`bold 16px ${FONT}`; const w=ctx.measureText(s).width;
-    text(L(G.lv.name),16+w+10,29,20,'#e8e6f0','left');
+    const wi=Math.floor(G.n/5), s=`${t('level')} ${G.n+1} ${t('of')} ${LEVELS.length}`;   // сразу видно, сколько уровней всего
+    text(s,16,29,16,WORLDS[wi].c,'left'); ctx.font=`bold 16px ${FONT}`; const w=ctx.measureText(s).width;
+    text(L(G.lv.name),16+w+12,29,20,'#e8e6f0','left');
     ctx.font=`bold 20px ${FONT}`; const w2=ctx.measureText(L(G.lv.name)).width;
-    const wi=Math.floor(G.n/5); text(L(WORLDS[wi]),16+w+10+w2+18,28,14,WORLDS[wi].c,'left','normal');
-    ctx.font=`normal 14px ${FONT}`; const w3=ctx.measureText(L(WORLDS[wi])).width;
-    for(let i=wi*5;i<Math.min(LEVELS.length,wi*5+5);i++) levelDot(i,16+w+10+w2+18+w3+20+(i-wi*5)*24,22,9,i===G.n);
+    const ws=`${t('world')} ${wi+1}: ${L(WORLDS[wi])}`; ctx.font=`normal 14px ${FONT}`;
+    if(16+w+12+w2+18+ctx.measureText(ws).width < (SIDE_UI?CONFIG.W-16:CONFIG.W-280)) text(ws,16+w+12+w2+18,28,14,'#8f86a8','left','normal');
   } else text('idea_generator · '+(LANG==='ru'?'прототип механики':'mechanic prototype'),16,28,14,'#5b5372','left','normal');
   if(SIDE_UI) return;                     // на телефоне эти кнопки — крупные, сбоку от поля
   const bw=44, bh=34, y=5; let x=CONFIG.W-8-bw;
@@ -937,11 +1047,14 @@ function drawSteps(top){ // три картинки «как играть»
     text(cap[0],cx,top+178,16,'#e8e6f0'); text(cap[1],cx,top+200,16,'#e8e6f0');
   });
 }
-function drawLevelRow(y){
-  const sp=24, gap=13, nW=Math.ceil(LEVELS.length/5), total=(LEVELS.length-1)*sp+(nW-1)*gap, x0=480-total/2;
-  for(let wi=0;wi<nW;wi++){ const xa=x0+wi*5*sp+wi*gap, xb=xa+4*sp; text(L(WORLDS[wi]),(xa+xb)/2,y-22,11,WORLDS[wi].c); }
-  LEVELS.forEach((lv,i)=>{ const x=x0+i*sp+Math.floor(i/5)*gap, best=levelDot(i,x,y,10.5,false);
-    for(let s=0;s<3;s++){ ctx.fillStyle=s<best?'#ffd166':'#3a3050'; starShape(x-6+s*6,y+20,3); ctx.fill(); } });
+function drawLevelRow(y){ // полоска миров: сколько уровней всего и сколько звёзд собрано; тап — к выбору уровня
+  const nW=Math.ceil(LEVELS.length/5), cw=84, gap=6, x0=480-(nW*cw+(nW-1)*gap)/2;
+  const all=LEVELS.reduce((a,_,i)=>a+(BEST[i]||0),0);
+  text(`${LEVELS.length} ${t('nLevels')} · ${nW} ${t('nWorlds')} · ★ ${all}/${LEVELS.length*3}`,480,y-14,16,'#cfcbe0');
+  for(let wi=0;wi<nW;wi++){ const x=x0+wi*(cw+gap), a=wi*5, b=Math.min(LEVELS.length,a+5); let st=0; for(let i=a;i<b;i++) st+=BEST[i]||0;
+    ctx.fillStyle=st?hexA(WORLDS[wi].c,0.22):'#241c31'; rr(x,y,cw,50,9); ctx.fill(); ctx.strokeStyle=WORLDS[wi].c; ctx.lineWidth=2; ctx.stroke();
+    text(`${a+1}–${b}`,x+cw/2,y+22,17,'#e8e6f0','center','900'); text(`★ ${st}/${(b-a)*3}`,x+cw/2,y+41,12,st?'#ffd166':'#8f86a8','center','normal');
+    uiButtons.push({x,y,w:cw,h:50,act:openLevels}); }
 }
 function drawStart(){
   ctx.fillStyle='#17131f'; ctx.fillRect(0,CONFIG.HUD_H,CONFIG.W,CONFIG.H-CONFIG.HUD_H);
@@ -949,27 +1062,27 @@ function drawStart(){
   text(t('sub1'),480,146,18,'#cfcbe0','center','normal');
   text(t('sub2'),480,170,18,'#cfcbe0','center','normal');
   drawSteps(192);
-  button(t('play'),400,450,270,58,startGame,true,28);
-  button('☰ '+t('levels'),672,450,190,58,openLevels,false,22);
-  if(!isTouch) drawLevelRow(540);
+  button(t('play'),400,isTouch?456:450,270,58,startGame,true,28);
+  button('☰ '+t('levels'),672,isTouch?456:450,190,58,openLevels,false,22);
+  drawLevelRow(isTouch?558:548);
 }
-function drawLevels(){ // выбор уровня крупными плитками: 7 миров в две колонки
-  dim(); panel(20,52,920,576);
-  text(t('levels'),480,92,28,'#e8e6f0','center','900');
-  const nW=Math.ceil(LEVELS.length/5), perCol=Math.ceil(nW/2), tw=80, th=72, gx=8;
+function drawLevels(){ // выбор уровня крупными плитками: 10 миров в две колонки
+  dim(); panel(20,50,920,582);
+  text(`${t('levels')} · ${LEVELS.length}`,480,88,26,'#e8e6f0','center','900');
+  const nW=Math.ceil(LEVELS.length/5), perCol=Math.ceil(nW/2), tw=80, th=62, gx=8;
   for(let wi=0;wi<nW;wi++){
-    const col=wi<perCol?0:1, row=col?wi-perCol:wi, x0=44+col*452, y0=112+row*108;
-    text(L(WORLDS[wi]),x0,y0+12,15,WORLDS[wi].c,'left');
+    const col=wi<perCol?0:1, row=col?wi-perCol:wi, x0=44+col*452, y0=106+row*103;
+    text(`${wi+1}. ${L(WORLDS[wi])}`,x0,y0+12,15,WORLDS[wi].c,'left');
     for(let k=0;k<5;k++){ const i=wi*5+k; if(i>=LEVELS.length) break;
       const x=x0+k*(tw+gx), y=y0+20, best=BEST[i]||0, cur=G&&G.n===i;
       ctx.fillStyle=cur?'#3a3050':(best?hexA(WORLDS[wi].c,0.22):'#241c31'); rr(x,y,tw,th,10); ctx.fill();
       ctx.strokeStyle=cur?'#ffffff':WORLDS[wi].c; ctx.lineWidth=cur?3:2; ctx.stroke();
-      text(String(i+1),x+tw/2,y+38,26,'#e8e6f0','center','900');
-      for(let st=0;st<3;st++){ ctx.fillStyle=st<best?'#ffd166':'#3a3050'; starShape(x+tw/2-14+st*14,y+56,5.5); ctx.fill(); }
+      text(String(i+1),x+tw/2,y+32,25,'#e8e6f0','center','900');
+      for(let st=0;st<3;st++){ ctx.fillStyle=st<best?'#ffd166':'#3a3050'; starShape(x+tw/2-14+st*14,y+49,5.5); ctx.fill(); }
       uiButtons.push({x,y,w:tw,h:th,act:()=>goLevel(i)});
     }
   }
-  button('← '+t('back'),760,562,200,52,()=>{ mode=levelsReturn; },false,20);
+  button('← '+t('back'),842,80,170,50,()=>{ mode=levelsReturn; },false,20,true);
 }
 function drawIntro(){
   dim(); panel(160,216,640,334);
@@ -1006,10 +1119,11 @@ function drawFinal(){
   const total=RESULTS.reduce((s,r)=>s+(r?r.stars:0),0);
   text(`${t('stars')}: ${total} / ${LEVELS.length*3}`,480,148,21,'#ffd166');
   const rows=Math.ceil(LEVELS.length/3);
-  LEVELS.forEach((lv,i)=>{ const r=RESULTS[i], c=Math.floor(i/rows), x=52+c*294, y=178+(i-c*rows)*32;
-    text(`${i+1}. ${L(lv.name)}`,x,y,14,WORLDS[Math.floor(i/5)].c,'left');
-    text(r?`${r.used}/${r.par}${r.hint?' 💡':''}`:'—',x+206,y,13,'#8f86a8','center','normal');
-    for(let s=0;s<3;s++) drawStar(x+234+s*16,y-5,6,r&&s<r.stars); });
+  const rh=Math.min(32,378/rows), fs=rh<26?12.5:14;
+  LEVELS.forEach((lv,i)=>{ const r=RESULTS[i], c=Math.floor(i/rows), x=52+c*294, y=176+(i-c*rows)*rh;
+    text(`${i+1}. ${L(lv.name)}`,x,y,fs,WORLDS[Math.floor(i/5)].c,'left');
+    text(r?`${r.used}/${r.par}${r.hint?' 💡':''}`:'—',x+212,y,fs-1,'#8f86a8','center','normal');
+    for(let s=0;s<3;s++) drawStar(x+238+s*13,y-4,rh<26?4.5:6,r&&s<r.stars); });
   button(t('restart'),480,584,280,50,startGame,true,22);
 }
 function drawHelp(){
@@ -1022,8 +1136,10 @@ function drawHelp(){
     lines.slice(0,5).forEach((s,i)=>text(s,480,384+i*26,16,'#cfcbe0','center','normal'));
     button(t('more'),480,582,260,48,()=>{ helpPage=1; },true,22);
   } else {
-    lines.slice(5).forEach((s,i)=>wrapLines(s,840,17,'normal').forEach((ln,k)=>text(ln,480,150+i*58+k*23,17,k?'#a79fba':'#e8e6f0','center','normal')));
-    button(t('got'),480,582,240,48,()=>{ mode=helpReturn; },true,22);
+    const per=6, from=5+(helpPage-1)*per, last=from+per>=lines.length;
+    lines.slice(from,from+per).forEach((s,i)=>wrapLines(s,840,17,'normal').forEach((ln,k)=>text(ln,480,150+i*66+k*23,17,k?'#a79fba':'#e8e6f0','center','normal')));
+    if(last) button(t('got'),480,582,240,48,()=>{ mode=helpReturn; },true,22);
+    else button(t('more'),480,582,260,48,()=>{ helpPage++; },true,22);
   }
 }
 
@@ -1054,7 +1170,7 @@ requestAnimationFrame(loop);
 
 // для автотестов в headless-браузере
 window.STK={ get G(){return G;}, set G(v){G=v;}, get mode(){return mode;}, set mode(v){mode=v;}, get quiet(){return QUIET;}, set quiet(v){QUIET=v;},
-  loadLevel, goLevel, update, render, tapWheel, canJam, fits, blockers, LEVELS, CONFIG, TRIES, HINT };
+  loadLevel, goLevel, update, render, tapWheel, canJam, fits, blockers, holeErr, holeErr2, tolOf, LEVELS, WORLDS, CONFIG, TRIES, HINT };
 </script>
 </body>
 </html>
