@@ -51,7 +51,7 @@ function scenes() { const out = [];
   out.push(`В: назад на камень после петли в 3 клетки (шаг 6 < 2+N+2): ${short ? 'пускает ✗' : 'нельзя ✓'}; после петли в 5 клеток (шаг 8): ${long ? 'можно ✓' : 'нельзя ✗'}`);
   return out; }
 // ---------- прогон ----------
-console.log('СЦЕНКИ'); for (const s of scenes()) console.log('  ' + s);
+let failed = 0; console.log('СЦЕНКИ'); for (const s of scenes()) { console.log('  ' + s); if (s.includes('✗')) failed++; }
 let greedyWins = [], snakeWins = [], nChanged = 0, nTotal = 0; const pars = [];
 LEVELS.forEach((lv, i) => { const no = i + 1; if (only && !only.includes(no)) return;
   const L = C.compile(lv), walk = [...L.type].filter((t, c) => (t === C.FLOOR || t === C.STONE) && !(L.init[c] & C.PIT)).length;
@@ -67,7 +67,10 @@ LEVELS.forEach((lv, i) => { const no = i + 1; if (only && !only.includes(no)) re
   if (lv.par !== undefined && lv.par !== r.par) bad.push(`par в данных ${lv.par} ≠ ${r.par}`); if (own && !own.won) bad.push('plan из данных не проходит');
   if (rb.wins / rb.games >= 0.5) bad.push('рандом ≥50%'); if (rb.inv || rb.pvBad) bad.push(`инварианты ${rb.inv}, preview ${rb.pvBad}`);
   if (walk > 40) bad.push(`клеток ${walk} > 40`);
+  if (bad.length) failed++;
   console.log(`L${no} «${lv.name.ru}» ${L.W}×${L.H} N=${lv.n} клеток ${walk} | par ${r.par} план ${r.plan} (${r.states} сост., ${r.ms} мс) | план-бот ${pb.won ? '✓' : '✗'} | рандом ${(100 * rb.wins / rb.games).toFixed(1)}% | жадный ${gr ? 'ПОБЕДА' : '—'} | змейка ${sn ? 'ПОБЕДА' : '—'}${nt}${bad.length ? '  <<< ' + bad.join('; ') : ''}`); });
 if (!only) { console.log(`ИТОГ: жадный побеждает на L3+: [${greedyWins}] (допустимо ≤2) ; змейка на L3–L7: [${snakeWins.filter(n => n <= 7)}] (≤2), на L8+: [${snakeWins.filter(n => n >= 8)}] (должно быть пусто); N-тест: меняется на ${nChanged} из ${nTotal} (нужно ≥10 из 13)`);
   const pair = (a, b) => { const A = LEVELS[a - 1], B = LEVELS[b - 1]; if (!A || !B || !pars[a - 1] || !pars[a - 1].plan) return '—'; return playPlan(B, pars[a - 1].plan).won ? 'ПРОХОДИТ ✗' : 'проигрывает ✓'; };
-  console.log(`ПАРЫ: план L3 на L4 — ${pair(3, 4)}; план L14 на L15 — ${pair(14, 15)}`); }
+  const p1 = pair(3, 4), p2 = pair(14, 15); console.log(`ПАРЫ: план L3 на L4 — ${p1}; план L14 на L15 — ${p2}`);
+  if (greedyWins.length > 2 || snakeWins.filter(n => n <= 7).length > 2 || snakeWins.some(n => n >= 8) || nChanged < 10 || !p1.includes('✓') || !p2.includes('✓')) failed++;
+  console.log(failed ? `ПРИЁМКА: НЕ ПРОЙДЕНА (${failed})` : 'ПРИЁМКА: пройдена'); process.exit(failed ? 1 : 0); }

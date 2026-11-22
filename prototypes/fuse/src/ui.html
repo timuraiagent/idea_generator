@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Фитиль — заставляет ли огонёк, который идёт твоим следом на N шагов позади и служит сразу ключом, оружием и угрозой, планировать от него?</title>
+<style>
+html,body{margin:0;height:100%;background:#0a1016;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+canvas{display:block;touch-action:none}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// Собрано из src/ (logic.js + levels.js + ui.html) командой `node src/build.js`. Руками править src/, не этот файл.
+/*__LOGIC__*/
+/*__LEVELS__*/
+(() => {
+'use strict';
+const C = FUSE_CORE, LEVELS = FUSE_LEVELS;
+// Все числа прототипа. Радиусы света (огонёк 1, горящая клетка 1, лампа 2) зашиты в логике: compile() → light1/light2.
+const CONFIG = { W: 390, H: 700, header: 56, panel: 72, cell: 48, cellMax: 60, stepMs: 120, failMs: 400, ghostMs: 1600, light: { flame: 1, burning: 1, lamp: 2 } };
+const TXT = {
+  ru: { undo: 'отмена', restart: 'заново', levels: 'уровни', behind: n => `огонёк отстаёт на ${n} ${n === 1 ? 'шаг' : n < 5 ? 'шага' : 'шагов'}`, move: 'ход', stuck: 'тупик', burned: 'сгорел', seen: 'замечен',
+    closed: 'в темноте дверь закрыта', won: 'Дверь открыта!', moves: 'ходов', best: 'короче нельзя', next: 'дальше', again: 'ещё раз', all: 'Подвал пройден!', pick: 'Уровни', close: 'закрыть', lang: 'English' },
+  en: { undo: 'undo', restart: 'restart', levels: 'levels', behind: n => `the flame is ${n} step${n === 1 ? '' : 's'} behind`, move: 'move', stuck: 'dead end', burned: 'burned', seen: 'spotted',
+    closed: 'the door stays shut in the dark', won: 'The door is open!', moves: 'moves', best: 'shortest possible', next: 'next', again: 'again', all: 'Cellar cleared!', pick: 'Levels', close: 'close', lang: 'Русский' },
+};
+const store = { get(k, d) { try { const v = localStorage.getItem('fuse.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('fuse.' + k, JSON.stringify(v)); } catch (e) { } } };
+const qs = new URLSearchParams(location.search);
+let lang = qs.get('lang') || store.get('lang', (navigator.language || 'ru').toLowerCase().startsWith('ru') ? 'ru' : 'en'); if (!TXT[lang]) lang = 'ru';
+const T = () => TXT[lang];
+
+// ---------- состояние партии ----------
+let cur = 0, L = null, S = null, hist = [], geo = null; const log = [];
+let mode = 'play', anim = null, fail = null, ghost = null, nudge = null;      // состояние экрана: режим, анимация шага, вспышка провала, метка провала, толчок в стену
+const player = () => S.tail[S.tail.length - 1], xy = c => ({ x: c % L.W, y: (c - c % L.W) / L.W });
+function load(n) { cur = Math.max(0, Math.min(LEVELS.length - 1, (n | 0) - 1)); L = C.compile(LEVELS[cur]); S = C.init(L); hist = []; layout(); store.set('level', cur + 1); resetUi(); return state(); }
+function legal() { const p = player(); return C.legal(L, S).map(m => C.dirChar(L, p, m.cell)); }
+function logLine() { const lv = LEVELS[cur], head = `L${cur + 1} «${lv.name.ru}»: `;
+  const line = S.won ? head + `победа, ходов ${S.t}/${lv.par}` : head + `провал (${TXT.ru[S.reason]}), ход ${S.t}/${lv.par}`; log.push(line); if (log.length > 500) log.shift(); return line; }
+function step(dir) { if (S.over) return { ok: false, reason: 'over' }; const c = C.cellInDir(L, player(), dir), m = C.legal(L, S).find(q => q.cell === c); if (!m) return { ok: false, reason: 'illegal' };
+  hist.push(S); S = C.apply(L, S, c); if (S.over) logLine(); return { ok: true, reason: S.won ? 'won' : S.reason }; }
+function undo() { if (!hist.length) return false; S = hist.pop(); resetUi(); return true; }
+function restart() { S = C.init(L); hist = []; resetUi(); return state(); }
+function grid(a) { const o = []; for (let y = 0; y < L.H; y++) o.push(Array.from(a.subarray(y * L.W, (y + 1) * L.W))); return o; }
+function state() { const cells = [];
+  for (let y = 0; y < L.H; y++) { let r = ''; for (let x = 0; x < L.W; x++) { const c = y * L.W + x, ty = L.type[c], d = S.d[c];
+    r += ty === C.WALL ? '#' : ty === C.DOOR ? 'D' : ty === C.LAMP ? ((S.lampLit >> L.lampAt[c] & 1) ? 'K' : 'L') : ty === C.STONE ? 's' : (d & C.PIT) ? '_' : (d & C.BURN) ? '*' : (d & C.OIL) ? 'o' : '.'; } cells.push(r); }
+  return { level: cur + 1, n: L.N, t: S.t, player: xy(player()), flame: xy(S.tail[0]), fuse: S.tail.slice(1, -1).map(xy), cells,
+    lamps: L.lamps.map((c, k) => Object.assign(xy(c), { lit: !!(S.lampLit >> k & 1) })), guards: L.guards.map((c, k) => { const alive = !!(S.guardAlive >> k & 1); return Object.assign(xy(c), { alive, awake: alive && !!S.lit[c] }); }),
+    burning: Array.from(S.d).map((d, c) => (d & C.BURN) ? xy(c) : null).filter(Boolean), lit: grid(S.lit), doorOpen: !!S.lit[L.door], over: S.over, won: S.won, reason: S.reason }; }
+function preview() { const p = C.preview(L, S), list = a => Array.from(a).map((v, c) => v ? xy(c) : null).filter(Boolean);
+  return { flame: xy(p.flame), ignites: list(p.burn), lit: grid(p.lit), seen: list(p.seen), burned: list(p.burn), lamps: L.lamps.map((c, k) => Object.assign(xy(c), { lit: !!(p.lampLit >> k & 1) })) }; }
+function solve(n, opts) { return C.solve(LEVELS[(n | 0) - 1], opts); }
+
+// ---------- холст ----------
+const cv = document.getElementById('c'), ctx = cv.getContext('2d'); let scale = 1, dpr = 1;
+const SPR = { floor: [0, 0], wall: [1, 0], pit: [2, 0], stone: [3, 0], oil: [4, 0], burning: [0, 1], lamp_off: [1, 1], lamp_on: [2, 1], door_closed: [3, 1], door_open: [4, 1],
+  guard_asleep: [0, 2], guard_awake: [1, 2], hero: [2, 2], flame: [3, 2], cord_h: [4, 2], cord_corner: [0, 3], spark: [1, 3], danger: [2, 3], light: [3, 3], hand: [4, 3] };   // клетки листа assets.svg (128×128)
+const FB = { floor: '#25333e', wall: '#3a4a59', pit: '#05080c', stone: '#8696a2', oil: '#101826', burning: '#f2793a', lamp_off: '#5a6a78', lamp_on: '#ffc65a', door_closed: '#55606c', door_open: '#ffd27a',
+  guard_asleep: '#56667a', guard_awake: '#b0703a', hero: '#3fa7a0', flame: '#ff8a3d', spark: '#ffd34d', danger: 'rgba(255,60,60,.35)', light: 'rgba(255,214,150,.22)', hand: '#f4d7b5' };  // запасная отрисовка, если лист не загрузился
+const img = new Image(); let imgOk = false, atlas = null, atlasK = 1;
+img.onload = () => { imgOk = true; buildAtlas(); }; img.src = 'assets.svg';
+function buildAtlas() { if (!imgOk || !geo) return; const k = Math.max(0.5, Math.min(2.5, Math.ceil(geo.cs * scale * dpr / 128 * 4) / 4)); if (atlas && k === atlasK) return;
+  const a = document.createElement('canvas'); a.width = Math.round(640 * k); a.height = Math.round(512 * k); a.getContext('2d').drawImage(img, 0, 0, a.width, a.height); atlas = a; atlasK = k; }
+function spr(name, x, y, s, cropW) { const q = SPR[name], w = cropW || 1;
+  if (atlas) ctx.drawImage(atlas, q[0] * 128 * atlasK, q[1] * 128 * atlasK, 128 * w * atlasK, 128 * atlasK, x, y, s * w, s);
+  else { const flat = ['floor', 'wall', 'pit', 'stone', 'oil', 'burning', 'danger', 'light'].includes(name), m = flat ? s * 0.06 : s * 0.24; ctx.fillStyle = FB[name] || '#888'; ctx.fillRect(x + m, y + m, s - 2 * m, s - 2 * m); } }
+function fit() { dpr = Math.min(3, window.devicePixelRatio || 1); scale = Math.min(innerWidth / CONFIG.W, innerHeight / CONFIG.H);
+  cv.style.width = CONFIG.W * scale + 'px'; cv.style.height = CONFIG.H * scale + 'px'; cv.width = Math.round(CONFIG.W * scale * dpr); cv.height = Math.round(CONFIG.H * scale * dpr); buildAtlas(); }
+function layout() { const top = CONFIG.header + 44, bot = CONFIG.H - CONFIG.panel - 56, cs = Math.max(24, Math.min(CONFIG.cellMax, Math.floor((CONFIG.W - 24) / L.W), Math.floor((bot - top) / L.H)));
+  geo = { cs, ox: Math.round((CONFIG.W - L.W * cs) / 2), oy: Math.round(top + (bot - top - L.H * cs) / 2), top, bot }; buildAtlas(); }
+const center = c => ({ x: geo.ox + (c % L.W + 0.5) * geo.cs, y: geo.oy + ((c - c % L.W) / L.W + 0.5) * geo.cs });
+function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+function text(s, x, y, size, color, align, weight) { ctx.font = `${weight || 500} ${size}px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif`; ctx.fillStyle = color; ctx.textAlign = align || 'left'; ctx.textBaseline = 'middle'; ctx.fillText(s, x, y); }
+function wrap(s, maxW, size) { ctx.font = `500 ${size}px system-ui,-apple-system,"Segoe UI",Roboto,sans-serif`; const out = []; let line = ''; for (const w of s.split(' ')) { const t = line ? line + ' ' + w : w; if (ctx.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; } if (line) out.push(line); return out; }
+
+// ---------- интерфейс ----------
+let face = 1, wonAt = 0, buttons = [], doneSet = new Set(store.get('done', []));
+let actx = null; function sfx(kind) { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); const t = actx.currentTime, o = actx.createOscillator(), g = actx.createGain(); o.connect(g); g.connect(actx.destination);
+  const P = { step: [330, 0.05, 'triangle', 0.05], no: [140, 0.09, 'square', 0.04], fail: [110, 0.3, 'sawtooth', 0.07], lamp: [660, 0.16, 'sine', 0.07], win: [523, 0.35, 'triangle', 0.08], fire: [200, 0.2, 'sawtooth', 0.04] }[kind];
+  o.type = P[2]; o.frequency.setValueAtTime(P[0], t); if (kind === 'win') o.frequency.setValueAtTime(784, t + 0.12); if (kind === 'fail') o.frequency.exponentialRampToValueAtTime(55, t + P[1]);
+  g.gain.setValueAtTime(P[3], t); g.gain.exponentialRampToValueAtTime(0.0001, t + P[1]); o.start(t); o.stop(t + P[1] + 0.02); } catch (e) { } }
+function resetUi() { mode = 'play'; anim = fail = ghost = nudge = null; }
+function go(n) { load(n); face = 1; }
+function tryStep(dir) { if (mode !== 'play' || fail || S.over) return; const p = player(), before = S, now = performance.now(), r = step(dir);
+  if (!r.ok) { nudge = { t0: now, dir, door: C.cellInDir(L, p, dir) === L.door }; sfx('no'); return; }
+  anim = { t0: now, fromP: p, fromF: before.tail[0] }; ghost = null; if (dir === 'L') face = -1; if (dir === 'R') face = 1;
+  if (S.won) { doneSet.add(cur); store.set('done', [...doneSet]); wonAt = now; mode = 'won'; sfx('win'); console.log(log[log.length - 1]); }
+  else if (S.over) { fail = { t0: now + CONFIG.stepMs, reason: S.reason }; sfx('fail'); console.log(log[log.length - 1]); }
+  else if (S.lampLit !== before.lampLit) sfx('lamp'); else if (S.d.some((d, i) => (d & C.BURN) && !(before.d[i] & C.BURN))) sfx('fire'); else sfx('step'); }
+function uiUndo() { if (fail) return; if (undo()) sfx('step'); }
+function uiRestart() { restart(); sfx('step'); }
+
+function drawHeader() { const lv = LEVELS[cur], t = T();
+  text(`${cur + 1}`, 18, 28, 26, '#f1e6d2', 'left', 800); text(`/ ${LEVELS.length}`, 18 + (cur >= 9 ? 34 : 19), 31, 13, '#6f8494', 'left', 600);
+  text(lv.name[lang], CONFIG.W / 2, 28, 17, '#f1e6d2', 'center', 700); text(`${t.move} ${S.t}`, CONFIG.W - 18, 28, 14, '#8fa3b2', 'right', 600);
+  // полоска задержки: огонёк — N узлов шнура — герой; горит столько узлов, сколько шнура уже размотано
+  const n = L.N, y = CONFIG.header + 12, gap = 18, w = (n + 1) * gap, x0 = CONFIG.W / 2 - w / 2;
+  ctx.strokeStyle = '#5d3f22'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + w, y); ctx.stroke();
+  for (let i = 1; i <= n; i++) { ctx.beginPath(); ctx.arc(x0 + i * gap, y, 4.5, 0, 7); ctx.fillStyle = i > n - Math.min(S.t, n) ? '#ffc45c' : '#3b4a57'; ctx.fill(); }
+  spr('flame', x0 - 26, y - 14, 26, 0.84); spr('hero', x0 + w + 2, y - 14, 26);
+  text(t.behind(n), CONFIG.W / 2, y + 19, 12, '#8fa3b2', 'center', 500); }
+
+function drawField(now) { const { cs, ox, oy } = geo, pv = S.over ? null : C.preview(L, S), k = anim ? Math.min(1, (now - anim.t0) / CONFIG.stepMs) : 1, e = k * (2 - k);
+  for (let c = 0; c < L.n; c++) { const x = ox + (c % L.W) * cs, y = oy + ((c - c % L.W) / L.W) * cs, ty = L.type[c], d = S.d[c];
+    if (ty === C.WALL) { spr('wall', x, y, cs); continue; }
+    spr(ty === C.STONE ? 'stone' : (d & C.PIT) ? 'pit' : (d & C.BURN) ? 'burning' : (d & C.OIL) ? 'oil' : 'floor', x, y, cs);
+    if (S.lit[c]) { ctx.globalAlpha = 0.8 + 0.12 * Math.sin(now / 260 + c * 1.7); spr('light', x, y, cs); ctx.globalAlpha = 1; }
+    if (ty === C.LAMP) spr((S.lampLit >> L.lampAt[c] & 1) ? 'lamp_on' : 'lamp_off', x, y, cs);
+    if (ty === C.DOOR) { const sh = nudge && nudge.door && now - nudge.t0 < 260 ? Math.sin((now - nudge.t0) / 22) * 3 : 0; spr(S.lit[c] ? 'door_open' : 'door_closed', x + sh, y, cs); }
+    const g = L.guardAt[c]; if (g >= 0 && (S.guardAlive >> g & 1)) spr(S.lit[c] ? 'guard_awake' : 'guard_asleep', x, y, cs);
+    if (pv && (pv.seen[c] || pv.burn[c]) && ty !== C.LAMP && ty !== C.DOOR && !(d & C.PIT) && !(g >= 0 && (S.guardAlive >> g & 1))) spr('danger', x, y, cs); }       // опасно на следующем ходу
+  // светлое пятно неспящего стража — обводка
+  for (let g = 0; g < L.guards.length; g++) if (S.guardAlive >> g & 1) { const patch = C.patchOf(L, S.lit, g); if (!patch) continue; const inP = new Uint8Array(L.n); for (const c of patch) inP[c] = 1;
+    ctx.save(); ctx.strokeStyle = '#ff6a3d'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.shadowColor = '#ff6a3d'; ctx.shadowBlur = 8; ctx.beginPath();
+    for (const c of patch) { const cx = c % L.W, cy = (c - cx) / L.W, x = ox + cx * cs, y = oy + cy * cs, out = (dx, dy) => { const X = cx + dx, Y = cy + dy; return X < 0 || Y < 0 || X >= L.W || Y >= L.H || !inP[Y * L.W + X]; };
+      if (out(0, -1)) { ctx.moveTo(x + 3, y + 2); ctx.lineTo(x + cs - 3, y + 2); } if (out(0, 1)) { ctx.moveTo(x + 3, y + cs - 2); ctx.lineTo(x + cs - 3, y + cs - 2); }
+      if (out(-1, 0)) { ctx.moveTo(x + 2, y + 3); ctx.lineTo(x + 2, y + cs - 3); } if (out(1, 0)) { ctx.moveTo(x + cs - 2, y + 3); ctx.lineTo(x + cs - 2, y + cs - 3); } }
+    ctx.stroke(); ctx.restore(); }
+  // куда можно шагнуть
+  if (mode === 'play' && !fail && !S.over) for (const m of C.legal(L, S)) { const q = center(m.cell); ctx.beginPath(); ctx.arc(q.x, q.y, cs * (m.win ? 0.16 : 0.085), 0, 7); ctx.fillStyle = m.win ? 'rgba(255,220,140,.9)' : 'rgba(235,245,255,.42)'; ctx.fill(); }
+  // шнур: от огонька до героя по пройденным клеткам
+  const pts = S.tail.map(center), hero = pts[pts.length - 1], flame = pts[0];
+  if (anim && k < 1) { const a = center(anim.fromP), b = center(anim.fromF); hero.x = a.x + (hero.x - a.x) * e; hero.y = a.y + (hero.y - a.y) * e; if (!S.won) { flame.x = b.x + (flame.x - b.x) * e; flame.y = b.y + (flame.y - b.y) * e; } }
+  if (nudge && now - nudge.t0 < 160) { const [dx, dy] = C.DIRS[nudge.dir], a = Math.sin((now - nudge.t0) / 160 * Math.PI) * cs * 0.12; hero.x += dx * a; hero.y += dy * a; }
+  if (pts.length > 1) { ctx.lineJoin = 'round'; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(flame.x, flame.y); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.strokeStyle = '#4a321c'; ctx.lineWidth = cs * 0.12; ctx.stroke(); ctx.strokeStyle = '#e2b87a'; ctx.lineWidth = cs * 0.06; ctx.setLineDash([cs * 0.1, cs * 0.08]); ctx.lineDashOffset = -now / 70; ctx.stroke(); ctx.setLineDash([]); }
+  const same = pts.length === 1, fs = cs * (same ? 0.62 : 0.92) * (1 + 0.04 * Math.sin(now / 90));
+  spr('flame', flame.x - fs * 0.42 - (same ? cs * 0.22 : 0), flame.y - fs * 0.56 + (same ? cs * 0.12 : 0), fs, 0.84);
+  for (let i = 0; i < 3; i++) { const ph = now / 300 + i * 2.1, r = cs * (0.28 + 0.1 * Math.sin(ph * 3.1)); ctx.fillStyle = `rgba(255,214,90,${0.5 + 0.4 * Math.sin(ph * 5)})`; ctx.beginPath(); ctx.arc(flame.x + Math.cos(ph * 1.7) * r - (same ? cs * 0.22 : 0), flame.y - cs * 0.1 + Math.sin(ph * 2.3) * r * 0.7, 1.6, 0, 7); ctx.fill(); }
+  ctx.save(); ctx.translate(hero.x, hero.y - (anim && k < 1 ? Math.sin(k * Math.PI) * cs * 0.07 : 0)); ctx.scale(face, 1); spr('hero', -cs / 2, -cs / 2, cs); ctx.restore();
+  // рука-указатель на первом уровне, пока идёшь по плану
+  if (cur === 0 && mode === 'play' && !fail && !S.over && hist.length < LEVELS[0].plan.length) { let p = L.start, onPlan = true; const plan = LEVELS[0].plan;
+    for (let i = 0; i < hist.length; i++) { p = C.cellInDir(L, p, plan[i]); const real = i + 1 < hist.length ? hist[i + 1].tail[hist[i + 1].tail.length - 1] : player(); if (p !== real) { onPlan = false; break; } }
+    if (onPlan) { const q = center(C.cellInDir(L, player(), plan[hist.length])), b = Math.sin(now / 240) * 4; spr('hand', q.x - cs * 0.36, q.y - cs * 0.08 + b, cs * 0.9); } }
+  // провал: вспышка, потом возврат на ход назад и метка, что случилось
+  if (fail && now >= fail.t0) { const a = 1 - (now - fail.t0) / CONFIG.failMs; ctx.fillStyle = fail.reason === 'burned' ? `rgba(255,90,40,${0.45 * a})` : fail.reason === 'seen' ? `rgba(255,170,40,${0.4 * a})` : `rgba(140,160,180,${0.38 * a})`; ctx.fillRect(0, CONFIG.header, CONFIG.W, CONFIG.H - CONFIG.header - CONFIG.panel);
+    if (now >= fail.t0 + CONFIG.failMs) { ghost = { t0: now, cell: player(), reason: fail.reason }; S = hist.pop(); fail = null; anim = null; } }
+  const label = fail ? { reason: fail.reason, a: 1, cell: player() } : ghost && now - ghost.t0 < CONFIG.ghostMs ? { reason: ghost.reason, a: 1 - (now - ghost.t0) / CONFIG.ghostMs, cell: ghost.cell } : null;
+  if (label) { const q = center(label.cell), s = T()[label.reason]; ctx.globalAlpha = Math.max(0, Math.min(1, label.a * 1.6)); ctx.font = '800 15px system-ui,sans-serif'; const w = ctx.measureText(s).width + 20, bx = Math.max(6, Math.min(CONFIG.W - w - 6, q.x - w / 2)), by = Math.max(geo.top, q.y - cs * 0.95);
+    ctx.fillStyle = 'rgba(20,10,8,.88)'; rr(bx, by, w, 26, 13); ctx.fill(); text(s, bx + w / 2, by + 13.5, 15, label.reason === 'stuck' ? '#c9d6e0' : '#ffb07a', 'center', 800);
+    if (!fail) { ctx.strokeStyle = '#ff6a3d'; ctx.lineWidth = 3; ctx.lineCap = 'round'; const r = cs * 0.2; ctx.beginPath(); ctx.moveTo(q.x - r, q.y - r); ctx.lineTo(q.x + r, q.y + r); ctx.moveTo(q.x + r, q.y - r); ctx.lineTo(q.x - r, q.y + r); ctx.stroke(); } ctx.globalAlpha = 1; }
+  else if (nudge && nudge.door && now - nudge.t0 < 1400) { const q = center(L.door), s = T().closed; ctx.globalAlpha = Math.min(1, (1400 - (now - nudge.t0)) / 400); ctx.font = '700 13px system-ui,sans-serif'; const w = ctx.measureText(s).width + 18, bx = Math.max(6, Math.min(CONFIG.W - w - 6, q.x - w / 2)), by = Math.max(geo.top, q.y - cs * 0.95);
+    ctx.fillStyle = 'rgba(8,14,20,.9)'; rr(bx, by, w, 24, 12); ctx.fill(); text(s, bx + w / 2, by + 12.5, 13, '#c9d6e0', 'center', 700); ctx.globalAlpha = 1; } }
+
+function drawHint() { const h = LEVELS[cur].hint; if (!h) return; const lines = wrap(h[lang], CONFIG.W - 40, 13.5).slice(0, 3); lines.forEach((s, i) => text(s, CONFIG.W / 2, geo.bot + 14 + i * 17, 13.5, '#a9bac7', 'center', 500)); }
+function button(x, y, w, h, label, fn, opt) { opt = opt || {}; rr(x, y, w, h, 14); ctx.fillStyle = opt.primary ? '#e7a94a' : opt.dim ? '#141d26' : '#1c2832'; ctx.fill(); ctx.strokeStyle = opt.primary ? '#ffd58a' : '#2f4050'; ctx.lineWidth = 1.5; ctx.stroke();
+  text(label, x + w / 2, y + h / 2 + 0.5, opt.size || 15, opt.primary ? '#1b1206' : opt.dim ? '#5f7383' : '#e6eef4', 'center', 700); buttons.push({ x, y, w, h, fn }); }
+function drawPanel() { const y = CONFIG.H - CONFIG.panel + 10, w = 112, g = 9, x0 = (CONFIG.W - 3 * w - 2 * g) / 2, t = T();
+  button(x0, y, w, 50, t.undo, uiUndo, { dim: !hist.length }); button(x0 + w + g, y, w, 50, t.restart, uiRestart, { dim: !hist.length }); button(x0 + 2 * (w + g), y, w, 50, t.levels, () => { mode = 'levels'; }); }
+function drawWon(now) { const a = Math.max(0, Math.min(1, (now - wonAt - 320) / 220)); if (a <= 0) return; const t = T(), lv = LEVELS[cur], last = cur === LEVELS.length - 1, y = geo.bot + 2 + (1 - a) * 24, h = CONFIG.H - geo.bot - 10;
+  ctx.globalAlpha = a; rr(10, y, CONFIG.W - 20, h, 20); ctx.fillStyle = 'rgba(16,24,32,.97)'; ctx.fill(); ctx.strokeStyle = '#e7a94a'; ctx.lineWidth = 2; ctx.stroke();
+  text(last ? t.all : t.won, CONFIG.W / 2, y + 27, 21, '#ffd58a', 'center', 800); text(`${t.moves}: ${S.t}` + (S.t === lv.par ? `  ·  ${t.best}` : ''), CONFIG.W / 2, y + 51, 13.5, '#a9bac7', 'center', 600);
+  const by = y + 66, bh = h - 78; button(22, by, 104, bh, t.again, uiRestart); button(134, by, 104, bh, t.levels, () => { mode = 'levels'; }, last ? { primary: true } : {}); if (!last) button(246, by, 122, bh, t.next + '  →', () => go(cur + 2), { primary: true }); else button(246, by, 122, bh, t.undo, uiUndo); ctx.globalAlpha = 1; }
+function drawLevels() { const t = T(); buttons = []; ctx.fillStyle = 'rgba(6,10,14,.93)'; ctx.fillRect(0, 0, CONFIG.W, CONFIG.H); text(t.pick, CONFIG.W / 2, 44, 24, '#f1e6d2', 'center', 800);
+  const w = 108, h = 82, g = 10, x0 = (CONFIG.W - 3 * w - 2 * g) / 2;
+  LEVELS.forEach((lv, i) => { const x = x0 + (i % 3) * (w + g), y = 80 + Math.floor(i / 3) * (h + g), done = doneSet.has(i); rr(x, y, w, h, 14); ctx.fillStyle = done ? '#23382c' : '#1c2832'; ctx.fill(); ctx.strokeStyle = i === cur ? '#e7a94a' : done ? '#4f8a62' : '#2f4050'; ctx.lineWidth = i === cur ? 2.5 : 1.5; ctx.stroke();
+    text(String(i + 1), x + 14, y + 26, 24, '#f1e6d2', 'left', 800); if (done) text('✓', x + w - 14, y + 24, 18, '#7fd39a', 'right', 800);
+    const nm = wrap(lv.name[lang], w - 26, 11.5).slice(0, 2); nm.forEach((s, j) => text(s, x + 14, y + 52 + j * 14, 11.5, '#9fb0bd', 'left', 500)); buttons.push({ x, y, w, h, fn: () => go(i + 1) }); });
+  const by = 80 + 5 * (h + g) + 12; button(x0, by, 160, 48, t.lang, () => { lang = lang === 'ru' ? 'en' : 'ru'; store.set('lang', lang); }); button(CONFIG.W - x0 - 160, by, 160, 48, t.close, () => { mode = S.won ? 'won' : 'play'; }, { primary: true }); }
+function frame(now) { ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0); ctx.fillStyle = '#0d151c'; ctx.fillRect(0, 0, CONFIG.W, CONFIG.H); buttons = [];
+  drawHeader(); drawField(now); if (mode === 'won' && now - wonAt > 320) drawWon(now); else { drawHint(); drawPanel(); } if (mode === 'levels') drawLevels(); requestAnimationFrame(frame); }
+
+// ---------- управление: тап по клетке рядом, свайп, стрелки/WASD ----------
+let down = null; const local = ev => { const r = cv.getBoundingClientRect(); return { x: (ev.clientX - r.left) / scale, y: (ev.clientY - r.top) / scale }; };
+const dirOf = (dx, dy) => Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U');
+cv.addEventListener('pointerdown', ev => { ev.preventDefault(); down = Object.assign(local(ev), { id: ev.pointerId }); });
+cv.addEventListener('pointerup', ev => { ev.preventDefault(); if (!down) return; const p = local(ev), dx = p.x - down.x, dy = p.y - down.y, start = down; down = null;
+  if (Math.hypot(dx, dy) > 26 && mode === 'play') return tryStep(dirOf(dx, dy));                                    // свайп
+  for (let i = buttons.length - 1; i >= 0; i--) { const b = buttons[i]; if (start.x >= b.x && start.x <= b.x + b.w && start.y >= b.y && start.y <= b.y + b.h) return b.fn(); }
+  if (mode !== 'play' || start.y < geo.top - 6 || start.y > geo.bot + 6) return; const h = center(player()), ax = start.x - h.x, ay = start.y - h.y; if (Math.hypot(ax, ay) < geo.cs * 0.35) return; tryStep(dirOf(ax, ay)); });   // тап: в сторону от героя
+cv.addEventListener('pointercancel', () => { down = null; });
+addEventListener('keydown', ev => { const k = ev.key.toLowerCase(), d = { arrowup: 'U', w: 'U', ц: 'U', arrowdown: 'D', s: 'D', ы: 'D', arrowleft: 'L', a: 'L', ф: 'L', arrowright: 'R', d: 'R', в: 'R' }[k];
+  if (d) { ev.preventDefault(); if (mode === 'play') tryStep(d); } else if (k === 'z' || k === 'я' || k === 'backspace') { ev.preventDefault(); uiUndo(); } else if (k === 'r' || k === 'к') uiRestart();
+  else if ((k === 'enter' || k === ' ') && mode === 'won' && cur < LEVELS.length - 1) go(cur + 2); else if (k === 'escape') mode = mode === 'levels' ? (S.won ? 'won' : 'play') : 'levels'; });
+addEventListener('resize', fit);
+
+window.FUSE = { CONFIG, LEVELS, load, state, legal, step, undo, restart, preview, solve, log, core: C };
+go(+qs.get('level') || store.get('level', 1)); fit(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
