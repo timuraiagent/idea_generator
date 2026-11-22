@@ -33,7 +33,7 @@ SCORES = {
     "condemn-day": 16, "courtyard": 16, "disperse": 16, "palpate-regime": 16, "send-tone": 16,
     "closed-list": 16, "kinwork": 15, "unwedge": 15, "incarnate-knave": 16, "selfbind": 15,
     "order-feel": 16, "respect-transfer": 15, "happiness-show": 15, "smoke-surrender": 15,
-    "fuse": 16,
+    "fuse": 16, "incur-figurine": 16,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
