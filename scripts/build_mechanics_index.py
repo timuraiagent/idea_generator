@@ -31,7 +31,7 @@ SCORES = {
     "soak-stage": 16, "deny-path": 16, "waft-credit": 16, "glorify-touch": 16,
     "spill-detail": 16, "pour-algorithm": 16, "circumnavigate-policy": 16, "death-stamp": 16,
     "condemn-day": 16, "courtyard": 16, "disperse": 16, "palpate-regime": 16, "send-tone": 16,
-    "closed-list": 16,
+    "closed-list": 16, "kinwork": 15,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
