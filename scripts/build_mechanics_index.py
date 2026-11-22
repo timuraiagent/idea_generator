@@ -32,7 +32,7 @@ SCORES = {
     "spill-detail": 16, "pour-algorithm": 16, "circumnavigate-policy": 16, "death-stamp": 16,
     "condemn-day": 16, "courtyard": 16, "disperse": 16, "palpate-regime": 16, "send-tone": 16,
     "closed-list": 16, "kinwork": 15, "unwedge": 15, "incarnate-knave": 16, "selfbind": 15,
-    "order-feel": 16,
+    "order-feel": 16, "happiness-show": 15,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
