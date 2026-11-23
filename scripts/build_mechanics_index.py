@@ -47,7 +47,7 @@ SCORES = {
     "sublaw": 16, "reface": 16, "privyaz": 16, "cursebearer": 16, "stalelaw": 16, "spur": 15,
     "edict-reign": 15, "foundling": 15, "pokrov": 16, "contactka": 16, "lattice": 16, "pinch": 16, "suture": 16,
     "steep": 15, "unglue": 16, "prosvet": 16, "overwinter": 15, "reforge": 15, "sanation": 16, "tauten": 16,
-    "choke": 16, "gnoinik": 16, "ether": 15, "likho": 16, "zazhigala": 16,
+    "choke": 16, "gnoinik": 16, "ether": 15, "likho": 16, "zazhigala": 16, "measureback": 16,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
