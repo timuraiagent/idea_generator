@@ -21,7 +21,7 @@ const ICON = {
   list(x, y, r) { for (const k of [-0.36, 0, 0.36]) { ctx.beginPath(); ctx.moveTo(x - r * 0.46, y + r * k); ctx.lineTo(x + r * 0.46, y + r * k); ctx.stroke(); } },
   lock(x, y, r) { rr(ctx, x - r * 0.36, y - r * 0.06, r * 0.72, r * 0.56, r * 0.12); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y - r * 0.08, r * 0.24, Math.PI, 0); ctx.stroke(); },
 };
-function star(x, y, r, on, c) { c = c || ctx; c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * 0.46 : r; c.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q); } c.closePath(); c.fillStyle = on ? '#ffc94d' : '#2a3160'; c.fill(); c.lineWidth = Math.max(1.5, r * 0.16); c.lineJoin = 'round'; c.strokeStyle = on ? '#8a5a12' : '#3b4478'; c.stroke(); }
+function star(x, y, r, on, c) { c = c || ctx; c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * 0.46 : r; c.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q); } c.closePath(); c.fillStyle = on ? '#ffc94d' : '#323b72'; c.fill(); c.lineWidth = Math.max(1.5, r * 0.16); c.lineJoin = 'round'; c.strokeStyle = on ? '#8a5a12' : '#6470b0'; c.stroke(); }
 // круглая кнопка со значком
 function roundBtn(id, x, y, r, icon, fn, o) { o = o || {}; const down = btn(x - r - 4, y - r - 4, r * 2 + 8, r * 2 + 8, fn, id), s = down ? 0.94 : 1, a = o.dim ? 0.38 : 1; ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.globalAlpha = a;
   ctx.fillStyle = 'rgba(4,5,16,0.5)'; ctx.beginPath(); ctx.arc(0, 3, r, 0, 7); ctx.fill(); const g = ctx.createLinearGradient(0, -r, 0, r); g.addColorStop(0, o.primary ? '#ffca62' : '#2c3466'); g.addColorStop(1, o.primary ? '#f09a2c' : '#1c2247'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
@@ -29,8 +29,8 @@ function roundBtn(id, x, y, r, icon, fn, o) { o = o || {}; const down = btn(x - 
   if (o.pulse) { const k = (Math.sin(now / 240) + 1) / 2; ctx.strokeStyle = `rgba(255,201,77,${0.35 + k * 0.6})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r + 3 + k * 3, 0, 7); ctx.stroke(); }
   ctx.strokeStyle = o.primary ? PAL.ink : (o.col || PAL.text); ctx.lineWidth = Math.max(2.4, r * 0.11); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; icon(0, 0, r, o.arg); ctx.restore(); }
 function pillBtn(id, x, y, w, h, label, fn, o) { o = o || {}; const down = btn(x, y, w, h, fn, id); ctx.save(); if (down) { ctx.translate(x + w / 2, y + h / 2); ctx.scale(0.96, 0.96); ctx.translate(-x - w / 2, -y - h / 2); }
-  ctx.fillStyle = 'rgba(4,5,16,0.5)'; rr(ctx, x, y + 3, w, h, h / 2); ctx.fill(); const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, o.primary ? '#ffca62' : '#2c3466'); g.addColorStop(1, o.primary ? '#f09a2c' : '#1c2247'); ctx.fillStyle = g; rr(ctx, x, y, w, h, h / 2); ctx.fill();
-  ctx.strokeStyle = o.primary ? '#ffe3a1' : '#46508a'; ctx.lineWidth = 1.5; rr(ctx, x + 0.75, y + 0.75, w - 1.5, h - 1.5, h / 2); ctx.stroke(); ctx.fillStyle = o.primary ? PAL.ink : PAL.text; ctx.font = font(o.size || 16, 800); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x + w / 2, y + h / 2 + 1); ctx.restore(); }
+  ctx.fillStyle = 'rgba(4,5,16,0.5)'; rr(ctx, x, y + 3, w, h, h / 2); ctx.fill(); const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, o.primary ? '#ffca62' : o.danger ? '#5a2238' : '#2c3466'); g.addColorStop(1, o.primary ? '#f09a2c' : o.danger ? '#3a1626' : '#1c2247'); ctx.fillStyle = g; rr(ctx, x, y, w, h, h / 2); ctx.fill();
+  ctx.strokeStyle = o.primary ? '#ffe3a1' : o.danger ? '#b0506a' : '#46508a'; ctx.lineWidth = 1.5; rr(ctx, x + 0.75, y + 0.75, w - 1.5, h - 1.5, h / 2); ctx.stroke(); ctx.fillStyle = o.primary ? PAL.ink : PAL.text; ctx.font = font(o.size || 16, 800); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x + w / 2, y + h / 2 + 1); ctx.restore(); }
 function text(s, x, y, px, col, w, align) { ctx.font = font(px, w || 700); ctx.fillStyle = col || PAL.text; ctx.textAlign = align || 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s, x, y); }
 function wrap(s, x, y, maxW, px, col, lh) { ctx.font = font(px, 600); const words = s.replace(/ — /g, '\u00a0— ').split(' '), lines = []; let cur = ''; for (const wd of words) { const t = cur ? cur + ' ' + wd : wd; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = wd; } else cur = t; } if (cur) lines.push(cur);
   lines.forEach((ln, k) => text(ln, x, y + k * (lh || px * 1.3), px, col, 600)); return lines.length; }
@@ -53,12 +53,11 @@ function drawPlay() { const lv = LEVELS[M.idx], S = M.S, L = M.L, wd = WORLDS[lv
   ctx.save(); ctx.translate(0, -shift); drawField(); ctx.restore();
   if (shift > 1) { const g = ctx.createLinearGradient(0, CONFIG.top - 8, 0, CONFIG.top + 14); g.addColorStop(0, 'rgba(12,15,40,0.97)'); g.addColorStop(1, 'rgba(12,15,40,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, CONFIG.top + 14); }
   // шапка
-  roundBtn('map', 34, 30, 20, ICON.grid, goMap);
+  roundBtn('map', 36, 30, 24, ICON.grid, goMap);
   text(`${lv.w} · ${numInWorld(M.idx)}`, VW / 2, 24, 22, PAL.text, 800); text(tr(wd.name), VW / 2, 44, 11.5, PAL.dim, 700);
-  const st = starsOf(M.idx); for (let k = 0; k < 3; k++) star(VW - 62 + k * 17, 21, 7, k < st);
-  text(`${T('moves')} ${V.shown.t}`, VW - 45, 43, 11.5, PAL.dim, 700);
-  if (!UI.win) { drawFuse(CONFIG.top + 18); text(T('behind')(C.fuseLen(L, V.shown.spools)), VW / 2, CONFIG.top + 41, 11, PAL.dim, 700); }      // после победы полоска фитиля не нужна — место отдано полю
-  if (lv.hint && !UI.win) wrap(tr(lv.hint), VW / 2, VH - CONFIG.bottom - 34, VW - 56, 13.5, '#aab3da', 18);
+  if (!UI.win) { const st = starsOf(M.idx); for (let k = 0; k < 3; k++) star(VW - 64 + k * 18, 21, 7.5, k < st); text(`${T('moves')} ${V.shown.t}`, VW - 46, 43, 12.5, '#a3acd4', 700); }
+  if (!UI.win) { drawFuse(CONFIG.top + 18); text(T('behind')(C.fuseLen(L, V.shown.spools)), VW / 2, CONFIG.top + 42, 13, '#a3acd4', 700); }      // после победы полоска фитиля не нужна — место отдано полю
+  if (lv.hint && !UI.win && !UI.card) wrap(tr(lv.hint), VW / 2, VH - CONFIG.bottom - 34, VW - 56, 13.5, '#aab3da', 18);
   // нижняя панель: отмена, заново, подсказка — всегда на одних местах
   const by = VH - 50;
   if (!UI.win) { roundBtn('undo', VW / 2 - 98, by, 31, ICON.undo, () => { if (now < V.failUntil) return; undo(); }, { dim: !M.hist.length });
@@ -72,7 +71,7 @@ function drawWin() { const wv = UI.win, p = easeOut(clamp((now - wv.t0) / 320, 0
   text(wv.moves <= wv.par ? `${T('moves')} ${wv.moves} · ${T('best')}` : `${T('moves')} ${wv.moves} · ★ ${wv.par}`, VW / 2, y + 92, 13.5, '#aab3da', 700);
   roundBtn('wagain', 56, y + 144, 27, ICON.restart, () => { UI.win = null; restart(); }); roundBtn('wmap', 124, y + 144, 27, ICON.grid, goMap);
   pillBtn('wnext', 168, y + 116, VW - 168 - 28, 56, last ? T('map') : T('next') + '  →', () => { if (last) goMap(); else { let n = M.idx + 1; startLevel(n); } SND.play('click'); }, { primary: true, size: 19 }); }
-function drawCard() { const cd = UI.card, wd = WORLDS[cd.w - 1], p = easeOut(clamp((now - cd.t0) / 260, 0, 1)); ctx.fillStyle = `rgba(4,5,16,${0.72 * p})`; ctx.fillRect(0, 0, VW, VH); const w = 310, h = 300, x = (VW - w) / 2, y = (VH - h) / 2 + (1 - p) * 30; ctx.globalAlpha = p;
+function drawCard() { const cd = UI.card, wd = WORLDS[cd.w - 1], p = easeOut(clamp((now - cd.t0) / 260, 0, 1)); ctx.fillStyle = `rgba(4,5,16,${0.9 * p})`; ctx.fillRect(0, 0, VW, VH); const w = 310, h = 300, x = (VW - w) / 2, y = (VH - h) / 2 + (1 - p) * 30; ctx.globalAlpha = p;
   const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#2a3163'); g.addColorStop(1, '#171c3d'); ctx.fillStyle = g; rr(ctx, x, y, w, h, 26); ctx.fill(); ctx.strokeStyle = '#525d9c'; ctx.lineWidth = 1.5; rr(ctx, x + 0.75, y + 0.75, w - 1.5, h - 1.5, 26); ctx.stroke();
   text(`${T('world')} ${cd.w}`, VW / 2, y + 30, 13, PAL.dim, 800); text(tr(wd.name), VW / 2, y + 56, 24, PAL.text, 800);
   ctx.fillStyle = wd.icon === 'flame' || wd.icon === 'lamp_on' || wd.icon === 'door_open' ? '#10142e' : '#3b4563'; ctx.beginPath(); ctx.arc(VW / 2, y + 128, 46, 0, 7); ctx.fill(); ctx.strokeStyle = '#11142a'; ctx.lineWidth = 3; ctx.stroke(); if (wd.icon === 'flame') { ctx.globalCompositeOperation = 'lighter'; glow(VW / 2, y + 122, 60, '255,150,60', 0.4 * p); ctx.globalCompositeOperation = 'source-over'; flameShape(VW / 2, y + 150, 1, 1, 86); } else { if (wd.icon === 'lamp_on') { ctx.globalCompositeOperation = 'lighter'; glow(VW / 2, y + 118, 64, '255,200,110', 0.4 * p); ctx.globalCompositeOperation = 'source-over'; } spr(ctx, wd.icon, VW / 2 - 40, y + 86, 80, 80); }
@@ -80,17 +79,17 @@ function drawCard() { const cd = UI.card, wd = WORLDS[cd.w - 1], p = easeOut(cla
   btn(0, 0, VW, VH, () => { save.seenWorld[cd.w] = 1; persist(); UI.card = null; SND.play('click'); }, 'card'); }
 
 // ---------- карта миров ----------
-function nodePos(k, n) { const cols = 3, row = Math.floor(k / cols), col = row % 2 ? cols - 1 - (k % cols) : k % cols; return [VW / 2 + (col - 1) * 104, 206 + row * 104]; }
+function nodePos(k, n) { const cols = 3, row = Math.floor(k / cols), col = row % 2 ? cols - 1 - (k % cols) : k % cols; return [VW / 2 + (col - 1) * 104, 212 + row * clamp((VH - 368) / 3.3, 98, 132)]; }
 function drawMap() { bg(); const w = UI.mapW + 1, wd = WORLDS[UI.mapW], ids = worldLevels(w), cur = firstUnsolved(), got = ids.reduce((a, i) => a + starsOf(i), 0);
   ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.restore();
   text(tr({ ru: 'Фитиль', en: 'The Fuse' }), VW / 2, 34, 26, PAL.text, 800); star(VW / 2 - 34, 62, 8, true); text(`${totalStars()} / ${LEVELS.length * 3}`, VW / 2 + 8, 63, 13, '#ffd98a', 800);
   // заголовок мира
-  const hy = 104; ctx.fillStyle = wd.tint; ctx.globalAlpha = 0.16; rr(ctx, 58, hy - 28, VW - 116, 60, 18); ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = '#3b4478'; ctx.lineWidth = 1.5; rr(ctx, 58.75, hy - 27.25, VW - 117.5, 58.5, 18); ctx.stroke();
+  const hy = 104; ctx.fillStyle = wd.tint; ctx.globalAlpha = 0.16; rr(ctx, 62, hy - 28, VW - 124, 60, 18); ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = '#3b4478'; ctx.lineWidth = 1.5; rr(ctx, 62.75, hy - 27.25, VW - 125.5, 58.5, 18); ctx.stroke();
   text(`${T('world')} ${w}`, VW / 2 + 16, hy - 12, 12, PAL.dim, 800); text(tr(wd.name), VW / 2 + 16, hy + 10, 20, PAL.text, 800);
-  ctx.fillStyle = wd.icon === 'flame' || wd.icon === 'door_open' ? '#10142e' : '#3b4563'; ctx.beginPath(); ctx.arc(92, hy + 2, 21, 0, 7); ctx.fill(); ctx.strokeStyle = PAL.ink; ctx.lineWidth = 2.5; ctx.stroke();
-  if (wd.icon === 'flame') flameShape(92, hy + 14, 1, 2, 40); else spr(ctx, wd.icon, 92 - 19, hy + 2 - 19, 38, 38);
+  ctx.fillStyle = wd.icon === 'flame' || wd.icon === 'door_open' ? '#10142e' : '#3b4563'; ctx.beginPath(); ctx.arc(98, hy + 2, 21, 0, 7); ctx.fill(); ctx.strokeStyle = PAL.ink; ctx.lineWidth = 2.5; ctx.stroke();
+  if (wd.icon === 'flame') flameShape(98, hy + 14, 1, 2, 40); else spr(ctx, wd.icon, 98 - 19, hy + 2 - 19, 38, 38);
   const allLocked = ids.every(i => !isOpen(i)); text(allLocked ? T('lockedWorld') : `★ ${got} / ${ids.length * 3}`, VW / 2, hy + 46, 12, allLocked ? PAL.dim : '#ffd98a', 800);
-  roundBtn('wprev', 30, hy + 2, 19, ICON.prev, () => { UI.mapW = Math.max(0, UI.mapW - 1); SND.play('click'); }, { dim: UI.mapW === 0 }); roundBtn('wnext2', VW - 30, hy + 2, 19, ICON.fwd, () => { UI.mapW = Math.min(WORLDS.length - 1, UI.mapW + 1); SND.play('click'); }, { dim: UI.mapW === WORLDS.length - 1 });
+  roundBtn('wprev', 31, hy + 2, 23, ICON.prev, () => { UI.mapW = Math.max(0, UI.mapW - 1); SND.play('click'); }, { dim: UI.mapW === 0 }); roundBtn('wnext2', VW - 31, hy + 2, 23, ICON.fwd, () => { UI.mapW = Math.min(WORLDS.length - 1, UI.mapW + 1); SND.play('click'); }, { dim: UI.mapW === WORLDS.length - 1 });
   // шнур между уровнями: пройденная часть «горит»
   const pos = ids.map((i, k) => nodePos(k, ids.length)); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   const path = (col, wdt, upto) => { ctx.strokeStyle = col; ctx.lineWidth = wdt; ctx.beginPath(); pos.forEach(([x, y], k) => { if (k > upto) return; if (k) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); };
@@ -101,11 +100,10 @@ function drawMap() { bg(); const w = UI.mapW + 1, wd = WORLDS[UI.mapW], ids = wo
     ctx.fillStyle = 'rgba(4,5,16,0.55)'; ctx.beginPath(); ctx.arc(0, 3, r, 0, 7); ctx.fill(); const g = ctx.createLinearGradient(0, -r, 0, r); if (st) { g.addColorStop(0, '#ffd27a'); g.addColorStop(1, '#f09a2c'); } else if (open) { g.addColorStop(0, '#343d77'); g.addColorStop(1, '#222956'); } else { g.addColorStop(0, '#1a1f40'); g.addColorStop(1, '#12162f'); }
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = st ? '#fff0c2' : open ? '#5a66a8' : '#2a305c'; ctx.beginPath(); ctx.arc(0, 0, r - 1, 0, 7); ctx.stroke();
     if (isCur && open) { const q = (Math.sin(now / 260) + 1) / 2; ctx.strokeStyle = `rgba(53,201,179,${0.45 + q * 0.5})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r + 4 + q * 3, 0, 7); ctx.stroke(); }
-    if (open) text(String(k + 1), 0, 1, 22, st ? PAL.ink : PAL.text, 800); else { ctx.strokeStyle = '#4a548f'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ICON.lock(0, 0, 26); }
-    ctx.restore(); if (isCur && open) prop(ctx, 'hero_a', x - r - 4, y + r * 0.72, 40);
-    ctx.fillStyle = '#080a18'; rr(ctx, x - 27, y + r + 4, 54, 18, 9); ctx.fill(); for (let s = 0; s < 3; s++) star(x + (s - 1) * 15, y + r + 13, 6, s < st); });
+    if (open) { text(String(k + 1), 0, -6, 21, st ? PAL.ink : PAL.text, 800); for (let q = 0; q < 3; q++) star((q - 1) * 13, 14, 5.2, q < st); } else { ctx.strokeStyle = '#4a548f'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ICON.lock(0, 0, 26); }
+    ctx.restore(); if (isCur && open) prop(ctx, 'hero_a', x, y - r + 9 - Math.abs(Math.sin(now / 320)) * 4, 40); });
   // точки миров и нижний ряд
-  const dy = VH - 108; WORLDS.forEach((q, k) => { ctx.fillStyle = k === UI.mapW ? '#ffd98a' : '#353d70'; ctx.beginPath(); ctx.arc(VW / 2 + (k - (WORLDS.length - 1) / 2) * 16, dy, k === UI.mapW ? 4.5 : 3.2, 0, 7); ctx.fill(); });
+  const dy = VH - 108; WORLDS.forEach((q, k) => { ctx.fillStyle = k === UI.mapW ? '#ffd98a' : '#4a5490'; ctx.beginPath(); ctx.arc(VW / 2 + (k - (WORLDS.length - 1) / 2) * 18, dy, k === UI.mapW ? 5.5 : 4, 0, 7); ctx.fill(); });
   const by = VH - 54; roundBtn('snd', VW / 2 - 96, by, 25, ICON.sound, () => { SND.setOn(!save.sound); SND.play('click'); }, { arg: save.sound });
   pillBtn('lng', VW / 2 - 34, by - 25, 68, 50, T('lang'), () => { save.lang = save.lang === 'ru' ? 'en' : 'ru'; persist(); SND.play('click'); }, { size: 17 });
   roundBtn('sts', VW / 2 + 96, by, 25, ICON.list, () => { UI.screen = 'stats'; UI.statScroll = 0; SND.play('click'); });
@@ -125,7 +123,7 @@ function drawStats() { bg(); const rows = statsRows(), top = 104, rowH = 26, vie
   ctx.restore(); const by = VH - 104;
   pillBtn('sall', 20, by, VW - 40, 40, (save.openAll ? '✓ ' : '') + T('openAll'), () => { save.openAll = !save.openAll; persist(); SND.play('click'); }, { size: 14 });
   pillBtn('scopy', 20, by + 48, (VW - 50) / 2, 40, now - UI.copiedAt < 1500 ? T('copied') : T('copy'), () => { const data = JSON.stringify(stats()); try { navigator.clipboard.writeText(data); } catch (e) { /* нет доступа к буферу */ } UI.copiedAt = now; }, { size: 13 });
-  pillBtn('sreset', 30 + (VW - 50) / 2, by + 48, (VW - 50) / 2, 40, now - UI.resetArm < 2500 ? T('resetAsk') : T('reset'), () => { if (now - UI.resetArm < 2500) { save.done = {}; save.stats = {}; save.seenWorld = {}; save.openAll = false; persist(); UI.resetArm = 0; } else UI.resetArm = now; }, { size: 13 }); }
+  pillBtn('sreset', 30 + (VW - 50) / 2, by + 48, (VW - 50) / 2, 40, now - UI.resetArm < 2500 ? T('resetAsk') : T('reset'), () => { if (now - UI.resetArm < 2500) { save.done = {}; save.stats = {}; save.seenWorld = {}; save.openAll = false; persist(); UI.resetArm = 0; } else UI.resetArm = now; }, { size: 13, danger: true }); }
 function stats() { return statsRows().map(r => Object.assign({ level: r.i + 1, id: r.id, stars: r.stars }, r.st, { ms: Math.round(r.st.ms) })); }
 
 // ---------- ввод ----------

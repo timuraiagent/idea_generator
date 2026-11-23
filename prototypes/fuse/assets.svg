@@ -133,14 +133,14 @@ No cord, ambient darkness, glow or particles: the engine supplies these.
   <ellipse cx="59" cy="46" rx="9" ry="4" fill="#39426a"/>
 </g>
 <g id="lamp_off" transform="translate(640,128)" stroke="#11142a" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
-  <path d="M58 77H70V106H83L88 120H40L45 106H58Z" fill="#39426a"/>
-  <path d="M64 90V108M48 112H77" fill="none" stroke="#59658b" stroke-width="3"/>
-  <path d="M55 24V17Q55 8 64 8Q73 8 73 17V24" fill="none" stroke="#39426a"/>
-  <path d="M37 38H91V78L82 85H46L37 78Z" fill="#2b3350"/>
-  <path d="M45 45H54V70H45Z" fill="#39426a" stroke="none"/>
-  <path d="M32 38L46 25H82L96 38Z" fill="#39426a"/>
-  <path d="M44 30H78" fill="none" stroke="#59658b" stroke-width="3"/>
+  <path d="M58 77H70V106H83L88 120H40L45 106H58Z" fill="#7783ad"/>
+  <path d="M64 90V108M48 112H77" fill="none" stroke="#a9b3d6" stroke-width="3"/>
+  <path d="M55 24V17Q55 8 64 8Q73 8 73 17V24" fill="none" stroke="#7783ad"/>
+  <path d="M37 38H91V78L82 85H46L37 78Z" fill="#414c7a"/>
+    <path d="M32 38L46 25H82L96 38Z" fill="#7783ad"/>
+  <path d="M44 30H78" fill="none" stroke="#a9b3d6" stroke-width="3"/>
   <path d="M37 40L45 44V75H83V44L91 40M64 43V75M35 79H93" fill="none"/>
+  <path d="M48 47V68" fill="none" stroke="#c3cbe6" stroke-width="4"/>
 </g>
 <g id="lamp_on" transform="translate(768,128)" stroke="#11142a" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
   <path d="M58 77H70V106H83L88 120H40L45 106H58Z" fill="#39426a"/>
@@ -164,9 +164,9 @@ No cord, ambient darkness, glow or particles: the engine supplies these.
   <path d="M12 120V54Q12 4 64 4Q116 4 116 54V120Z" fill="#5d6787"/>
   <path d="M14 54Q14 7 64 7Q93 7 107 27L96 37Q86 22 64 22Q29 22 28 55V118H14Z" fill="#8892ad" stroke="none"/>
   <path d="M28 120V55Q28 22 64 22Q100 22 100 55V120Z" fill="#0b0d1c"/>
-  <path d="M40 35V118M52 26V118M64 23V118M76 26V118M88 35V118" fill="none" stroke="#39426a" stroke-width="5"/>
-  <path d="M29 52H99M28 76H100M28 100H100" fill="none" stroke="#39426a" stroke-width="5"/>
-  <path d="M40 35V118M52 26V118M64 23V118M76 26V118M88 35V118" fill="none" stroke="#56618f" stroke-width="1.5"/>
+  <path d="M40 35V118M52 26V118M64 23V118M76 26V118M88 35V118" fill="none" stroke="#5f6b99" stroke-width="5"/>
+  <path d="M29 52H99M28 76H100M28 100H100" fill="none" stroke="#5f6b99" stroke-width="5"/>
+  <path d="M40 35V118M52 26V118M64 23V118M76 26V118M88 35V118" fill="none" stroke="#8e9ac6" stroke-width="1.5"/>
   <path d="M15 57H26M16 88H26M102 57H113M102 88H113M32 19L41 30M64 7V19M96 19L87 30" fill="none" stroke="#39426a" stroke-width="3"/>
   <path d="M22 47Q25 21 48 15" fill="none" stroke="#a9b3cc" stroke-width="3"/>
 </g>
