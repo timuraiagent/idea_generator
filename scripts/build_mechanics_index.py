@@ -36,7 +36,8 @@ SCORES = {
     "fuse": 16, "incur-figurine": 16, "infuse": 15, "transplant": 15, "overkeep": 15, "gastrol": 16,
     "force-address": 16, "pool-tent": 16, "reloop": 15, "steal-youth": 16,
     "darkcraft": 15, "drawout": 16, "samotek": 16, "stretchout": 16, "zertsalo": 15,
-    "burden-count": 16,
+    "burden-count": 16, "haulaway": 15,
+    "notice-period": 15,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
