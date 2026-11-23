@@ -11,6 +11,8 @@ const SPR = { floor_a: [0, 0], floor_b: [1, 0], floor_c: [2, 0], wall_top: [3, 0
   door_closed: [0, 2], door_open: [1, 2], hero_a: [2, 2], hero_b: [3, 2], guard_sleep: [4, 2], guard_awake: [5, 2], niche_barrel: [6, 2], niche_jug: [7, 2],
   niche_books: [0, 3], niche_flowers: [1, 3], niche_crate: [2, 3], ivy: [3, 3], portrait: [4, 3], bead: [5, 3], hero_fall: [6, 3], hero_hot: [7, 3] };
 const NICHES = ['niche_barrel', 'niche_books', 'niche_jug', 'niche_flowers', 'niche_crate'];
+// узел верёвки: в листе он ~44 px из 128, поэтому рамку спрайта берём крупнее нужного диаметра
+function bead(c, x, y, d) { const b = d * 128 / 44; if (spr(c, 'bead', x - b / 2, y - b / 2, b, b)) return; c.fillStyle = PAL.rope2; c.beginPath(); c.arc(x, y, d / 2, 0, 7); c.fill(); c.fillStyle = PAL.rope; c.beginPath(); c.arc(x - d * 0.06, y - d * 0.06, d * 0.36, 0, 7); c.fill(); }
 const atlas = { img: null, cv: null, k: 0, rows: 3 };
 function loadAtlas() { const hm = FUSE_ATLAS.match(/height="(\d+)"/), H0 = hm ? +hm[1] : 384; atlas.rows = Math.round(H0 / 128);
   const svg = FUSE_ATLAS.replace('width="1024"', 'width="2048"').replace(`height="${H0}"`, `height="${H0 * 2}"`), img = new Image();
@@ -37,7 +39,7 @@ function resize() { const w = window.innerWidth, h = window.innerHeight; SC = Ma
   cv.style.width = Math.round(VW * SC) + 'px'; cv.style.height = Math.round(VH * SC) + 'px'; cv.width = Math.round(VW * SC * DPR); cv.height = Math.round(VH * SC * DPR); V.hatch = null; layout(); if (V.shown && now >= V.failUntil) snap(); }      // после смены размера герой и огонёк встают на свои клетки заново
 function layout() { const L = M.L; if (!L) return; const lv = LEVELS[M.idx], top = CONFIG.top + 56, bot = VH - CONFIG.bottom - (lv.hint ? 46 : 16);
   F.cell = clamp(Math.floor(Math.min((VW - 16) / (L.W + 0.7), (bot - top) / (L.H + 0.9))), CONFIG.cellMin, CONFIG.cellMax);
-  F.x = Math.round((VW - L.W * F.cell) / 2); F.y = Math.round(top + (bot - top - L.H * F.cell) / 2 + F.cell * 0.12); rasterAtlas(); V.baseDirty = true; }
+  F.x = Math.round((VW - L.W * F.cell) / 2); F.y = Math.round(top + (bot - top - L.H * F.cell) * 0.32 + F.cell * 0.3); rasterAtlas(); V.baseDirty = true; }      // поле ближе к шапке, как в референсах
 const cellX = c => F.x + (c % M.L.W + 0.5) * F.cell, cellY = c => F.y + (Math.floor(c / M.L.W) + 0.5) * F.cell;
 function cellAt(px, py) { const L = M.L, x = Math.floor((px - F.x) / F.cell), y = Math.floor((py - F.y) / F.cell); return (x < 0 || y < 0 || x >= L.W || y >= L.H) ? -1 : y * L.W + x; }
 const isWall = (x, y) => { const L = M.L; return x < 0 || y < 0 || x >= L.W || y >= L.H || L.type[y * L.W + x] === C.WALL; };
@@ -135,13 +137,13 @@ function drawField() { const L = M.L, S = V.shown, cs = F.cell, lit = S.lit, t =
   // пол: тьма и свет ложатся на плитку строго по клеткам (тёплый тон один на всю игру); лужи, камень и зола — поверх, со своим тёмным и светлым видом
   const flick = 0.97 + Math.sin(t * 11) * 0.03, sprL = (name, x, y, w, h, I, flip) => { spr(ctx, name, x, y, w, h, flip, 1, atlas.dk); if (I > 0.02) { ctx.globalAlpha = I; spr(ctx, name, x, y, w, h, flip); ctx.globalAlpha = 1; } };
   const shade = (i, x, y, warm) => { const I = LI[i]; if (I < 0.99) { ctx.fillStyle = `rgba(${PAL.dark},${CONFIG.dark * (1 - I)})`; ctx.fillRect(x, y, cs, cs); }
-    if (I > 0.01) { ctx.fillStyle = `rgba(238,152,52,${warm * I * flick})`; ctx.fillRect(x, y, cs, cs); ctx.fillStyle = `rgba(255,214,140,${0.12 * I})`; ctx.fillRect(x + cs * 0.12, y + cs * 0.1, cs * 0.76, cs * 0.76); const f0 = V.flash.get(i); if (f0 !== undefined) { const p = (now - f0) / 380; if (p >= 1) V.flash.delete(i); else if (p >= 0) { ctx.fillStyle = `rgba(255,236,170,${0.4 * (1 - p)})`; ctx.fillRect(x, y, cs, cs); } } } };
+    if (I > 0.01) { ctx.fillStyle = `rgba(242,156,50,${warm * I * flick})`; ctx.fillRect(x, y, cs, cs); ctx.fillStyle = `rgba(255,214,140,${0.12 * I})`; ctx.fillRect(x + cs * 0.12, y + cs * 0.1, cs * 0.76, cs * 0.76); const f0 = V.flash.get(i); if (f0 !== undefined) { const p = (now - f0) / 380; if (p >= 1) V.flash.delete(i); else if (p >= 0) { ctx.fillStyle = `rgba(255,236,170,${0.4 * (1 - p)})`; ctx.fillRect(x, y, cs, cs); } } } };
   for (let i = 0; i < L.n; i++) { const ty = L.type[i], [x, y] = cellPx(i), d = S.d[i], I = LI[i];
     if (ty === C.WALL) { const b = i + L.W; if (b < L.n && L.type[b] !== C.WALL) { const fh = Math.round(cs * 0.46); ctx.fillStyle = `rgba(${PAL.dark},${0.5 * (1 - LI[b] * 0.8)})`; ctx.fillRect(x, y + cs - fh, cs, fh); } continue; }
-    if (d & C.PIT) { const flip = (i * 7 + 3) % 5 < 2; spr(ctx, 'pit', x, y, cs, cs, flip); shade(i, x, y, 0.4);                                       // яма: свет виден на кромке, нутро всегда чёрное
+    if (d & C.PIT) { const flip = (i * 7 + 3) % 5 < 2; spr(ctx, 'pit', x, y, cs, cs, flip); const hue = WORLD_HUE[LEVELS[M.idx].w - 1]; if (hue) { ctx.globalCompositeOperation = 'color'; ctx.globalAlpha = 0.6; ctx.fillStyle = hue; ctx.fillRect(x, y, cs, cs); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; } shade(i, x, y, 0.4);                                       // яма: свет виден на кромке, нутро всегда чёрное
       ctx.save(); ctx.beginPath(); PITPOLY.forEach(([px, py], k) => { const X = x + (flip ? 128 - px : px) / 128 * cs, Y = y + py / 128 * cs; if (k) ctx.lineTo(X, Y); else ctx.moveTo(X, Y); }); ctx.closePath(); ctx.clip(); spr(ctx, 'pit', x, y, cs, cs, flip); ctx.restore();
       const f0 = V.falls.get(i); if (f0 !== undefined) { const p = (now - f0) / 340; if (p >= 1) V.falls.delete(i); else { ctx.save(); ctx.globalAlpha = 1 - p; ctx.translate(x + cs / 2, y + cs / 2 + p * cs * 0.18); ctx.rotate(p * 0.5); const s2 = cs * (1 - p * 0.85); spr(ctx, 'floor_a', -s2 / 2, -s2 / 2, s2, s2); ctx.restore(); } } continue; }
-    shade(i, x, y, 0.62);
+    shade(i, x, y, 0.72);
     if (ty === C.STONE) sprL('stone', x + cs * 0.05, y + cs * 0.04, cs * 0.9, cs * 0.9, I);
     else if (ty === C.WATER) sprL('water', x + cs * 0.02, y + cs * 0.04, cs * 0.96, cs * 0.96, Math.max(I, 0.25));
     if (d & (C.OIL | C.BURN)) sprL('oil', x, y, cs, cs, Math.max(I, 0.25));
@@ -177,9 +179,9 @@ function drawField() { const L = M.L, S = V.shown, cs = F.cell, lit = S.lit, t =
   // шнур: от огонька через клетки следа к герою; узел на каждой клетке — по узлам видно N
   const pts = [[fx, fy + cs * 0.14]]; for (let k = 1; k < S.tail.length - 1; k++) pts.push([cellX(S.tail[k]), cellY(S.tail[k]) + cs * 0.14]); if (S.tail.length > 1 || same) pts.push([hx, hy + cs * 0.2 + Math.sin(hp * Math.PI) * cs * 0.12]);
   if (pts.length > 1 && !S.won) { ctx.lineJoin = 'round'; ctx.lineCap = 'round'; const line = (col, wd) => { ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k][0], pts[k][1]); ctx.stroke(); };
-    line('rgba(30,18,10,0.55)', cs * 0.15); line(PAL.rope2, cs * 0.095); ctx.setLineDash([cs * 0.045, cs * 0.06]); ctx.lineDashOffset = 0; line(PAL.rope, cs * 0.07); ctx.setLineDash([]);      // скрученная верёвка
+    line('rgba(30,18,10,0.55)', cs * 0.2); line(PAL.rope2, cs * 0.13); ctx.setLineDash([cs * 0.05, cs * 0.065]); ctx.lineDashOffset = 0; line(PAL.rope, cs * 0.095); ctx.setLineDash([]);      // скрученная верёвка
     const g = ctx.createLinearGradient(pts[0][0], pts[0][1], pts[1][0], pts[1][1]); g.addColorStop(0, PAL.hot); g.addColorStop(1, 'rgba(255,170,70,0)'); ctx.strokeStyle = g; ctx.lineWidth = cs * 0.075; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); ctx.lineTo(pts[1][0], pts[1][1]); ctx.stroke();
-    for (let k = 1; k < pts.length - 1; k++) { const bs = cs * 0.34; if (!spr(ctx, 'bead', pts[k][0] - bs / 2, pts[k][1] - bs / 2, bs, bs)) { ctx.fillStyle = PAL.rope2; ctx.beginPath(); ctx.arc(pts[k][0], pts[k][1], cs * 0.11, 0, 7); ctx.fill(); ctx.fillStyle = PAL.rope; ctx.beginPath(); ctx.arc(pts[k][0] - cs * 0.015, pts[k][1] - cs * 0.015, cs * 0.075, 0, 7); ctx.fill(); } } }
+    for (let k = 1; k < pts.length - 1; k++) bead(ctx, pts[k][0], pts[k][1], cs * 0.3); }
   // пожар на клетках (ниже и темнее) и сам огонёк
   for (let i = 0; i < L.n; i++) if (S.d[i] & C.FIRE) { const x = cellX(i), y = cellY(i) + cs * 0.3; flameShape(x - cs * 0.24, y, 0.62, i, 0, FIRE2, 1.25); flameShape(x + cs * 0.22, y - cs * 0.03, 0.7, i + 2, 0, FIRE2, 1.25); flameShape(x, y + cs * 0.05, 0.86, i + 4, 0, FIRE2, 1.25); if (Math.random() < 0.25) part({ kind: 'ember', x: x + (Math.random() - 0.5) * cs * 0.6, y: y - cs * 0.2, vx: (Math.random() - 0.5) * 20, vy: -40 - Math.random() * 30, life: 600, size: 2.2, col: '#ff9a4a' }); }
   if (!S.won) { if (wet) { ctx.fillStyle = PAL.ink; ctx.beginPath(); ctx.arc(fx, fy + cs * 0.12, cs * 0.13, 0, 7); ctx.fill(); ctx.fillStyle = `rgba(214,96,52,${0.75 + Math.sin(t * 6) * 0.2})`; ctx.beginPath(); ctx.arc(fx, fy + cs * 0.12, cs * 0.08, 0, 7); ctx.fill(); if (Math.random() < 0.12) part({ kind: 'smoke', col: '#aab4d8', x: fx, y: fy, vx: (Math.random() - 0.5) * 10, vy: -26, life: 900, size: 4 }); }
