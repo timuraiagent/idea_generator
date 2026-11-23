@@ -170,6 +170,7 @@ def main():
     # приставочное сопоставление автопары к лемме модели: «командовать» ловит
     # «командовать_VERB»; «направить» ловит «направить_VERB» и производные теги
     used_lemmas_v = {w.rsplit("_", 1)[0] for w in used_v} | idx_v
+    used_v_full = used_v | {v + "_VERB" for v in idx_v if v + "_VERB" in index}
     used_lemmas_n = {w.rsplit("_", 1)[0] for w in used_n} | idx_n
 
     probe_index = {p: index[p] for arch, ps in ARCHETYPES.items() for p in ps if p in index}
@@ -208,7 +209,7 @@ def main():
             arch, scores = classify_verb(mat[vi], index, mat)
             if arch not in GOOD_ARCH and not args.no_arch_gate:
                 continue
-            fresh = max((float(mat[vi] @ mat[index[u]]) for u in used_v if u in index),
+            fresh = max((float(mat[vi] @ mat[index[u]]) for u in used_v_full if u in index),
                         default=-1.0)
             if fresh > args.fresh_sim:
                 continue
@@ -241,7 +242,7 @@ def main():
             arch, scores = classify_verb(mat[vi], index, mat)
             if arch not in GOOD_ARCH and not args.no_arch_gate:      # №8: гейт архетипа
                 continue
-            fresh = max((float(mat[vi] @ mat[index[u]]) for u in used_v if u in index),
+            fresh = max((float(mat[vi] @ mat[index[u]]) for u in used_v_full if u in index),
                         default=-1.0)
             if fresh > args.fresh_sim:                               # «старая ось»
                 continue
