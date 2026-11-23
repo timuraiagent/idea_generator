@@ -193,7 +193,7 @@ def main():
             A = direction(directions)
             B = direction(directions + [A])
             # существительное около A, глагол около B — ближайшие проходящие гейты
-            nouns_near = [i for i in np.argsort(-(mat @ A)) if pos[i] == "NOUN"][: args.region_k * 3]
+            nouns_near = [i for i in np.argsort(-(mat @ A)) if pos[i] == "NOUN" and not human_mask[i]][: args.region_k * 3]
             verbs_near = [i for i in np.argsort(-(mat @ B)) if pos[i] == "VERB"][: args.region_k * 3]
             ni = next((i for i in nouns_near if words[i] not in used_n
                        and words[i].rsplit("_", 1)[0] not in used_lemmas_n), None)
