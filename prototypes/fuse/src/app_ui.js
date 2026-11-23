@@ -91,7 +91,7 @@ function drawWin() { const wv = UI.win, p = easeOut(clamp((now - wv.t0) / 320, 0
 function drawCard() { const cd = UI.card, wd = WORLDS[cd.w - 1], p = easeOut(clamp((now - cd.t0) / 260, 0, 1)); ctx.fillStyle = `rgba(4,5,16,${0.9 * p})`; ctx.fillRect(0, 0, VW, VH); const w = 310, h = 300, x = (VW - w) / 2, y = (VH - h) / 2 + (1 - p) * 30; ctx.globalAlpha = p;
   goldPanel(x, y, w, h, 26);
   text(`${T('world')} ${cd.w}`, VW / 2, y + 30, 13, PAL.dim, 800); text(tr(wd.name), VW / 2, y + 56, 24, '#f6dfae', 800);
-  ctx.fillStyle = wd.icon === 'flame' || wd.icon === 'lamp_on' || wd.icon === 'door_open' ? '#10142e' : '#3b4563'; ctx.beginPath(); ctx.arc(VW / 2, y + 128, 46, 0, 7); ctx.fill(); ctx.strokeStyle = '#11142a'; ctx.lineWidth = 3; ctx.stroke(); if (wd.icon === 'flame') { ctx.globalCompositeOperation = 'lighter'; glow(VW / 2, y + 122, 60, '255,150,60', 0.4 * p); ctx.globalCompositeOperation = 'source-over'; flameShape(VW / 2, y + 150, 1, 1, 86); } else { if (wd.icon === 'lamp_on') { ctx.globalCompositeOperation = 'lighter'; glow(VW / 2, y + 118, 64, '255,200,110', 0.4 * p); ctx.globalCompositeOperation = 'source-over'; } spr(ctx, wd.icon, VW / 2 - 40, y + 86, 80, 80); }
+  ctx.save(); ctx.translate(VW / 2, y + 128); goldRing(ctx, 48, 5); ctx.restore(); if (wd.icon === 'flame') { ctx.globalCompositeOperation = 'lighter'; glow(VW / 2, y + 122, 60, '255,150,60', 0.4 * p); ctx.globalCompositeOperation = 'source-over'; flameShape(VW / 2, y + 150, 1, 1, 86); } else { if (wd.icon === 'lamp_on') { ctx.globalCompositeOperation = 'lighter'; glow(VW / 2, y + 118, 64, '255,200,110', 0.4 * p); ctx.globalCompositeOperation = 'source-over'; } spr(ctx, wd.icon, VW / 2 - 40, y + 86, 80, 80); }
   wrap(tr(wd.card), VW / 2, y + 204, w - 44, 15, '#d5dbf7', 21); text(T('tapNew'), VW / 2, y + h - 22, 12, PAL.dim, 700); ctx.globalAlpha = 1;
   btn(0, 0, VW, VH, () => { save.seenWorld[cd.w] = 1; persist(); UI.card = null; SND.play('click'); }, 'card'); }
 
@@ -103,7 +103,7 @@ function drawMap() { bg(); const w = UI.mapW + 1, wd = WORLDS[UI.mapW], ids = wo
   // заголовок мира
   const hy = 104; plate(62, hy - 29, VW - 124, 62);
   text(`${T('world')} ${w}`, VW / 2 + 16, hy - 12, 12, PAL.dim, 800); text(tr(wd.name), VW / 2 + 16, hy + 10, 20, '#f6dfae', 800);
-  ctx.fillStyle = wd.icon === 'flame' || wd.icon === 'door_open' ? '#10142e' : '#3b4563'; ctx.beginPath(); ctx.arc(98, hy + 2, 21, 0, 7); ctx.fill(); ctx.strokeStyle = PAL.ink; ctx.lineWidth = 2.5; ctx.stroke();
+  ctx.save(); ctx.translate(98, hy + 2); goldRing(ctx, 23, 3.5); ctx.restore();
   if (wd.icon === 'flame') flameShape(98, hy + 14, 1, 2, 40); else spr(ctx, wd.icon, 98 - 19, hy + 2 - 19, 38, 38);
   const allLocked = ids.every(i => !isOpen(i)); text(allLocked ? T('lockedWorld') : `★ ${got} / ${ids.length * 3}`, VW / 2, hy + 46, 12, allLocked ? PAL.dim : '#ffd98a', 800);
   roundBtn('wprev', 31, hy + 2, 23, ICON.prev, () => { UI.mapW = Math.max(0, UI.mapW - 1); SND.play('click'); }, { dim: UI.mapW === 0 }); roundBtn('wnext2', VW - 31, hy + 2, 23, ICON.fwd, () => { UI.mapW = Math.min(WORLDS.length - 1, UI.mapW + 1); SND.play('click'); }, { dim: UI.mapW === WORLDS.length - 1 });

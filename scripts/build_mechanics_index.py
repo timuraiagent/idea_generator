@@ -41,7 +41,7 @@ SCORES = {
     "townclock": 15, "rehouse": 15, "stake-steppe": 15, "puntout": 15, "hushmark": 16,
     "densify": 15, "ebbwatch": 15, "podpor": 16, "lightverdict": 16, "backstage": 15,
     "parting-face": 15, "circumstance": 15, "displacement": 16, "idolkneel": 16, "warmhold": 16,
-    "tightreins": 16, "molvoprovod": 15, "tolkuchka": 15, "lotdrop": 16,
+    "tightreins": 16, "molvoprovod": 15, "tolkuchka": 15, "lotdrop": 16, "molchkom": 16,
 }
 # Особые статусы поверх автоопределения
 NOTES = {

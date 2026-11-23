@@ -46,19 +46,19 @@ let failed = 0; const bad = [], say = s => console.log(s);
 say('СЦЕНКИ'); for (const s of scenes()) { say('  ' + s); if (s.includes('✗')) failed++; }
 // «ворота» мира: без элемента решения нет или par другой; для стражей хватает и того, что без них путей к победе больше
 const WGATE = { 3: g => g.stone, 4: (g, st) => g.oil || g.oilPit || st.lampByFire, 5: (g, st, lv) => g.guard || st.guardsBurnt > 0 || A.matters(lv, /G/g, '.'), 6: g => g.wood, 7: g => g.spool, 8: g => g.water || g.waterFloor };
-const LAZY_OK = lv => lv.w === 1 || lv.id === '2-01' || lv.id === '2-03' || lv.id === '6-01';      // первые уровни: идея пока одна — «дойди, не заперев себя»
+const LAZY_OK = lv => !!lv.tut;      // только ручные вводные уровни: там идея одна и её показывают
 const rowsOut = [], seenMaps = new Map(), last = {}, gap = {};
 LEVELS.forEach((lv, i) => { const no = i + 1; if (only && !only.includes(no)) return; const errs = [], m = A.metrics(lv, 200000);
   if (!m.solvable) { say(`${lv.id} НЕ РЕШАЕТСЯ`); failed++; bad.push(lv.id); return; }
-  const pb = playPlan(lv, m.plan), rb = randomBot(lv, 300, 12345 + i), lazy = A.lazyWins(lv), g = A.gates(lv, m.par), st = A.story(lv, m.plan), D = A.difficulty(m);
+  const pb = playPlan(lv, m.plan), rb = randomBot(lv, 300, 12345 + i), lazy = A.lazyWins(lv), g = A.gates(lv, m.par), st = A.story(lv, m.plan), D = A.adultDifficulty(m);
   if (!pb.won || pb.t !== m.par) errs.push('бот-план не проходит за par'); if (m.pwin >= 0.5) errs.push('случайный бот ≥ 50 %'); if (rb.inv || rb.pvBad) errs.push(`инварианты ${rb.inv}, preview ${rb.pvBad}`); if (rb.hintBad) errs.push(`подсказка ведёт не к победе: ${rb.hintBad}`);
-  if (lazy && !LAZY_OK(lv)) errs.push('ленивый бот побеждает'); if (WGATE[lv.w] && !WGATE[lv.w](g, st, lv)) errs.push('элемент мира не «ворота»'); if (m.overflow) errs.push('перебор не уложился');
+  if (lazy && !LAZY_OK(lv)) errs.push('ленивый бот побеждает'); if (!lv.tut && m.p4 >= 0.999) errs.push('внимательный бот проходит без раздумий'); if (WGATE[lv.w] && !WGATE[lv.w](g, st, lv)) errs.push('элемент мира не «ворота»'); if (m.overflow) errs.push('перебор не уложился');
   const key = lv.n + ':' + lv.map.join('/'); if (seenMaps.has(key)) errs.push('повтор карты ' + seenMaps.get(key)); seenMaps.set(key, lv.id);
   if (lv.map[0].length > 7 || lv.map.length > 9) errs.push('поле больше 7×9');
   const present = { stone: 's', oil: 'og', guard: 'Gg', wood: 'w', spool: '12', water: '~' }; for (const [name, chs] of Object.entries(present)) if (lv.map.some(r => [...chs].some(ch => r.includes(ch)))) { if (last[name] !== undefined) gap[name] = Math.max(gap[name] || 0, no - last[name]); last[name] = no; }
   if (errs.length) { failed++; bad.push(lv.id); }
   rowsOut.push({ lv, D, m, lazy });
-  say(`${lv.id} N${lv.n} ${lv.map[0].length}×${lv.map.length} par ${String(m.par).padStart(2)} сост ${String(m.states).padStart(5)} рандом ${(m.pwin * 100).toFixed(1).padStart(5)}% (партий ${rb.wins}/${rb.games}) D ${D.toFixed(1).padStart(4)} ${lazy ? 'лентяй' : '      '} подсказок ${rb.hints}${lv.exam ? ' ЭКЗАМЕН' : ''}${errs.length ? '  <<< ' + errs.join('; ') : ''}`); });
+  say(`${lv.id} N${lv.n} ${lv.map[0].length}×${lv.map.length} par ${String(m.par).padStart(2)} сост ${String(m.states).padStart(5)} рандом ${(m.pwin * 100).toFixed(1).padStart(5)}% (партий ${rb.wins}/${rb.games}) A ${D.toFixed(1).padStart(4)} внимат.4 ${(m.p4 * 100).toFixed(0).padStart(3)}% ${lazy ? 'лентяй' : '      '} подсказок ${rb.hints}${lv.exam ? ' ЭКЗАМЕН' : ''}${errs.length ? '  <<< ' + errs.join('; ') : ''}`); });
 if (!only) { say('КРИВАЯ'); let prevMax = 0, prevExam = 0;
   for (const w of WORLDS) { const rs = rowsOut.filter(r => r.lv.w === w.id), ds = rs.map(r => r.D), mx = Math.max(...ds), ex = rs.find(r => r.lv.exam), first = ds[0], notes = [];
     if (ex && ex.D < mx - 0.01) notes.push('экзамен не максимум'); if (mx < prevMax - 0.01) notes.push('максимум ниже прошлого мира'); if (prevExam && first > prevExam) notes.push('ввод труднее прошлого экзамена');

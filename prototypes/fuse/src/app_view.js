@@ -44,6 +44,7 @@ const isWall = (x, y) => { const L = M.L; return x < 0 || y < 0 || x >= L.W || y
 
 // неподвижный слой: пол со швами, тёмный верх стен, передние грани, контур комнаты, оттенок мира, затухание края
 const FLOORS = ['floor_a', 'floor_b', 'floor_c'];
+const WORLD_HUE = [null, '#2c8596', '#6d6890', '#3f8058', '#8f4f72', '#8c6c46', '#4b6fa3', '#2f8f85', '#6c3fa0'];      // как в референсах: индиго, бирюза, сиреневый камень, зелёное масло, розовые сторожа, дерево, сталь, вода, фиолетовая глубина
 const hash = (x, y, k) => { let h = (x * 374761393 + y * 668265263 + (k || 0) * 2147483647 + LEVELS[M.idx].id.length * 97) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 // неподвижный слой: рамка погреба, пол, кирпичные стены, ниши с утварью у задней стены, плющ, оттенок мира
 function buildBase() { const L = M.L, px = Math.round(F.cell * SC * DPR), b = V.base || (V.base = document.createElement('canvas')); b.width = (L.W + 2) * px; b.height = (L.H + 2) * px; const c = b.getContext('2d'), W = b.width, H = b.height;
@@ -67,7 +68,8 @@ function buildBase() { const L = M.L, px = Math.round(F.cell * SC * DPR), b = V.
   // кромка пола у стен: тонкая тёмная линия — комната читается, клетки считаются
   c.strokeStyle = 'rgba(8,7,22,0.75)'; c.lineWidth = Math.max(1.5, px * 0.04);
   for (let y = 0; y < L.H; y++) for (let x = 0; x < L.W; x++) if (!isWall(x, y)) { const dx = (x + 1) * px, dy = (y + 1) * px; if (isWall(x - 1, y)) seg(dx, dy, dx, dy + px); if (isWall(x + 1, y)) seg(dx + px, dy, dx + px, dy + px); if (isWall(x, y + 1)) seg(dx, dy + px, dx + px, dy + px); }
-  c.globalCompositeOperation = 'multiply'; c.fillStyle = WORLDS[LEVELS[M.idx].w - 1].tint; c.fillRect(px, px, L.W * px, L.H * px); c.globalCompositeOperation = 'source-over';      // оттенок мира: перекрашены пол и стены, рамка и предметы прежние
+  const hue = WORLD_HUE[LEVELS[M.idx].w - 1]; if (hue) { c.globalCompositeOperation = 'color'; c.fillStyle = hue; c.globalAlpha = 0.6;      // цвет мира: пол перекрашен, яркость плит сохранена; стены, рамка и предметы прежние
+    for (let y = 0; y < L.H; y++) for (let x = 0; x < L.W; x++) if (!isWall(x, y)) c.fillRect((x + 1) * px, (y + 1) * px, px, px); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; }
   V.baseDirty = false; }
 
 // ---------- события модели → анимации ----------
