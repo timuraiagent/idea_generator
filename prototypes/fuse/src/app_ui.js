@@ -1,0 +1,162 @@
+// ===== интерфейс: экраны, кнопки, ввод, главный цикл =====
+const UI = { screen: 'play', btns: [], mapW: 0, card: null, winAt: 0, win: null, statScroll: 0, resetArm: 0, copiedAt: 0, toast: null, press: null, mapSlide: 0 };
+const perf = { n: 0, sum: 0, max: 0 };
+const wOf = i => LEVELS[i].w, numInWorld = i => worldLevels(wOf(i)).indexOf(i) + 1, totalStars = () => LEVELS.reduce((a, l, i) => a + starsOf(i), 0);
+function btn(x, y, w, h, fn, id) { UI.btns.push({ x, y, w, h, fn, id }); return UI.press && UI.press.id === id; }
+
+// ---------- значки (кодом) ----------
+const ICON = {
+  undo(x, y, r) { ctx.beginPath(); ctx.arc(x + r * 0.08, y + r * 0.1, r * 0.52, Math.PI * 1.08, Math.PI * 0.42); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - r * 0.78, y - r * 0.42); ctx.lineTo(x - r * 0.42, y - r * 0.02); ctx.lineTo(x - r * 0.06, y - r * 0.5); ctx.stroke(); },
+  restart(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r * 0.52, -Math.PI * 0.35, Math.PI * 1.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + r * 0.04, y - r * 0.78); ctx.lineTo(x + r * 0.46, y - r * 0.44); ctx.lineTo(x + r * 0.02, y - r * 0.16); ctx.stroke(); },
+  hint(x, y, r) { ctx.beginPath(); ctx.arc(x, y - r * 0.16, r * 0.42, Math.PI * 0.78, Math.PI * 0.22); ctx.lineTo(x + r * 0.2, y + r * 0.36); ctx.lineTo(x - r * 0.2, y + r * 0.36); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - r * 0.16, y + r * 0.58); ctx.lineTo(x + r * 0.16, y + r * 0.58); ctx.stroke(); },
+  grid(x, y, r) { const q = r * 0.2; for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { rr(ctx, x + a * r * 0.3 - q, y + b * r * 0.3 - q, q * 2, q * 2, q * 0.5); ctx.stroke(); } },
+  next(x, y, r) { ctx.beginPath(); ctx.moveTo(x - r * 0.5, y); ctx.lineTo(x + r * 0.42, y); ctx.moveTo(x + r * 0.05, y - r * 0.4); ctx.lineTo(x + r * 0.46, y); ctx.lineTo(x + r * 0.05, y + r * 0.4); ctx.stroke(); },
+  prev(x, y, r) { ctx.beginPath(); ctx.moveTo(x + r * 0.3, y - r * 0.5); ctx.lineTo(x - r * 0.25, y); ctx.lineTo(x + r * 0.3, y + r * 0.5); ctx.stroke(); },
+  fwd(x, y, r) { ctx.beginPath(); ctx.moveTo(x - r * 0.3, y - r * 0.5); ctx.lineTo(x + r * 0.25, y); ctx.lineTo(x - r * 0.3, y + r * 0.5); ctx.stroke(); },
+  close(x, y, r) { ctx.beginPath(); ctx.moveTo(x - r * 0.38, y - r * 0.38); ctx.lineTo(x + r * 0.38, y + r * 0.38); ctx.moveTo(x + r * 0.38, y - r * 0.38); ctx.lineTo(x - r * 0.38, y + r * 0.38); ctx.stroke(); },
+  sound(x, y, r, on) { ctx.beginPath(); ctx.moveTo(x - r * 0.56, y - r * 0.18); ctx.lineTo(x - r * 0.24, y - r * 0.18); ctx.lineTo(x + r * 0.08, y - r * 0.46); ctx.lineTo(x + r * 0.08, y + r * 0.46); ctx.lineTo(x - r * 0.24, y + r * 0.18); ctx.lineTo(x - r * 0.56, y + r * 0.18); ctx.closePath(); ctx.stroke();
+    if (on) { ctx.beginPath(); ctx.arc(x + r * 0.1, y, r * 0.36, -0.8, 0.8); ctx.stroke(); ctx.beginPath(); ctx.arc(x + r * 0.1, y, r * 0.6, -0.8, 0.8); ctx.stroke(); } else { ctx.beginPath(); ctx.moveTo(x + r * 0.3, y - r * 0.22); ctx.lineTo(x + r * 0.66, y + r * 0.22); ctx.moveTo(x + r * 0.66, y - r * 0.22); ctx.lineTo(x + r * 0.3, y + r * 0.22); ctx.stroke(); } },
+  list(x, y, r) { for (const k of [-0.36, 0, 0.36]) { ctx.beginPath(); ctx.moveTo(x - r * 0.46, y + r * k); ctx.lineTo(x + r * 0.46, y + r * k); ctx.stroke(); } },
+  lock(x, y, r) { rr(ctx, x - r * 0.36, y - r * 0.06, r * 0.72, r * 0.56, r * 0.12); ctx.stroke(); ctx.beginPath(); ctx.arc(x, y - r * 0.08, r * 0.24, Math.PI, 0); ctx.stroke(); },
+};
+function star(x, y, r, on, c) { c = c || ctx; c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * 0.46 : r; c.lineTo(x + Math.cos(a) * q, y + Math.sin(a) * q); } c.closePath(); c.fillStyle = on ? '#ffc94d' : '#2a3160'; c.fill(); c.lineWidth = Math.max(1.5, r * 0.16); c.lineJoin = 'round'; c.strokeStyle = on ? '#8a5a12' : '#3b4478'; c.stroke(); }
+// круглая кнопка со значком
+function roundBtn(id, x, y, r, icon, fn, o) { o = o || {}; const down = btn(x - r - 4, y - r - 4, r * 2 + 8, r * 2 + 8, fn, id), s = down ? 0.94 : 1, a = o.dim ? 0.38 : 1; ctx.save(); ctx.translate(x, y); ctx.scale(s, s); ctx.globalAlpha = a;
+  ctx.fillStyle = 'rgba(4,5,16,0.5)'; ctx.beginPath(); ctx.arc(0, 3, r, 0, 7); ctx.fill(); const g = ctx.createLinearGradient(0, -r, 0, r); g.addColorStop(0, o.primary ? '#ffca62' : '#2c3466'); g.addColorStop(1, o.primary ? '#f09a2c' : '#1c2247'); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = o.primary ? '#ffe3a1' : '#46508a'; ctx.beginPath(); ctx.arc(0, 0, r - 0.75, 0, 7); ctx.stroke();
+  if (o.pulse) { const k = (Math.sin(now / 240) + 1) / 2; ctx.strokeStyle = `rgba(255,201,77,${0.35 + k * 0.6})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r + 3 + k * 3, 0, 7); ctx.stroke(); }
+  ctx.strokeStyle = o.primary ? PAL.ink : (o.col || PAL.text); ctx.lineWidth = Math.max(2.4, r * 0.11); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; icon(0, 0, r, o.arg); ctx.restore(); }
+function pillBtn(id, x, y, w, h, label, fn, o) { o = o || {}; const down = btn(x, y, w, h, fn, id); ctx.save(); if (down) { ctx.translate(x + w / 2, y + h / 2); ctx.scale(0.96, 0.96); ctx.translate(-x - w / 2, -y - h / 2); }
+  ctx.fillStyle = 'rgba(4,5,16,0.5)'; rr(ctx, x, y + 3, w, h, h / 2); ctx.fill(); const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, o.primary ? '#ffca62' : '#2c3466'); g.addColorStop(1, o.primary ? '#f09a2c' : '#1c2247'); ctx.fillStyle = g; rr(ctx, x, y, w, h, h / 2); ctx.fill();
+  ctx.strokeStyle = o.primary ? '#ffe3a1' : '#46508a'; ctx.lineWidth = 1.5; rr(ctx, x + 0.75, y + 0.75, w - 1.5, h - 1.5, h / 2); ctx.stroke(); ctx.fillStyle = o.primary ? PAL.ink : PAL.text; ctx.font = font(o.size || 16, 800); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x + w / 2, y + h / 2 + 1); ctx.restore(); }
+function text(s, x, y, px, col, w, align) { ctx.font = font(px, w || 700); ctx.fillStyle = col || PAL.text; ctx.textAlign = align || 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s, x, y); }
+function wrap(s, x, y, maxW, px, col, lh) { ctx.font = font(px, 600); const words = s.split(' '), lines = []; let cur = ''; for (const wd of words) { const t = cur ? cur + ' ' + wd : wd; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = wd; } else cur = t; } if (cur) lines.push(cur);
+  lines.forEach((ln, k) => text(ln, x, y + k * (lh || px * 1.3), px, col, 600)); return lines.length; }
+function bg() { const g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, PAL.bg1); g.addColorStop(0.55, PAL.bg0); g.addColorStop(1, '#04050c'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH); }
+
+// ---------- экран игры ----------
+function goMap() { UI.screen = 'map'; UI.mapW = wOf(M.idx) - 1; UI.win = null; SND.play('click'); }
+function startLevel(i) { UI.win = null; UI.screen = 'play'; load(i + 1); const w = wOf(i), wd = WORLDS[w - 1]; save.seenWorld = save.seenWorld || {}; if (wd.card && !save.seenWorld[w] && numInWorld(i) === 1) UI.card = { w, t0: now }; }
+function doHint() { if (M.S.over || now < V.failUntil) return; const tier = (!V.idea && solutionStory().any) ? 1 : 2; hint(tier); }
+function drawFuse(y) { const L = M.L, S = V.shown, N = C.fuseLen(L, S.spools), gap = Math.min(24, 168 / (N + 1)), w = gap * (N + 1), x0 = VW / 2 - w / 2, pop = clamp((now - V.nPop) / 400, 0, 1);
+  ctx.lineCap = 'round'; ctx.strokeStyle = PAL.ink; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + w, y); ctx.stroke(); ctx.strokeStyle = PAL.cream; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + w, y); ctx.stroke();
+  for (let k = 1; k <= N; k++) { const r = 5.2 * (k === N && pop < 1 ? 1 + Math.sin(pop * Math.PI) * 0.9 : 1); ctx.fillStyle = PAL.ink; ctx.beginPath(); ctx.arc(x0 + gap * k - gap / 2, y, r + 2, 0, 7); ctx.fill(); ctx.fillStyle = PAL.cream; ctx.beginPath(); ctx.arc(x0 + gap * k - gap / 2, y, r, 0, 7); ctx.fill(); }
+  ctx.globalCompositeOperation = 'lighter'; glow(x0 - 6, y - 6, 22, '255,150,60', 0.3); ctx.globalCompositeOperation = 'source-over'; flameShape(x0 - 6, y + 7, 1, 5, 34);
+  prop(ctx, 'hero_a', x0 + w + 13, y + 15, 32); }
+function drawPlay() { const lv = LEVELS[M.idx], S = M.S, wd = WORLDS[lv.w - 1]; bg(); drawField();
+  // шапка
+  roundBtn('map', 34, 30, 20, ICON.grid, goMap);
+  text(`${lv.w} · ${numInWorld(M.idx)}`, VW / 2, 24, 22, PAL.text, 800); text(tr(wd.name), VW / 2, 44, 11.5, PAL.dim, 700);
+  const st = starsOf(M.idx); for (let k = 0; k < 3; k++) star(VW - 62 + k * 17, 21, 7, k < st);
+  text(`${T('moves')} ${V.shown.t}`, VW - 45, 43, 11.5, PAL.dim, 700);
+  drawFuse(CONFIG.top + 22);
+  if (lv.hint && !UI.win) wrap(tr(lv.hint), VW / 2, VH - CONFIG.bottom - 34, VW - 56, 13.5, '#aab3da', 18);
+  // руководящая рука на вводных уровнях: показывает следующий шаг плана, пока игрок идёт по плану
+  if (lv.guide && !S.over && now >= V.failUntil && !UI.card) { const pc = planCells(); if (S.t < lv.plan.length && pcell(S) === pc[S.t] && M.hist.every((h, k) => pcell(h) === pc[k])) { const c = pc[S.t + 1], k = (Math.sin(now / 260) + 1) / 2, x = cellX(c) + F.cell * 0.34 + k * 5, y = cellY(c) - F.cell * 0.3 - k * 5; spr(ctx, 'hand', x - F.cell * 0.35, y - F.cell * 0.4, F.cell * 0.9, F.cell * 0.9); } }
+  // нижняя панель: отмена, заново, подсказка — всегда на одних местах
+  const by = VH - 50;
+  if (!UI.win) { roundBtn('undo', VW / 2 - 98, by, 31, ICON.undo, () => { if (now < V.failUntil) return; undo(); }, { dim: !M.hist.length });
+    roundBtn('restart', VW / 2, by, 31, ICON.restart, () => { if (now < V.failUntil) return; restart(); }, { dim: !M.hist.length });
+    roundBtn('hint', VW / 2 + 98, by, 31, ICON.hint, doHint, { pulse: M.trouble >= CONFIG.hintAfterFails && !V.move && !V.idea, col: '#ffd98a' }); }
+  if (UI.win) drawWin(); if (UI.card) drawCard(); }
+function drawWin() { const wv = UI.win, p = easeOut(clamp((now - wv.t0) / 320, 0, 1)), h = 196, y = VH - h * p, last = M.idx === LEVELS.length - 1;
+  ctx.fillStyle = 'rgba(4,5,16,0.55)'; rr(ctx, 6, y - 4, VW - 12, h + 30, 26); ctx.fill(); const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#262d5a'); g.addColorStop(1, '#161b3a'); ctx.fillStyle = g; rr(ctx, 8, y, VW - 16, h + 30, 24); ctx.fill(); ctx.strokeStyle = '#4a548f'; ctx.lineWidth = 1.5; rr(ctx, 8.75, y + 0.75, VW - 17.5, h + 30, 24); ctx.stroke();
+  for (let k = 0; k < 3; k++) { const t0 = wv.t0 + 260 + k * 170, q = clamp((now - t0) / 260, 0, 1), on = k < wv.stars, s = on ? (q <= 0 ? 0 : 1 + Math.sin(q * Math.PI) * 0.35) : 1; if (on && q > 0 && !wv.rang[k]) { wv.rang[k] = 1; SND.play('star'); }
+    star(VW / 2 + (k - 1) * 58, y + 46 + (k === 1 ? -6 : 0), (k === 1 ? 25 : 21) * (on ? s : 1), on && q > 0); }
+  text(wv.moves <= wv.par ? `${T('moves')} ${wv.moves} · ${T('best')}` : `${T('moves')} ${wv.moves} · ★ ${wv.par}`, VW / 2, y + 92, 13.5, '#aab3da', 700);
+  roundBtn('wagain', 56, y + 144, 27, ICON.restart, () => { UI.win = null; restart(); }); roundBtn('wmap', 124, y + 144, 27, ICON.grid, goMap);
+  pillBtn('wnext', 168, y + 116, VW - 168 - 28, 56, last ? T('map') : T('next') + '  →', () => { if (last) goMap(); else { let n = M.idx + 1; startLevel(n); } SND.play('click'); }, { primary: true, size: 19 }); }
+function drawCard() { const cd = UI.card, wd = WORLDS[cd.w - 1], p = easeOut(clamp((now - cd.t0) / 260, 0, 1)); ctx.fillStyle = `rgba(4,5,16,${0.72 * p})`; ctx.fillRect(0, 0, VW, VH); const w = 310, h = 300, x = (VW - w) / 2, y = (VH - h) / 2 + (1 - p) * 30; ctx.globalAlpha = p;
+  const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#2a3163'); g.addColorStop(1, '#171c3d'); ctx.fillStyle = g; rr(ctx, x, y, w, h, 26); ctx.fill(); ctx.strokeStyle = '#525d9c'; ctx.lineWidth = 1.5; rr(ctx, x + 0.75, y + 0.75, w - 1.5, h - 1.5, 26); ctx.stroke();
+  text(`${T('world')} ${cd.w}`, VW / 2, y + 30, 13, PAL.dim, 800); text(tr(wd.name), VW / 2, y + 56, 24, PAL.text, 800);
+  ctx.fillStyle = '#10142e'; ctx.beginPath(); ctx.arc(VW / 2, y + 128, 46, 0, 7); ctx.fill(); if (wd.icon === 'flame') { ctx.globalCompositeOperation = 'lighter'; glow(VW / 2, y + 122, 60, '255,150,60', 0.4 * p); ctx.globalCompositeOperation = 'source-over'; flameShape(VW / 2, y + 150, 1, 1, 86); } else { if (wd.icon === 'lamp_on') { ctx.globalCompositeOperation = 'lighter'; glow(VW / 2, y + 118, 64, '255,200,110', 0.4 * p); ctx.globalCompositeOperation = 'source-over'; } spr(ctx, wd.icon, VW / 2 - 40, y + 86, 80, 80); }
+  wrap(tr(wd.card), VW / 2, y + 204, w - 44, 15, '#d5dbf7', 21); text(T('tapNew'), VW / 2, y + h - 22, 12, PAL.dim, 700); ctx.globalAlpha = 1;
+  btn(0, 0, VW, VH, () => { save.seenWorld[cd.w] = 1; persist(); UI.card = null; SND.play('click'); }, 'card'); }
+
+// ---------- карта миров ----------
+function nodePos(k, n) { const cols = 3, row = Math.floor(k / cols), col = row % 2 ? cols - 1 - (k % cols) : k % cols; return [VW / 2 + (col - 1) * 104, 206 + row * 104]; }
+function drawMap() { bg(); const w = UI.mapW + 1, wd = WORLDS[UI.mapW], ids = worldLevels(w), cur = firstUnsolved(), got = ids.reduce((a, i) => a + starsOf(i), 0);
+  ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.restore();
+  text(tr({ ru: 'Фитиль', en: 'The Fuse' }), VW / 2, 34, 26, PAL.text, 800); star(VW / 2 - 34, 62, 8, true); text(`${totalStars()} / ${LEVELS.length * 3}`, VW / 2 + 8, 63, 13, '#ffd98a', 800);
+  // заголовок мира
+  const hy = 104; ctx.fillStyle = wd.tint; ctx.globalAlpha = 0.16; rr(ctx, 58, hy - 28, VW - 116, 60, 18); ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = '#3b4478'; ctx.lineWidth = 1.5; rr(ctx, 58.75, hy - 27.25, VW - 117.5, 58.5, 18); ctx.stroke();
+  text(`${T('world')} ${w}`, VW / 2, hy - 12, 12, PAL.dim, 800); text(tr(wd.name), VW / 2, hy + 10, 20, PAL.text, 800); text(`★ ${got} / ${ids.length * 3}`, VW / 2, hy + 46, 12, '#ffd98a', 800);
+  roundBtn('wprev', 30, hy + 2, 19, ICON.prev, () => { UI.mapW = Math.max(0, UI.mapW - 1); SND.play('click'); }, { dim: UI.mapW === 0 }); roundBtn('wnext2', VW - 30, hy + 2, 19, ICON.fwd, () => { UI.mapW = Math.min(WORLDS.length - 1, UI.mapW + 1); SND.play('click'); }, { dim: UI.mapW === WORLDS.length - 1 });
+  // шнур между уровнями: пройденная часть «горит»
+  const pos = ids.map((i, k) => nodePos(k, ids.length)); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const path = (col, wdt, upto) => { ctx.strokeStyle = col; ctx.lineWidth = wdt; ctx.beginPath(); pos.forEach(([x, y], k) => { if (k > upto) return; if (k) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); };
+  path(PAL.ink, 9, 99); path('#59618f', 4, 99); let litUpto = -1; ids.forEach((i, k) => { if (starsOf(i)) litUpto = k; }); if (litUpto > 0) path('#ffb347', 4, litUpto);
+  ids.forEach((i, k) => { const [x, y] = pos[k], st = starsOf(i), open = isOpen(i), isCur = i === cur, r = 29, down = btn(x - r - 6, y - r - 6, r * 2 + 12, r * 2 + 30, () => { if (!isOpen(i)) { UI.toast = { text: T('locked'), until: now + 1500 }; SND.play('nope'); return; } SND.play('click'); startLevel(i); }, 'lv' + i);
+    ctx.save(); ctx.translate(x, y); if (down) ctx.scale(0.94, 0.94);
+    if (st) { ctx.globalCompositeOperation = 'lighter'; glow(0, 0, r * 1.9, '255,170,70', 0.2); ctx.globalCompositeOperation = 'source-over'; }
+    ctx.fillStyle = 'rgba(4,5,16,0.55)'; ctx.beginPath(); ctx.arc(0, 3, r, 0, 7); ctx.fill(); const g = ctx.createLinearGradient(0, -r, 0, r); if (st) { g.addColorStop(0, '#ffd27a'); g.addColorStop(1, '#f09a2c'); } else if (open) { g.addColorStop(0, '#343d77'); g.addColorStop(1, '#222956'); } else { g.addColorStop(0, '#1a1f40'); g.addColorStop(1, '#12162f'); }
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = st ? '#fff0c2' : open ? '#5a66a8' : '#2a305c'; ctx.beginPath(); ctx.arc(0, 0, r - 1, 0, 7); ctx.stroke();
+    if (isCur && open) { const q = (Math.sin(now / 260) + 1) / 2; ctx.strokeStyle = `rgba(53,201,179,${0.45 + q * 0.5})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r + 4 + q * 3, 0, 7); ctx.stroke(); }
+    if (open) text(String(k + 1), 0, 1, 22, st ? PAL.ink : PAL.text, 800); else { ctx.strokeStyle = '#4a548f'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ICON.lock(0, 0, 26); }
+    ctx.restore(); for (let s = 0; s < 3; s++) star(x + (s - 1) * 15, y + r + 13, 6, s < st); });
+  // точки миров и нижний ряд
+  const dy = VH - 108; WORLDS.forEach((q, k) => { ctx.fillStyle = k === UI.mapW ? '#ffd98a' : '#353d70'; ctx.beginPath(); ctx.arc(VW / 2 + (k - (WORLDS.length - 1) / 2) * 16, dy, k === UI.mapW ? 4.5 : 3.2, 0, 7); ctx.fill(); });
+  const by = VH - 54; roundBtn('snd', VW / 2 - 96, by, 25, ICON.sound, () => { SND.setOn(!save.sound); SND.play('click'); }, { arg: save.sound });
+  pillBtn('lng', VW / 2 - 34, by - 25, 68, 50, T('lang'), () => { save.lang = save.lang === 'ru' ? 'en' : 'ru'; persist(); SND.play('click'); }, { size: 17 });
+  roundBtn('sts', VW / 2 + 96, by, 25, ICON.list, () => { UI.screen = 'stats'; UI.statScroll = 0; SND.play('click'); });
+  if (UI.toast && now < UI.toast.until) { ctx.font = font(13, 700); const tw = ctx.measureText(UI.toast.text).width + 28; ctx.fillStyle = '#2b3364'; rr(ctx, VW / 2 - tw / 2, VH - 150, tw, 32, 16); ctx.fill(); text(UI.toast.text, VW / 2, VH - 133.5, 13, PAL.text, 700); } }
+
+// ---------- журнал плейтеста ----------
+const fmtMs = ms => { const s = Math.round(ms / 1000); return s >= 60 ? Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') : s + 'с'; };
+function statsRows() { return LEVELS.map((l, i) => ({ i, id: l.id, st: save.stats[l.id], stars: starsOf(i) })).filter(r => r.st && (r.st.moves || r.st.wins)); }
+function drawStats() { bg(); const rows = statsRows(), top = 104, rowH = 26, viewH = VH - top - 132, maxScroll = Math.max(0, rows.length * rowH - viewH); UI.statScroll = clamp(UI.statScroll, 0, maxScroll);
+  text(T('stats'), VW / 2, 34, 22, PAL.text, 800); roundBtn('sclose', VW - 32, 32, 19, ICON.close, () => { UI.screen = 'map'; SND.play('click'); });
+  const cols = [34, 92, 148, 198, 250, 304, 358], hd = T('statHead'); hd.forEach((h, k) => text(h, cols[k], 78, 10.5, PAL.dim, 800));
+  ctx.save(); ctx.beginPath(); ctx.rect(0, top - 12, VW, viewH + 12); ctx.clip();
+  rows.forEach((r, k) => { const y = top + k * rowH - UI.statScroll + 6; if (y < top - 30 || y > top + viewH + 20) return; if (k % 2 === 0) { ctx.fillStyle = 'rgba(255,255,255,0.035)'; ctx.fillRect(10, y - rowH / 2, VW - 20, rowH); }
+    const s = r.st, vals = [r.id + (r.stars ? ' ' + '★'.repeat(r.stars) : ''), fmtMs(s.wins ? s.firstMs : s.ms), s.wins ? s.firstMoves : s.moves, s.undos, s.restarts, s.fails, (s.ideas || 0) + '+' + (s.shows || 0)];
+    vals.forEach((v, c) => text(String(v), cols[c], y, 12, c === 0 ? (r.stars ? '#ffd98a' : PAL.text) : '#c9d0f2', 700)); });
+  if (!rows.length) text('—', VW / 2, top + 30, 16, PAL.dim);
+  ctx.restore(); const by = VH - 104;
+  pillBtn('sall', 20, by, VW - 40, 40, (save.openAll ? '✓ ' : '') + T('openAll'), () => { save.openAll = !save.openAll; persist(); SND.play('click'); }, { size: 14 });
+  pillBtn('scopy', 20, by + 48, (VW - 50) / 2, 40, now - UI.copiedAt < 1500 ? T('copied') : T('copy'), () => { const data = JSON.stringify(stats()); try { navigator.clipboard.writeText(data); } catch (e) { /* нет доступа к буферу */ } UI.copiedAt = now; }, { size: 13 });
+  pillBtn('sreset', 30 + (VW - 50) / 2, by + 48, (VW - 50) / 2, 40, now - UI.resetArm < 2500 ? T('resetAsk') : T('reset'), () => { if (now - UI.resetArm < 2500) { save.done = {}; save.stats = {}; save.seenWorld = {}; persist(); UI.resetArm = 0; } else UI.resetArm = now; }, { size: 13 }); }
+function stats() { return statsRows().map(r => Object.assign({ level: r.i + 1, id: r.id, stars: r.stars }, r.st, { ms: Math.round(r.st.ms) })); }
+
+// ---------- ввод ----------
+function tryStep(dir) { if (UI.screen !== 'play' || UI.win || UI.card || now < V.failUntil) return; SND.unlock(); step(dir); }
+const ptr = { down: false, x: 0, y: 0, moved: false, t: 0 };
+function toLocal(e) { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / SC, (e.clientY - r.top) / SC]; }
+function hit(x, y) { for (let k = UI.btns.length - 1; k >= 0; k--) { const b = UI.btns[k]; if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) return b; } return null; }
+cv.addEventListener('pointerdown', e => { e.preventDefault(); SND.unlock(); const [x, y] = toLocal(e); ptr.down = true; ptr.x = x; ptr.y = y; ptr.moved = false; ptr.t = now; UI.press = hit(x, y); if (cv.setPointerCapture) try { cv.setPointerCapture(e.pointerId); } catch (err) { /* не критично */ } });
+cv.addEventListener('pointermove', e => { if (!ptr.down) return; const [x, y] = toLocal(e), dx = x - ptr.x, dy = y - ptr.y;
+  if (UI.screen === 'stats' && !UI.press) { UI.statScroll -= dy; ptr.x = x; ptr.y = y; ptr.moved = true; return; }
+  if (!ptr.moved && Math.hypot(dx, dy) > 24) { ptr.moved = true; if (UI.press) { UI.press = null; }
+    if (UI.screen === 'play') tryStep(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U'));
+    else if (UI.screen === 'map' && Math.abs(dx) > Math.abs(dy)) { UI.mapW = clamp(UI.mapW + (dx < 0 ? 1 : -1), 0, WORLDS.length - 1); SND.play('click'); } } });
+function release(e) { if (!ptr.down) return; ptr.down = false; const [x, y] = toLocal(e), b = UI.press; UI.press = null; if (ptr.moved) return;
+  if (b) { const again = hit(x, y); if (again && again.id === b.id) b.fn(); return; }
+  if (UI.screen === 'play' && !UI.win && !UI.card) { const hx = V.hero.x, hy = V.hero.y, dx = x - hx, dy = y - hy; if (y < CONFIG.top || y > VH - CONFIG.bottom || Math.hypot(dx, dy) < F.cell * 0.4) return; tryStep(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U')); } }
+cv.addEventListener('pointerup', release); cv.addEventListener('pointercancel', () => { ptr.down = false; UI.press = null; });
+cv.addEventListener('wheel', e => { if (UI.screen === 'stats') { UI.statScroll += e.deltaY; e.preventDefault(); } }, { passive: false });
+const KEYS = { ArrowUp: 'U', ArrowDown: 'D', ArrowLeft: 'L', ArrowRight: 'R', KeyW: 'U', KeyS: 'D', KeyA: 'L', KeyD: 'R' };
+window.addEventListener('keydown', e => { SND.unlock(); if (UI.card) { if (e.code === 'Enter' || e.code === 'Space' || e.code === 'Escape') { save.seenWorld[UI.card.w] = 1; persist(); UI.card = null; } return; }
+  if (UI.screen === 'play') { if (KEYS[e.code]) { e.preventDefault(); tryStep(KEYS[e.code]); }
+    else if (e.code === 'KeyZ' || e.code === 'Backspace' || e.code === 'KeyU') { e.preventDefault(); if (!UI.win && now >= V.failUntil) undo(); } else if (e.code === 'KeyR') { UI.win = null; if (now >= V.failUntil) restart(); } else if (e.code === 'KeyH') doHint();
+    else if (e.code === 'Enter' && UI.win) { if (M.idx < LEVELS.length - 1) startLevel(M.idx + 1); else goMap(); } else if (e.code === 'Escape') goMap(); }
+  else if (UI.screen === 'map') { if (e.code === 'ArrowLeft') UI.mapW = Math.max(0, UI.mapW - 1); else if (e.code === 'ArrowRight') UI.mapW = Math.min(WORLDS.length - 1, UI.mapW + 1); else if (e.code === 'Enter' || e.code === 'Escape') { UI.screen = 'play'; } }
+  else if (UI.screen === 'stats' && e.code === 'Escape') UI.screen = 'map'; });
+M.listeners.push((type, d) => { if (type === 'win') after(520, () => { UI.win = { t0: now, stars: d.stars, moves: d.moves, par: d.par, rang: [] }; SND.play('win'); }); if (type === 'load' || type === 'restart') UI.win = null; });
+
+// ---------- главный цикл ----------
+let lastT = 0;
+function frame(ts) { requestAnimationFrame(frame); dtMs = Math.min(50, ts - lastT || 16); lastT = ts; now = ts; const p0 = performance.now();
+  if (V.timers.length) { const due = V.timers.filter(t => t.at <= now); if (due.length) { V.timers = V.timers.filter(t => t.at > now); for (const t of due) t.fn(); } }
+  if (UI.screen === 'play' && !M.S.won && !UI.card && document.visibilityState === 'visible') stat(M.idx).ms += dtMs;
+  ctx.setTransform(SC * DPR, 0, 0, SC * DPR, 0, 0); UI.btns = [];
+  if (UI.screen === 'play') drawPlay(); else if (UI.screen === 'map') drawMap(); else drawStats();
+  const d = performance.now() - p0; perf.n++; perf.sum += d; if (d > perf.max) perf.max = d; }
+setInterval(persist, 15000); window.addEventListener('pagehide', persist);
+window.addEventListener('resize', resize); window.addEventListener('orientationchange', resize);
+
+// ---------- запуск ----------
+window.FUSE = { CONFIG, LEVELS, WORLDS, load: n => { UI.win = null; UI.card = null; UI.screen = 'play'; return load(n); }, state, legal: legalDirs, step, undo, restart, preview, solve, hint, stats, log, core: C, ui: UI, view: V, perf,
+  light: () => Array.from(V.lightI), settle: () => { flushTimers(); V.failUntil = 0; if (V.shown !== M.S) snap(); for (let i = 0; i < M.L.n; i++) V.lightI[i] = M.S.lit[i]; } };
+const startAt = +qs.get('level') || 0; load(startAt || Math.min(LEVELS.length, (save.last === undefined ? firstUnsolved() : save.last) + 1)); resize(); loadAtlas();
+if (!startAt) { const w = wOf(M.idx); save.seenWorld = save.seenWorld || {}; if (WORLDS[w - 1].card && !save.seenWorld[w] && numInWorld(M.idx) === 1) UI.card = { w, t0: 0 }; }
+requestAnimationFrame(frame);
