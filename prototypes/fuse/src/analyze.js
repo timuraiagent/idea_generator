@@ -105,6 +105,6 @@ const walkable = lv => { const L = C.compile(lv); let k = 0; for (let c = 0; c <
 
 module.exports = { matters, graph, metrics, trace, playPlan, greedyBot, snakeBot, lazyWins, gates, story, difficulty, swap, walkable };
 
-if (require.main === module) { const LEVELS = require('./levels.js');
+if (require.main === module) { const { LEVELS } = require('./levels.js');
   LEVELS.forEach((lv, i) => { const m = metrics(lv); if (!m.solvable) { console.log(`L${i + 1} НЕ РЕШАЕТСЯ`); return; } const g = gates(lv, m.par), st = story(lv, m.plan);
-    console.log(`L${String(i + 1).padStart(3)} ${(lv.name ? lv.name.ru : '').padEnd(18)} N${lv.n} par ${String(m.par).padStart(2)} сост ${String(m.states).padStart(5)} рандом ${(m.pwin * 100).toFixed(1).padStart(5)}% биты ${m.bits.toFixed(1)} реш ${m.nsol} развилок ${m.forks} крит ${m.critical} ошибок ${m.mistakes} отлож ${m.delayed} жизнь ${m.maxLife} | D ${difficulty(m).toFixed(1)} | лентяй ${lazyWins(lv) ? 'ДА' : '—'} | ворота ${Object.entries(g).filter(([k, v]) => v === true).map(([k]) => k).join(',')} N±:${g.nSens}`); }); }
+    console.log(`${lv.id} N${lv.n} par ${String(m.par).padStart(2)} сост ${String(m.states).padStart(5)} рандом ${(m.pwin * 100).toFixed(1).padStart(5)}% биты ${m.bits.toFixed(1)} реш ${m.nsol} развилок ${m.forks} крит ${m.critical} ошибок ${m.mistakes} отлож ${m.delayed} жизнь ${m.maxLife} | D ${difficulty(m).toFixed(1)} | лентяй ${lazyWins(lv) ? 'ДА' : '—'} | ворота ${Object.entries(g).filter(([k, v]) => v === true).map(([k]) => k).join(',')} N±:${g.nSens}`); }); }
