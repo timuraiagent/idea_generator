@@ -43,7 +43,7 @@ SCORES = {
     "parting-face": 15, "circumstance": 15, "displacement": 16, "idolkneel": 16, "warmhold": 16,
     "tightreins": 16, "molvoprovod": 15, "tolkuchka": 15, "lotdrop": 16, "molchkom": 16,
     "inface": 16, "cautery": 16, "remind": 16, "sleepwall": 16, "billeting": 16, "phase-throne": 15,
-    "haze-repeat": 15, "radiant-crown": 15,
+    "haze-repeat": 15, "radiant-crown": 15, "dive-threat": 16,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
