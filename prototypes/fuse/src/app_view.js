@@ -1,23 +1,27 @@
 // ===== вид: экран, атлас, поле, свет, анимации, частицы =====
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 let VW = CONFIG.VW, VH = 700, SC = 1, DPR = 1, now = 0, dtMs = 16;
-const PAL = { bg0: '#060812', bg1: '#0f1330', ink: '#11142a', cream: '#f1d9a0', warm: '#ffb347', warm2: '#ffd98a', hot: '#ff6a2a', core: '#fff3c4', red: '#ff4d5e', text: '#eef1ff', dim: '#8d96bf', panel: '#161b38', panel2: '#232a52', line: '#39426f', teal: '#35c9b3', dark: [7, 9, 26] };
+const PAL = { bg0: '#0e0f2d', bg1: '#1d1d44', gold: '#f0c060', gold2: '#c8853a', gold3: '#6e3f1c', plate: '#2a2654', brick: '#4a3b5e', rope: '#f1d39a', rope2: '#b8955c', ink: '#11142a', cream: '#f1d9a0', warm: '#ffb347', warm2: '#ffd98a', hot: '#ff6a2a', core: '#fff3c4', red: '#ff4d5e', text: '#eef1ff', dim: '#8d96bf', panel: '#161b38', panel2: '#232a52', line: '#39426f', teal: '#35c9b3', dark: [7, 9, 26] };
 const FONT = 'ui-rounded, "SF Pro Rounded", "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif';
 const font = (px, w) => `${w || 700} ${px}px ${FONT}`;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v, lerp = (a, b, p) => a + (b - a) * p, easeOut = p => 1 - Math.pow(1 - p, 3), easeInOut = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
 
 // ---------- атлас спрайтов (assets.svg встроен сборкой) ----------
 const SPR = { floor_a: [0, 0], floor_b: [1, 0], floor_c: [2, 0], wall_top: [3, 0], wall_front: [4, 0], pit: [5, 0], stone: [6, 0], crack: [7, 0], water: [0, 1], oil: [1, 1], ash: [2, 1], wood: [3, 1], spool: [4, 1], lamp_off: [5, 1], lamp_on: [6, 1], hand: [7, 1],
-  door_closed: [0, 2], door_open: [1, 2], hero_a: [2, 2], hero_b: [3, 2], guard_sleep: [4, 2], guard_awake: [5, 2] };
-const atlas = { img: null, cv: null, k: 0 };
-function loadAtlas() { const svg = FUSE_ATLAS.replace('width="1024"', 'width="2048"').replace('height="384"', 'height="768"'), img = new Image();
+  door_closed: [0, 2], door_open: [1, 2], hero_a: [2, 2], hero_b: [3, 2], guard_sleep: [4, 2], guard_awake: [5, 2], niche_barrel: [6, 2], niche_jug: [7, 2],
+  niche_books: [0, 3], niche_flowers: [1, 3], niche_crate: [2, 3], ivy: [3, 3], portrait: [4, 3], bead: [5, 3], hero_fall: [6, 3], hero_hot: [7, 3] };
+const NICHES = ['niche_barrel', 'niche_books', 'niche_jug', 'niche_flowers', 'niche_crate'];
+const atlas = { img: null, cv: null, k: 0, rows: 3 };
+function loadAtlas() { const hm = FUSE_ATLAS.match(/height="(\d+)"/), H0 = hm ? +hm[1] : 384; atlas.rows = Math.round(H0 / 128);
+  const svg = FUSE_ATLAS.replace('width="1024"', 'width="2048"').replace(`height="${H0}"`, `height="${H0 * 2}"`), img = new Image();
   img.onload = () => { atlas.img = img; atlas.k = 0; rasterAtlas(); V.baseDirty = true; }; img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); }
 function rasterAtlas() { if (!atlas.img) return; const k = clamp(Math.ceil(CONFIG.cellMax * SC * DPR * 1.3 / 128 * 4) / 4, 1, 3); if (k === atlas.k) return;      // один размер на экран: смена уровня не перерисовывает лист
-  const c = atlas.cv || (atlas.cv = document.createElement('canvas')); c.width = 1024 * k; c.height = 384 * k; c.getContext('2d').drawImage(atlas.img, 0, 0, c.width, c.height);
+  const c = atlas.cv || (atlas.cv = document.createElement('canvas')); c.width = 1024 * k; c.height = atlas.rows * 128 * k; c.getContext('2d').drawImage(atlas.img, 0, 0, c.width, c.height);
   const d = atlas.dk || (atlas.dk = document.createElement('canvas')), x = d.getContext('2d'); d.width = c.width; d.height = c.height; x.drawImage(c, 0, 0); x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(16,22,62,0.3)'; x.fillRect(0, 0, d.width, d.height);   // тёмный вид: приглушён и остужен
   atlas.k = k; V.baseDirty = true; }
 // спрайт целиком в прямоугольник; part — доля высоты спрайта сверху (для передней грани стены)
-function spr(c, name, x, y, w, h, flip, part, src) { const s = SPR[name], A = src || atlas.cv; if (!A || !s) return false; const k = atlas.k * 128, sh = k * (part || 1);
+const has = name => !!(atlas.cv && SPR[name] && SPR[name][1] < atlas.rows);
+function spr(c, name, x, y, w, h, flip, part, src) { const s = SPR[name], A = src || atlas.cv; if (!A || !s || s[1] >= atlas.rows) return false; const k = atlas.k * 128, sh = k * (part || 1);
   if (flip) { c.save(); c.translate(x + w, y); c.scale(-1, 1); c.drawImage(A, s[0] * k + 0.5, s[1] * k + 0.5, k - 1, sh - 1, 0, 0, w, h); c.restore(); }
   else c.drawImage(A, s[0] * k + 0.5, s[1] * k + 0.5, k - 1, sh - 1, x, y, w, h); return true; }
 // предмет, стоящий на клетке: низ спрайта (y = 120 из 128) на нижнем краю клетки; light — насколько освещена его клетка (нет — тёмный вид)
@@ -40,24 +44,31 @@ const isWall = (x, y) => { const L = M.L; return x < 0 || y < 0 || x >= L.W || y
 
 // неподвижный слой: пол со швами, тёмный верх стен, передние грани, контур комнаты, оттенок мира, затухание края
 const FLOORS = ['floor_a', 'floor_b', 'floor_c'];
-function buildBase() { const L = M.L, px = Math.round(F.cell * SC * DPR), b = V.base || (V.base = document.createElement('canvas')); b.width = (L.W + 2) * px; b.height = (L.H + 2) * px; const c = b.getContext('2d'), W = b.width, H = b.height, DK = `rgba(${PAL.dark},`;
-  const cells = fn => { for (let y = 0; y < L.H; y++) for (let x = 0; x < L.W; x++) if (!isWall(x, y)) fn(x, y, (x + 1) * px, (y + 1) * px); }, seg = (x0, y0, x1, y1) => { c.beginPath(); c.moveTo(x0, y0); c.lineTo(x1, y1); c.stroke(); };
-  for (let y = -1; y <= L.H; y++) for (let x = -1; x <= L.W; x++) { const dx = (x + 1) * px, dy = (y + 1) * px;
-    if (isWall(x, y)) { if (!spr(c, 'wall_top', dx, dy, px, px)) { c.fillStyle = '#232a47'; c.fillRect(dx, dy, px, px); } c.fillStyle = DK + '0.76)'; c.fillRect(dx, dy, px, px); }      // стены не освещаются: тёмные сразу и темнее неосвещённого пола
-    else if (!spr(c, FLOORS[(x * 7 + y * 13 + x * y * 3) % 3], dx, dy, px, px)) { c.fillStyle = '#3b4563'; c.fillRect(dx, dy, px, px); } }
-  c.strokeStyle = 'rgba(9,11,28,0.62)'; c.lineWidth = Math.max(1, Math.round(px * 0.035));                                                                                      // швы между клетками пола: игрок считает клетки
-  cells((x, y, dx, dy) => { if (!isWall(x + 1, y)) seg(dx + px, dy, dx + px, dy + px); if (!isWall(x, y + 1)) seg(dx, dy + px, dx + px, dy + px); });
-  for (let y = -1; y < L.H; y++) for (let x = 0; x < L.W; x++) if (isWall(x, y) && !isWall(x, y + 1)) { const dx = (x + 1) * px, dy = (y + 1) * px, fh = Math.round(px * 0.46);      // передняя грань стены над полом и тень под ней
-    if (!spr(c, 'wall_front', dx, dy + px - fh, px, fh, false, 56 / 128)) { c.fillStyle = '#2a3252'; c.fillRect(dx, dy + px - fh, px, fh); } c.fillStyle = DK + '0.16)'; c.fillRect(dx, dy + px - fh, px, fh);
-    const g = c.createLinearGradient(0, dy + px, 0, dy + px + px * 0.3); g.addColorStop(0, 'rgba(4,5,16,0.32)'); g.addColorStop(1, 'rgba(4,5,16,0)'); c.fillStyle = g; c.fillRect(dx, dy + px, px, px * 0.3); }
-  const ink = Math.max(2, Math.round(px * 0.07)), lip = Math.max(1, Math.round(px * 0.03)), off = ink / 2 + lip;                                                                // контур комнаты: тёмная линия по границе пола и светлая кромка внутри
-  cells((x, y, dx, dy) => { const Lw = isWall(x - 1, y), Rw = isWall(x + 1, y), Bw = isWall(x, y + 1); c.strokeStyle = '#090b1a'; c.lineWidth = ink; if (Lw) seg(dx, dy, dx, dy + px); if (Rw) seg(dx + px, dy, dx + px, dy + px); if (Bw) seg(dx, dy + px, dx + px, dy + px);
-    c.strokeStyle = 'rgba(150,165,230,0.3)'; c.lineWidth = lip; if (Lw) seg(dx + off, dy, dx + off, dy + px - (Bw ? off : 0)); if (Rw) seg(dx + px - off, dy, dx + px - off, dy + px - (Bw ? off : 0)); if (Bw) seg(dx + (Lw ? off : 0), dy + px - off, dx + px - (Rw ? off : 0), dy + px - off); });
-  c.globalCompositeOperation = 'multiply'; c.fillStyle = WORLDS[LEVELS[M.idx].w - 1].tint; c.fillRect(0, 0, W, H);                                                               // оттенок мира: перекрашен подвал, предметы прежние
-  c.globalCompositeOperation = 'destination-out';                                                                                                                                // подвал уходит во тьму за краем поля
-  const fade = (x0, y0, x1, y1, rx, ry, rw, rh) => { const g = c.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(rx, ry, rw, rh); };
-  const e = px * 0.8; fade(0, 0, e, 0, 0, 0, e, H); fade(W, 0, W - e, 0, W - e, 0, e, H); fade(0, 0, 0, e, 0, 0, W, e); fade(0, H, 0, H - e, 0, H - e, W, e);
-  c.globalCompositeOperation = 'source-over'; V.baseDirty = false; }
+const hash = (x, y, k) => { let h = (x * 374761393 + y * 668265263 + (k || 0) * 2147483647 + LEVELS[M.idx].id.length * 97) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+// неподвижный слой: рамка погреба, пол, кирпичные стены, ниши с утварью у задней стены, плющ, оттенок мира
+function buildBase() { const L = M.L, px = Math.round(F.cell * SC * DPR), b = V.base || (V.base = document.createElement('canvas')); b.width = (L.W + 2) * px; b.height = (L.H + 2) * px; const c = b.getContext('2d'), W = b.width, H = b.height;
+  c.clearRect(0, 0, W, H); const fr = Math.round(px * 0.36), x0 = px - fr, y0 = px - fr, rw = L.W * px + fr * 2, rh = L.H * px + fr * 2, rad = fr * 1.7;
+  const seg = (a, b2, c2, d) => { c.beginPath(); c.moveTo(a, b2); c.lineTo(c2, d); c.stroke(); };
+  // рамка: тень, кирпич, светлая кромка снаружи и тёмная внутри
+  c.save(); c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = px * 0.45; c.shadowOffsetY = px * 0.12; rr(c, x0, y0, rw, rh, rad); c.fillStyle = PAL.brick; c.fill(); c.restore();
+  c.save(); rr(c, x0, y0, rw, rh, rad); c.clip(); for (let yy = 0; yy < H; yy += px / 2) for (let xx = 0; xx < W; xx += px / 2) spr(c, 'wall_top', xx, yy, px / 2, px / 2); c.fillStyle = 'rgba(74,59,94,0.35)'; c.fillRect(0, 0, W, H); c.restore();
+  c.lineWidth = Math.max(1.5, px * 0.035); c.strokeStyle = 'rgba(176,150,196,0.55)'; rr(c, x0 + c.lineWidth / 2, y0 + c.lineWidth / 2, rw - c.lineWidth, rh - c.lineWidth, rad); c.stroke();
+  c.strokeStyle = 'rgba(12,10,28,0.85)'; c.lineWidth = Math.max(2, px * 0.05); c.strokeRect(px - c.lineWidth / 2, px - c.lineWidth / 2, L.W * px + c.lineWidth, L.H * px + c.lineWidth);
+  // клетки
+  for (let y = 0; y < L.H; y++) for (let x = 0; x < L.W; x++) { const dx = (x + 1) * px, dy = (y + 1) * px;
+    if (!isWall(x, y)) { if (!spr(c, FLOORS[(x * 7 + y * 13 + x * y * 3) % 3], dx, dy, px, px)) { c.fillStyle = '#2e3052'; c.fillRect(dx, dy, px, px); } continue; }
+    const back = !isWall(x, y + 1) && (y === 0 || isWall(x, y - 1)), niche = back && has('niche_barrel') && hash(x, y, 1) < 0.5;
+    if (niche) { spr(c, NICHES[Math.floor(hash(x, y, 2) * NICHES.length)], dx, dy, px, px); continue; }
+    if (!spr(c, 'wall_top', dx, dy, px, px)) { c.fillStyle = '#655065'; c.fillRect(dx, dy, px, px); } }
+  for (let y = 0; y < L.H; y++) for (let x = 0; x < L.W; x++) if (isWall(x, y) && !isWall(x, y + 1)) { const dx = (x + 1) * px, dy = (y + 1) * px, fh = Math.round(px * 0.42), back = (y === 0 || isWall(x, y - 1)) && has('niche_barrel') && hash(x, y, 1) < 0.5;
+    if (!back) { if (!spr(c, 'wall_front', dx, dy + px - fh, px, fh, false, 56 / 128)) { c.fillStyle = '#27223d'; c.fillRect(dx, dy + px - fh, px, fh); } }
+    const g = c.createLinearGradient(0, dy + px, 0, dy + px + px * 0.28); g.addColorStop(0, 'rgba(6,5,18,0.42)'); g.addColorStop(1, 'rgba(6,5,18,0)'); c.fillStyle = g; c.fillRect(dx, dy + px, px, px * 0.28);
+    if (!back && hash(x, y, 3) < 0.22) spr(c, 'ivy', dx, dy + px * 0.12, px, px); }
+  // кромка пола у стен: тонкая тёмная линия — комната читается, клетки считаются
+  c.strokeStyle = 'rgba(8,7,22,0.75)'; c.lineWidth = Math.max(1.5, px * 0.04);
+  for (let y = 0; y < L.H; y++) for (let x = 0; x < L.W; x++) if (!isWall(x, y)) { const dx = (x + 1) * px, dy = (y + 1) * px; if (isWall(x - 1, y)) seg(dx, dy, dx, dy + px); if (isWall(x + 1, y)) seg(dx + px, dy, dx + px, dy + px); if (isWall(x, y + 1)) seg(dx, dy + px, dx + px, dy + px); }
+  c.globalCompositeOperation = 'multiply'; c.fillStyle = WORLDS[LEVELS[M.idx].w - 1].tint; c.fillRect(px, px, L.W * px, L.H * px); c.globalCompositeOperation = 'source-over';      // оттенок мира: перекрашены пол и стены, рамка и предметы прежние
+  V.baseDirty = false; }
 
 // ---------- события модели → анимации ----------
 const after = (ms, fn) => V.timers.push({ at: now + ms, fn });
@@ -122,13 +133,13 @@ function drawField() { const L = M.L, S = V.shown, cs = F.cell, lit = S.lit, t =
   // пол: тьма и свет ложатся на плитку строго по клеткам (тёплый тон один на всю игру); лужи, камень и зола — поверх, со своим тёмным и светлым видом
   const flick = 0.97 + Math.sin(t * 11) * 0.03, sprL = (name, x, y, w, h, I, flip) => { spr(ctx, name, x, y, w, h, flip, 1, atlas.dk); if (I > 0.02) { ctx.globalAlpha = I; spr(ctx, name, x, y, w, h, flip); ctx.globalAlpha = 1; } };
   const shade = (i, x, y, warm) => { const I = LI[i]; if (I < 0.99) { ctx.fillStyle = `rgba(${PAL.dark},${CONFIG.dark * (1 - I)})`; ctx.fillRect(x, y, cs, cs); }
-    if (I > 0.01) { ctx.fillStyle = `rgba(226,168,88,${warm * I * flick})`; ctx.fillRect(x, y, cs, cs); const f0 = V.flash.get(i); if (f0 !== undefined) { const p = (now - f0) / 380; if (p >= 1) V.flash.delete(i); else if (p >= 0) { ctx.fillStyle = `rgba(255,236,170,${0.4 * (1 - p)})`; ctx.fillRect(x, y, cs, cs); } } } };
+    if (I > 0.01) { ctx.fillStyle = `rgba(238,152,52,${warm * I * flick})`; ctx.fillRect(x, y, cs, cs); ctx.fillStyle = `rgba(255,214,140,${0.12 * I})`; ctx.fillRect(x + cs * 0.12, y + cs * 0.1, cs * 0.76, cs * 0.76); const f0 = V.flash.get(i); if (f0 !== undefined) { const p = (now - f0) / 380; if (p >= 1) V.flash.delete(i); else if (p >= 0) { ctx.fillStyle = `rgba(255,236,170,${0.4 * (1 - p)})`; ctx.fillRect(x, y, cs, cs); } } } };
   for (let i = 0; i < L.n; i++) { const ty = L.type[i], [x, y] = cellPx(i), d = S.d[i], I = LI[i];
     if (ty === C.WALL) { const b = i + L.W; if (b < L.n && L.type[b] !== C.WALL) { const fh = Math.round(cs * 0.46); ctx.fillStyle = `rgba(${PAL.dark},${0.5 * (1 - LI[b] * 0.8)})`; ctx.fillRect(x, y + cs - fh, cs, fh); } continue; }
     if (d & C.PIT) { const flip = (i * 7 + 3) % 5 < 2; spr(ctx, 'pit', x, y, cs, cs, flip); shade(i, x, y, 0.4);                                       // яма: свет виден на кромке, нутро всегда чёрное
       ctx.save(); ctx.beginPath(); PITPOLY.forEach(([px, py], k) => { const X = x + (flip ? 128 - px : px) / 128 * cs, Y = y + py / 128 * cs; if (k) ctx.lineTo(X, Y); else ctx.moveTo(X, Y); }); ctx.closePath(); ctx.clip(); spr(ctx, 'pit', x, y, cs, cs, flip); ctx.restore();
       const f0 = V.falls.get(i); if (f0 !== undefined) { const p = (now - f0) / 340; if (p >= 1) V.falls.delete(i); else { ctx.save(); ctx.globalAlpha = 1 - p; ctx.translate(x + cs / 2, y + cs / 2 + p * cs * 0.18); ctx.rotate(p * 0.5); const s2 = cs * (1 - p * 0.85); spr(ctx, 'floor_a', -s2 / 2, -s2 / 2, s2, s2); ctx.restore(); } } continue; }
-    shade(i, x, y, 0.45);
+    shade(i, x, y, 0.62);
     if (ty === C.STONE) sprL('stone', x + cs * 0.05, y + cs * 0.04, cs * 0.9, cs * 0.9, I);
     else if (ty === C.WATER) sprL('water', x + cs * 0.02, y + cs * 0.04, cs * 0.96, cs * 0.96, Math.max(I, 0.25));
     if (d & (C.OIL | C.BURN)) sprL('oil', x, y, cs, cs, Math.max(I, 0.25));
@@ -164,9 +175,9 @@ function drawField() { const L = M.L, S = V.shown, cs = F.cell, lit = S.lit, t =
   // шнур: от огонька через клетки следа к герою; узел на каждой клетке — по узлам видно N
   const pts = [[fx, fy + cs * 0.14]]; for (let k = 1; k < S.tail.length - 1; k++) pts.push([cellX(S.tail[k]), cellY(S.tail[k]) + cs * 0.14]); if (S.tail.length > 1 || same) pts.push([hx, hy + cs * 0.2 + Math.sin(hp * Math.PI) * cs * 0.12]);
   if (pts.length > 1 && !S.won) { ctx.lineJoin = 'round'; ctx.lineCap = 'round'; const line = (col, wd) => { ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); for (let k = 1; k < pts.length; k++) ctx.lineTo(pts[k][0], pts[k][1]); ctx.stroke(); };
-    line(PAL.ink, cs * 0.15); line(PAL.cream, cs * 0.075);
+    line('rgba(30,18,10,0.55)', cs * 0.15); line(PAL.rope2, cs * 0.095); ctx.setLineDash([cs * 0.045, cs * 0.06]); ctx.lineDashOffset = 0; line(PAL.rope, cs * 0.07); ctx.setLineDash([]);      // скрученная верёвка
     const g = ctx.createLinearGradient(pts[0][0], pts[0][1], pts[1][0], pts[1][1]); g.addColorStop(0, PAL.hot); g.addColorStop(1, 'rgba(255,170,70,0)'); ctx.strokeStyle = g; ctx.lineWidth = cs * 0.075; ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]); ctx.lineTo(pts[1][0], pts[1][1]); ctx.stroke();
-    for (let k = 1; k < pts.length - 1; k++) { ctx.fillStyle = PAL.ink; ctx.beginPath(); ctx.arc(pts[k][0], pts[k][1], cs * 0.1, 0, 7); ctx.fill(); ctx.fillStyle = PAL.cream; ctx.beginPath(); ctx.arc(pts[k][0], pts[k][1], cs * 0.062, 0, 7); ctx.fill(); } }
+    for (let k = 1; k < pts.length - 1; k++) { const bs = cs * 0.34; if (!spr(ctx, 'bead', pts[k][0] - bs / 2, pts[k][1] - bs / 2, bs, bs)) { ctx.fillStyle = PAL.rope2; ctx.beginPath(); ctx.arc(pts[k][0], pts[k][1], cs * 0.11, 0, 7); ctx.fill(); ctx.fillStyle = PAL.rope; ctx.beginPath(); ctx.arc(pts[k][0] - cs * 0.015, pts[k][1] - cs * 0.015, cs * 0.075, 0, 7); ctx.fill(); } } }
   // пожар на клетках (ниже и темнее) и сам огонёк
   for (let i = 0; i < L.n; i++) if (S.d[i] & C.FIRE) { const x = cellX(i), y = cellY(i) + cs * 0.3; flameShape(x - cs * 0.24, y, 0.62, i, 0, FIRE2, 1.25); flameShape(x + cs * 0.22, y - cs * 0.03, 0.7, i + 2, 0, FIRE2, 1.25); flameShape(x, y + cs * 0.05, 0.86, i + 4, 0, FIRE2, 1.25); if (Math.random() < 0.25) part({ kind: 'ember', x: x + (Math.random() - 0.5) * cs * 0.6, y: y - cs * 0.2, vx: (Math.random() - 0.5) * 20, vy: -40 - Math.random() * 30, life: 600, size: 2.2, col: '#ff9a4a' }); }
   if (!S.won) { if (wet) { ctx.fillStyle = PAL.ink; ctx.beginPath(); ctx.arc(fx, fy + cs * 0.12, cs * 0.13, 0, 7); ctx.fill(); ctx.fillStyle = `rgba(214,96,52,${0.75 + Math.sin(t * 6) * 0.2})`; ctx.beginPath(); ctx.arc(fx, fy + cs * 0.12, cs * 0.08, 0, 7); ctx.fill(); if (Math.random() < 0.12) part({ kind: 'smoke', col: '#aab4d8', x: fx, y: fy, vx: (Math.random() - 0.5) * 10, vy: -26, life: 900, size: 4 }); }
@@ -187,8 +198,8 @@ function drawField() { const L = M.L, S = V.shown, cs = F.cell, lit = S.lit, t =
   const idle = 1 + Math.sin(t * 2.2) * 0.012, nope = clamp((now - V.hero.hop) / 220, 0, 1), wob = nope < 1 ? Math.sin(nope * Math.PI * 3) * cs * 0.05 : 0;
   if (!S.won && !(fi && fi.reason === 'stuck')) { ctx.fillStyle = 'rgba(4,5,16,0.42)'; ctx.beginPath(); ctx.ellipse(hx, hy0 + cs * 0.4, cs * 0.26 * (1 - Math.sin(hp * Math.PI) * 0.2), cs * 0.09, 0, 0, 7); ctx.fill(); }
   if (S.won) { const wp = clamp((now - V.winAt) / 300, 0, 1); if (wp < 1) { ctx.globalAlpha = 1 - wp * wp; prop(ctx, 'hero_b', hx, hy + cs * 0.5, cs * 1.12 * (1 - wp * 0.4), V.hero.face < 0); ctx.globalAlpha = 1; } }
-  else if (fi && fi.reason === 'stuck') { ctx.globalAlpha = 1 - fpz * 0.85; ctx.save(); ctx.translate(hx, hy + cs * 0.5); ctx.rotate(fpz * 0.9); prop(ctx, 'hero_a', 0, 0, cs * 1.12 * (1 - fpz * 0.6), V.hero.face < 0); ctx.restore(); ctx.globalAlpha = 1; }
-  else { prop(ctx, hp < 1 ? 'hero_b' : 'hero_a', hx + wob, hy + cs * 0.5, cs * 1.12, V.hero.face < 0, 1, idle);
+  else if (fi && fi.reason === 'stuck') { ctx.globalAlpha = 1 - fpz * 0.85; ctx.save(); ctx.translate(hx, hy + cs * 0.5); ctx.rotate(fpz * 0.9); prop(ctx, has('hero_fall') ? 'hero_fall' : 'hero_a', 0, 0, cs * 1.12 * (1 - fpz * 0.6), V.hero.face < 0); ctx.restore(); ctx.globalAlpha = 1; }
+  else { prop(ctx, fi && fi.reason === 'burned' && has('hero_hot') ? 'hero_hot' : hp < 1 ? 'hero_b' : 'hero_a', hx + wob, hy + cs * 0.5, cs * 1.12, V.hero.face < 0, 1, idle);
     if (fi && fi.reason === 'burned') { ctx.globalCompositeOperation = 'lighter'; glow(hx, hy, cs * 0.9, '255,120,40', 0.7 * (1 - fpz)); ctx.globalCompositeOperation = 'source-over'; flameShape(hx, hy + cs * 0.3, 1.5, 3); }
     if (fi && fi.reason === 'seen') { const seenBy = L.guards.filter((c, k) => (fi.to.guardAlive >> k & 1) && (C.patchOf(L, fi.to.lit, k) || []).includes(fi.cell)); ctx.strokeStyle = `rgba(255,77,94,${0.9 - fpz * 0.5})`; ctx.lineWidth = 3; ctx.setLineDash([2, 7]); ctx.lineCap = 'round';
       for (const c of seenBy) { ctx.beginPath(); ctx.moveTo(cellX(c), cellY(c) - cs * 0.3); ctx.lineTo(hx, hy - cs * 0.1); ctx.stroke(); } ctx.setLineDash([]); } }

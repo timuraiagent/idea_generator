@@ -32,7 +32,8 @@ function trim(g) { let rows = g.map(r => r.join(''));
 
 // ---------- жетоны ----------
 // spec: { n, W, H, cells, loop, room, lamps, lit, stone, oil, guards, wood, spool, water, pits, doorInWall }
-function build(sp) { const g = carve(sp.W, sp.H, sp.cells, sp.loop, sp.room);
+function build(sp) { if (process.env.SIZE === 'big') { sp.W = ri(5, 7); sp.H = ri(6, 9); sp.cells = ri(Math.max(sp.cells, 16), 32); }
+  const g = carve(sp.W, sp.H, sp.cells, sp.loop, sp.room);
   const ends = floors(g).filter(([x, y]) => deg(g, x, y) === 1), p = place(g, 'P', chance(0.6) && ends.length ? ends : floors(g)); if (!p) return null;
   const far = ([x, y]) => Math.abs(x - p[0]) + Math.abs(y - p[1]) >= 3;
   // дверь: в стене рядом с одной клеткой пола или в тупике
@@ -102,7 +103,7 @@ for (let i = 0; i < tries; i++) { const sp = recipe(), map = build(sp); if (!map
   if (m.par < 4 || m.par > 34 || m.pwin >= 0.5) continue;
   const g = A.gates(lv, m.par, MAXS), st = A.story(lv, m.plan), lazy = A.lazyWins(lv);
   const row = { w: world, seed: SEED, i, n: sp.n, map, par: m.par, plan: m.plan, states: m.states, pwin: +m.pwin.toFixed(4), bits: +m.bits.toFixed(2), nsol: m.nsol, forks: m.forks, critical: m.critical, mistakes: m.mistakes, delayed: m.delayed, maxLife: m.maxLife,
-    D: A.difficulty(m), lazy, g, st, cells: A.walkable(lv), used: new Set(A.trace(lv, m.plan).cells).size };
-  if (KEEP[world] && !KEEP[world](row)) continue; row.w = world.slice(0, 2); row.rec = world;
+    D: A.difficulty(m), A: A.adultDifficulty(m), p4: +m.p4.toFixed(4), p6: +m.p6.toFixed(4), lazy, g, st, cells: A.walkable(lv), used: new Set(A.trace(lv, m.plan).cells).size };
+  if (KEEP[world] && !KEEP[world](row)) continue; if (row.A < (+process.env.MIN_A || 0)) continue; row.w = world.slice(0, 2); row.rec = world;
   out.write(JSON.stringify(row) + '\n'); kept++; }
 out.end(() => console.log(`${world} seed ${SEED}: попыток ${tries}, разных карт ${seen.size}, решаемых ${solv}, в запас ${kept}`));

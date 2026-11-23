@@ -24,6 +24,12 @@ function metrics(lv, maxStates) { const G = graph(lv, maxStates), { L, nodes } =
       else { d = Math.min(d, 1 + dist[k.to]); p += pwin[k.to]; s += nsol[k.to]; lf = Math.max(lf, 1 + life[k.to]); } }
     dist[i] = d; pwin[i] = ks.length ? p / ks.length : 0; nsol[i] = s; life[i] = lf; }
   if (!isFinite(dist[0])) return { solvable: false, states: n, overflow: G.overflow, L };
+  // «внимательный игрок»: из ходов выбирает только те, после которых можно продержаться ещё k ходов (видит ловушки на k вперёд), среди них — наугад
+  const surv = new Float64Array(n);      // сколько ходов ещё можно прожить из узла (победа — бесконечно)
+  for (let i = n - 1; i >= 0; i--) { let v = 0; for (const k of nodes[i].kids) { const c = k.to === 'win' ? Infinity : k.to === 'dead' ? 0 : 1 + surv[k.to]; if (c > v) v = c; } surv[i] = v; }
+  const look = K => { const pk = new Float64Array(n); for (let i = n - 1; i >= 0; i--) { const ks = nodes[i].kids, ok = ks.filter(k => k.to === 'win' || (k.to !== 'dead' && 1 + surv[k.to] >= K)), pool = ok.length ? ok : ks; let p = 0;
+      if (ok.some(k => k.to === 'win')) { pk[i] = 1; continue; } for (const k of pool) p += k.to === 'win' ? 1 : k.to === 'dead' ? 0 : pk[k.to]; pk[i] = pool.length ? p / pool.length : 0; } return pk[0]; };
+  const p2 = look(2), p4 = look(4), p6 = look(6);
   // канонический кратчайший путь и развилки на нём
   let plan = '', id = 0, forks = 0, critical = 0, mistakes = 0, delayed = 0, maxLife = 0, sumLife = 0; const path = [0];
   while (true) { const ks = nodes[id].kids; if (ks.length >= 2) forks++;
@@ -35,7 +41,7 @@ function metrics(lv, maxStates) { const G = graph(lv, maxStates), { L, nodes } =
     plan += best.ch; if (best.to === 'win') break; id = best.to; path.push(id); }
   let alive = 0; for (let i = 0; i < n; i++) if (isFinite(dist[i])) alive++;
   const par = dist[0], bits = -Math.log2(Math.max(pwin[0], 1e-9));
-  return { solvable: true, par, plan, states: n, overflow: G.overflow, pwin: pwin[0], bits, nsol: nsol[0], forks, critical, mistakes, delayed, maxLife, sumLife, alive: alive / n, L, G, dist, path }; }
+  return { solvable: true, par, plan, states: n, overflow: G.overflow, pwin: pwin[0], bits, p2, p4, p6, bits4: -Math.log2(Math.max(p4, 1e-9)), bits6: -Math.log2(Math.max(p6, 1e-9)), nsol: nsol[0], forks, critical, mistakes, delayed, maxLife, sumLife, alive: alive / n, L, G, dist, path }; }
 
 // ---------- прогон плана ----------
 function trace(lv, plan) { const L = C.compile(lv); let S = C.init(L); const steps = [S], cells = [L.start];
@@ -99,12 +105,14 @@ function story(lv, plan) { const T = trace(lv, plan), L = T.L, E = T.end, cnt = 
 
 // ---------- оценка сложности ----------
 // Сколько «удачи» нужно тыкающему наугад (биты) + длина плана + развилки, где ошибка видна не сразу.
+// сложность для взрослого: сколько «удачи» нужно игроку, который видит ловушки на 4 и на 6 ходов вперёд, плюс немного длины
+function adultDifficulty(m) { return +(1.0 * m.bits4 + 0.6 * m.bits6 + 0.25 * m.bits + 0.04 * m.par).toFixed(2); }
 function difficulty(m) { return +(m.bits + 0.12 * m.par + 0.35 * m.delayed + 0.08 * Math.min(m.maxLife, 12)).toFixed(2); }
 
 const walkable = lv => { const L = C.compile(lv); let k = 0; for (let c = 0; c < L.n; c++) if ((L.type[c] === C.FLOOR || L.type[c] === C.STONE || L.type[c] === C.WATER) && !(L.init[c] & (C.PIT | C.WOOD))) k++; return k; };
 
-module.exports = { matters, graph, metrics, trace, playPlan, greedyBot, snakeBot, lazyWins, gates, story, difficulty, swap, walkable };
+module.exports = { adultDifficulty, matters, graph, metrics, trace, playPlan, greedyBot, snakeBot, lazyWins, gates, story, difficulty, swap, walkable };
 
 if (require.main === module) { const { LEVELS } = require('./levels.js');
   LEVELS.forEach((lv, i) => { const m = metrics(lv); if (!m.solvable) { console.log(`L${i + 1} НЕ РЕШАЕТСЯ`); return; } const g = gates(lv, m.par), st = story(lv, m.plan);
-    console.log(`${lv.id} N${lv.n} par ${String(m.par).padStart(2)} сост ${String(m.states).padStart(5)} рандом ${(m.pwin * 100).toFixed(1).padStart(5)}% биты ${m.bits.toFixed(1)} реш ${m.nsol} развилок ${m.forks} крит ${m.critical} ошибок ${m.mistakes} отлож ${m.delayed} жизнь ${m.maxLife} | D ${difficulty(m).toFixed(1)} | лентяй ${lazyWins(lv) ? 'ДА' : '—'} | ворота ${Object.entries(g).filter(([k, v]) => v === true).map(([k]) => k).join(',')} N±:${g.nSens}`); }); }
+    console.log(`${lv.id} N${lv.n} par ${String(m.par).padStart(2)} сост ${String(m.states).padStart(5)} рандом ${(m.pwin * 100).toFixed(1).padStart(5)}% биты ${m.bits.toFixed(1)} реш ${m.nsol} развилок ${m.forks} крит ${m.critical} ошибок ${m.mistakes} отлож ${m.delayed} жизнь ${m.maxLife} | D ${difficulty(m).toFixed(1)} | p4 ${(m.p4 * 100).toFixed(0)}% p6 ${(m.p6 * 100).toFixed(0)}% A ${adultDifficulty(m).toFixed(1)} | лентяй ${lazyWins(lv) ? 'ДА' : '—'} | ворота ${Object.entries(g).filter(([k, v]) => v === true).map(([k]) => k).join(',')} N±:${g.nSens}`); }); }
