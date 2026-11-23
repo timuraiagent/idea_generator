@@ -40,6 +40,7 @@ SCORES = {
     "notice-period": 15, "equipdark": 15, "longbox": 15, "subordination": 15, "seance": 16,
     "townclock": 15, "rehouse": 15, "stake-steppe": 15, "puntout": 15, "hushmark": 16,
     "densify": 15, "ebbwatch": 15, "podpor": 16, "lightverdict": 16, "backstage": 15,
+    "parting-face": 15,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
