@@ -48,7 +48,7 @@ SCORES = {
     "edict-reign": 15, "foundling": 15, "pokrov": 16, "contactka": 16, "lattice": 16, "pinch": 16, "suture": 16,
     "steep": 15, "unglue": 16, "prosvet": 16, "overwinter": 15, "reforge": 15, "sanation": 16, "tauten": 16,
     "choke": 16, "gnoinik": 16, "ether": 15, "likho": 16, "zazhigala": 16, "measureback": 16, "limp": 16, "otkat": 15,
-    "otsev": 15,
+    "otsev": 15, "nosilshchik": 16,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
