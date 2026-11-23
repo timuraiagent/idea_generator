@@ -136,10 +136,36 @@ def main():
     rng = random.Random(args.seed)
     pos = np.array([w.rsplit("_", 1)[1] for w in words])
     verbs = [i for i in range(len(words)) if pos[i] == "VERB"]
-    nouns = [i for i in range(len(words)) if pos[i] == "NOUN"]
+    # занятые слоты из MECHANICS.md (таблица: `глагол × существительное`) +
+    # статические списки — автосинхронизация, чтобы занятые глаголы/носители
+    # не просачивались в волны (сигнал: «командовать» прошёл после order-feel)
+    def _used_from_index(path="MECHANICS.md"):
+        uv, un = set(), set()
+        try:
+            for m in re.finditer(r"`([а-яё-]+) × ([а-яё-]+)`", open(path, encoding="utf-8").read()):
+                uv.add(m.group(1)); un.add(m.group(2))
+        except FileNotFoundError:
+            pass
+        return uv, un
+    idx_v, idx_n = _used_from_index()
+
+    # человеко-носители (№5≤1: «существо, не закон») отсекаются семантически:
+    # max cos к якорям людей > HUMAN_COS → noun не участвует (сигнал волн 39–48)
+    HUMAN_ANCHORS = ["человек_NOUN", "мужчина_NOUN", "женщина_NOUN",
+                     "ребёнок_NOUN", "мальчик_NOUN", "девочка_NOUN"]
+    HUMAN_COS = 0.55
+    anchors = [index[a] for a in HUMAN_ANCHORS if a in index]
+    human_mask = np.zeros(len(words), dtype=bool)
+    if anchors:
+        human_mask = (mat @ mat[anchors].T).max(axis=1) > HUMAN_COS
+    nouns = [i for i in range(len(words)) if pos[i] == "NOUN" and not human_mask[i]]
     used_v = {f"{v}_VERB" for v in USED_VERBS} | set(
         w for w in words if any(p in w for p in [f"{u}_VERB" for u in USED_VERBS]))
     used_n = {f"{n}_NOUN" for n in USED_NOUNS}
+    # приставочное сопоставление автопары к лемме модели: «командовать» ловит
+    # «командовать_VERB»; «направить» ловит «направить_VERB» и производные теги
+    used_lemmas_v = {w.rsplit("_", 1)[0] for w in used_v} | idx_v
+    used_lemmas_n = {w.rsplit("_", 1)[0] for w in used_n} | idx_n
 
     probe_index = {p: index[p] for arch, ps in ARCHETYPES.items() for p in ps if p in index}
     out, tries = [], 0
@@ -163,10 +189,11 @@ def main():
             # существительное около A, глагол около B — ближайшие проходящие гейты
             nouns_near = [i for i in np.argsort(-(mat @ A)) if pos[i] == "NOUN"][: args.region_k * 3]
             verbs_near = [i for i in np.argsort(-(mat @ B)) if pos[i] == "VERB"][: args.region_k * 3]
-            ni = next((i for i in nouns_near if words[i] not in used_n), None)
+            ni = next((i for i in nouns_near if words[i] not in used_n
+                       and words[i].rsplit("_", 1)[0] not in used_lemmas_n), None)
             vi = next((i for i in verbs_near
                        if words[i] not in used_v
-                       and words[i].rsplit("_", 1)[0] not in USED_VERBS
+                       and words[i].rsplit("_", 1)[0] not in used_lemmas_v
                        and not stop_hit(words[i].rsplit("_", 1)[0])), None)
             if ni is None or vi is None:
                 continue
@@ -202,9 +229,9 @@ def main():
                 continue
             if stop_hit(lem_v):                                      # №2 стоп-лист
                 continue
-            if wv in used_v or wv.rsplit("_", 1)[0] in USED_VERBS:   # эмбарго глаголов
+            if wv in used_v or lem_v in used_lemmas_v:               # эмбарго глаголов
                 continue
-            if wn in used_n:                                         # эмбарго существительных
+            if wn in used_n or wn.rsplit("_", 1)[0] in used_lemmas_n:  # эмбарго существительных
                 continue
             arch, scores = classify_verb(mat[vi], index, mat)
             if arch not in GOOD_ARCH and not args.no_arch_gate:      # №8: гейт архетипа
