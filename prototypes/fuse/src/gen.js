@@ -37,17 +37,22 @@ function build(sp) { const g = carve(sp.W, sp.H, sp.cells, sp.loop, sp.room);
   const far = ([x, y]) => Math.abs(x - p[0]) + Math.abs(y - p[1]) >= 3;
   // дверь: в стене рядом с одной клеткой пола или в тупике
   const dw = wallsNear(g).filter(([x, y]) => deg(g, x, y) === 1 && far([x, y])), de = floors(g).filter(([x, y]) => deg(g, x, y) === 1 && far([x, y]));
-  const d = place(g, 'D', (chance(sp.doorInWall === undefined ? 0.7 : sp.doorInWall) && dw.length) ? dw : (de.length ? de : dw)); if (!d) return null;
+  const df = floors(g).filter(([x, y]) => deg(g, x, y) >= 2 && far([x, y]));
+  const d = place(g, 'D', (sp.doorOnFloor && chance(sp.doorOnFloor) && df.length) ? df : (chance(sp.doorInWall === undefined ? 0.7 : sp.doorInWall) && dw.length) ? dw : (de.length ? de : dw)); if (!d) return null;
   for (let i = 0; i < (sp.lamps || 0); i++) { const w = wallsNear(g), f = floors(g).filter(([x, y]) => deg(g, x, y) >= 2), nearD = w.filter(([x, y]) => Math.abs(x - d[0]) + Math.abs(y - d[1]) <= 2);
     const pool = (i === 0 && nearD.length && chance(sp.lampNearDoor === undefined ? 0.7 : sp.lampNearDoor)) ? nearD : (chance(0.8) && w.length ? w : f); if (!place(g, i < (sp.lit || 0) ? 'K' : 'L', pool)) return null; }
   for (let i = 0; i < (sp.pits || 0); i++) place(g, '_', floors(g).filter(([x, y]) => deg(g, x, y) >= 2));
   for (let i = 0; i < (sp.stone || 0); i++) { const j = floors(g).filter(([x, y]) => deg(g, x, y) >= 3), any = floors(g); place(g, 's', chance(0.7) && j.length ? j : any); }
-  for (let i = 0; i < (sp.water || 0); i++) { const near = floors(g).filter(([x, y]) => nb4(x, y).some(([a, b]) => at(g, a, b) === '~')); place(g, '~', i > 0 && near.length && chance(0.7) ? near : floors(g)); }
+  const guardsFirst = [];
+  if (sp.waterNear) for (let i = 0; i < (sp.guards || 0); i++) { const fl = floors(g).filter(([x, y]) => !nb4(x, y).some(([a, b]) => at(g, a, b) === 'P')); const q = place(g, 'G', fl); if (!q) return null; guardsFirst.push(q); }
+  for (let i = 0; i < (sp.water || 0); i++) { if (sp.waterNear && chance(sp.waterNear)) { const hot = floors(g).filter(([x, y]) => nb4(x, y).some(([a, b]) => 'GLKD~'.includes(at(g, a, b)))); if (hot.length) { place(g, '~', hot); continue; } } const near = floors(g).filter(([x, y]) => nb4(x, y).some(([a, b]) => at(g, a, b) === '~')); place(g, '~', i > 0 && near.length && chance(0.7) ? near : floors(g)); }
   if (sp.oil) { let seed = place(g, 'o', floors(g).filter(([x, y]) => !nb4(x, y).some(([a, b]) => at(g, a, b) === 'P'))); if (!seed) return null; let fr = [seed], left = sp.oil - 1;
     while (left > 0 && fr.length) { const c = pick(fr), nb = nb4(c[0], c[1]).filter(([a, b]) => free(g, a, b)); if (!nb.length) { fr = fr.filter(q => q !== c); continue; } const q = pick(nb); g[q[1]][q[0]] = 'o'; fr.push(q); left--; } }
-  for (let i = 0; i < (sp.guards || 0); i++) { const onOil = cellsOf(g, ch => ch === 'o'), fl = floors(g).filter(([x, y]) => !nb4(x, y).some(([a, b]) => at(g, a, b) === 'P'));
+  for (let i = 0; i < (sp.waterNear ? 0 : (sp.guards || 0)); i++) { const onOil = cellsOf(g, ch => ch === 'o'), fl = floors(g).filter(([x, y]) => !nb4(x, y).some(([a, b]) => at(g, a, b) === 'P'));
     if (sp.guardOnOil && onOil.length && chance(sp.guardOnOil)) place(g, 'g', onOil); else if (!place(g, 'G', fl)) return null; }
-  for (let i = 0; i < (sp.wood || 0); i++) { const cor = floors(g).filter(([x, y]) => deg(g, x, y) === 2); if (!place(g, 'w', cor.length ? cor : floors(g))) return null; }
+  for (let i = 0; i < (sp.wood || 0); i++) { const cor = floors(g).filter(([x, y]) => deg(g, x, y) >= 2 && deg(g, x, y) <= 3), q = place(g, 'w', cor.length ? cor : floors(g)); if (!q) return null;
+    const nb = nb4(q[0], q[1]).filter(([a, b]) => free(g, a, b)); if (nb.length && sp.stoneNear && chance(sp.stoneNear)) { const [a, b] = pick(nb); g[b][a] = 's'; }
+    else if (nb.length && sp.oilToWood && chance(sp.oilToWood)) { let c = pick(nb), left = ri(2, 5); g[c[1]][c[0]] = 'o'; while (left-- > 0) { const n2 = nb4(c[0], c[1]).filter(([a, b]) => free(g, a, b)); if (!n2.length) break; c = pick(n2); g[c[1]][c[0]] = 'o'; } } }
   for (let i = 0; i < (sp.spool || 0); i++) if (!place(g, chance(sp.spool2 || 0.3) ? '2' : '1', floors(g))) return null;
   return trim(g); }
 
@@ -74,6 +79,20 @@ const RECIPES = {
   w9: () => ({ n: pick([2, 3, 4, 4]), ...size([6, 7], [7, 9]), cells: ri(22, 34), loop: 0.55, room: 0.4, lamps: pick([1, 2, 2]), guards: pick([1, 1, 2]), oil: ri(3, 8), guardOnOil: 0.6, stone: pick([0, 1, 1, 2]), wood: pick([0, 1, 1]), water: pick([0, 0, 1, 2]), spool: pick([0, 0, 1]) }),
 };
 
+const has = (r, ch) => r.map.some(x => x.includes(ch)), sz = () => chance(0.45) ? { ...size([4, 5], [4, 6]), cells: ri(8, 15) } : chance(0.6) ? { ...size([5, 6], [5, 7]), cells: ri(13, 22) } : { ...size([6, 7], [6, 9]), cells: ri(18, 30) };
+Object.assign(RECIPES, {
+  w2f: () => ({ n: pick([2, 2, 3, 3, 4]), ...sz(), loop: 0.7, room: 0.6, lamps: chance(0.2) ? 1 : 0, lampNearDoor: 0, doorOnFloor: 0.9, pits: chance(0.3) ? ri(1, 2) : 0 }),
+  w3b: () => ({ n: pick([2, 3, 3, 4, 4, 5]), ...sz(), loop: 0.7, room: 0.5, lamps: pick([1, 1, 1, 2]), lit: chance(0.25) ? 1 : 0, stone: pick([1, 1, 2, 2, 3]), pits: chance(0.2) ? 1 : 0, doorOnFloor: 0.15 }),
+  w4b: () => ({ n: pick([3, 3, 4, 4, 5]), ...sz(), loop: 0.6, room: 0.5, lamps: pick([1, 1, 1, 2]), oil: ri(2, 7), stone: chance(0.25) ? 1 : 0, pits: chance(0.25) ? ri(1, 2) : 0, lampNearDoor: 0.6 }),
+  w5b: () => ({ n: pick([2, 3, 3, 4, 4, 5]), ...sz(), loop: 0.6, room: 0.5, lamps: pick([1, 1, 2, 2]), guards: pick([1, 1, 1, 2]), oil: chance(0.45) ? ri(2, 6) : 0, guardOnOil: 0.75, stone: chance(0.2) ? 1 : 0, lampNearDoor: 0.6 }),
+  w6b: () => ({ n: pick([2, 2, 3, 3, 4]), ...sz(), loop: 0.7, room: 0.5, lamps: pick([0, 1, 1, 1, 2]), lit: chance(0.3) ? 1 : 0, wood: pick([1, 1, 1, 2]), stoneNear: 0.5, oilToWood: 0.6, guards: chance(0.15) ? 1 : 0 }),
+  w7b: () => ({ n: pick([2, 2, 3, 3, 4]), ...sz(), loop: 0.65, room: 0.5, lamps: pick([0, 1, 1, 1, 2]), spool: pick([1, 1, 1, 2]), spool2: 0.3, stone: chance(0.3) ? 1 : 0, oil: chance(0.3) ? ri(2, 5) : 0, guards: chance(0.25) ? 1 : 0, guardOnOil: 0.5, doorOnFloor: 0.25 }),
+  w8b: () => ({ n: pick([2, 2, 3, 3, 4, 4]), ...sz(), loop: 0.65, room: 0.5, lamps: pick([0, 1, 1, 1, 2]), water: ri(1, 3), waterNear: 0.7, guards: pick([0, 1, 1, 1, 2]), oil: chance(0.2) ? ri(2, 5) : 0, stone: chance(0.15) ? 1 : 0, doorOnFloor: 0.25 }),
+  w9b: () => ({ n: pick([2, 3, 3, 4, 4]), ...size([6, 7], [7, 9]), cells: ri(22, 34), loop: 0.65, room: 0.45, lamps: pick([1, 2, 2]), guards: pick([1, 1, 2]), oil: ri(3, 8), guardOnOil: 0.7, stone: pick([1, 1, 2]), wood: pick([0, 1, 1]), stoneNear: 0.5, oilToWood: 0.5, water: pick([0, 0, 1, 2]), spool: pick([0, 0, 1]) }),
+});
+const mainGates = r => Object.entries(r.g).filter(([k, v]) => v === true && !['lampLate', 'oilPit', 'woodOpen', 'waterFloor'].includes(k)).length;
+const KEEP = { w2f: r => true, w3b: r => r.g.stone && r.st.twice >= 1, w4b: r => r.g.oil || r.st.lampByFire, w5b: r => r.g.guard || r.st.guardsBurnt >= 1, w6b: r => r.g.wood && r.st.woodBurnt >= 1, w7b: r => r.g.spool,
+  w8b: r => r.g.water || (r.g.waterFloor && r.st.onWater >= 1), w9b: r => mainGates(r) >= 4 };
 // ---------- прогон ----------
 const [world, triesArg, outFile] = process.argv.slice(2), recipe = RECIPES[world], tries = +triesArg || 2000, seen = new Set(); let kept = 0, solv = 0;
 const out = fs.createWriteStream(outFile, { flags: 'a' });
@@ -84,5 +103,6 @@ for (let i = 0; i < tries; i++) { const sp = recipe(), map = build(sp); if (!map
   const g = A.gates(lv, m.par, MAXS), st = A.story(lv, m.plan), lazy = A.lazyWins(lv);
   const row = { w: world, seed: SEED, i, n: sp.n, map, par: m.par, plan: m.plan, states: m.states, pwin: +m.pwin.toFixed(4), bits: +m.bits.toFixed(2), nsol: m.nsol, forks: m.forks, critical: m.critical, mistakes: m.mistakes, delayed: m.delayed, maxLife: m.maxLife,
     D: A.difficulty(m), lazy, g, st, cells: A.walkable(lv), used: new Set(A.trace(lv, m.plan).cells).size };
+  if (KEEP[world] && !KEEP[world](row)) continue; row.w = world.slice(0, 2); row.rec = world;
   out.write(JSON.stringify(row) + '\n'); kept++; }
 out.end(() => console.log(`${world} seed ${SEED}: попыток ${tries}, разных карт ${seen.size}, решаемых ${solv}, в запас ${kept}`));

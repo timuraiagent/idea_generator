@@ -1,13 +1,15 @@
 // ===== интерфейс: экраны, кнопки, ввод, главный цикл =====
-const UI = { screen: 'play', btns: [], mapW: 0, card: null, winAt: 0, win: null, statScroll: 0, resetArm: 0, copiedAt: 0, toast: null, press: null, mapSlide: 0 };
+const UI = { screen: 'play', shownScreen: 'play', fadeT: -1e9, btns: [], mapW: 0, card: null, winAt: 0, win: null, statScroll: 0, resetArm: 0, copiedAt: 0, toast: null, press: null, mapSlide: 0 };
 const perf = { n: 0, sum: 0, max: 0 };
 const wOf = i => LEVELS[i].w, numInWorld = i => worldLevels(wOf(i)).indexOf(i) + 1, totalStars = () => LEVELS.reduce((a, l, i) => a + starsOf(i), 0);
 function btn(x, y, w, h, fn, id) { UI.btns.push({ x, y, w, h, fn, id }); return UI.press && UI.press.id === id; }
 
 // ---------- значки (кодом) ----------
 const ICON = {
-  undo(x, y, r) { ctx.beginPath(); ctx.arc(x + r * 0.08, y + r * 0.1, r * 0.52, Math.PI * 1.08, Math.PI * 0.42); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - r * 0.78, y - r * 0.42); ctx.lineTo(x - r * 0.42, y - r * 0.02); ctx.lineTo(x - r * 0.06, y - r * 0.5); ctx.stroke(); },
-  restart(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r * 0.52, -Math.PI * 0.35, Math.PI * 1.3); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x + r * 0.04, y - r * 0.78); ctx.lineTo(x + r * 0.46, y - r * 0.44); ctx.lineTo(x + r * 0.02, y - r * 0.16); ctx.stroke(); },
+  undo(x, y, r) { const cx0 = x + r * 0.06, cy0 = y + r * 0.1, q = r * 0.48; ctx.beginPath(); ctx.arc(cx0, cy0, q, Math.PI, Math.PI * 0.52); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx0 - q - r * 0.27, cy0 - r * 0.28); ctx.lineTo(cx0 - q, cy0 + r * 0.04); ctx.lineTo(cx0 - q + r * 0.3, cy0 - r * 0.24); ctx.stroke(); },
+  restart(x, y, r) { const q = r * 0.48, a1 = Math.PI * 1.42, ex = x + Math.cos(a1) * q, ey = y + Math.sin(a1) * q, tx = -Math.sin(a1), ty = Math.cos(a1), h = r * 0.34;      // почти полный круг по часовой и стрелка на конце
+    ctx.beginPath(); ctx.arc(x, y, q, -Math.PI * 0.18, a1); ctx.stroke(); const rot = (a) => [tx * Math.cos(a) - ty * Math.sin(a), tx * Math.sin(a) + ty * Math.cos(a)], tipx = ex + tx * h * 0.45, tipy = ey + ty * h * 0.45, [ax, ay] = rot(2.5), [bx, by] = rot(-2.5);
+    ctx.beginPath(); ctx.moveTo(tipx + ax * h, tipy + ay * h); ctx.lineTo(tipx, tipy); ctx.lineTo(tipx + bx * h, tipy + by * h); ctx.stroke(); },
   hint(x, y, r) { ctx.beginPath(); ctx.arc(x, y - r * 0.16, r * 0.42, Math.PI * 0.78, Math.PI * 0.22); ctx.lineTo(x + r * 0.2, y + r * 0.36); ctx.lineTo(x - r * 0.2, y + r * 0.36); ctx.closePath(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - r * 0.16, y + r * 0.58); ctx.lineTo(x + r * 0.16, y + r * 0.58); ctx.stroke(); },
   grid(x, y, r) { const q = r * 0.2; for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { rr(ctx, x + a * r * 0.3 - q, y + b * r * 0.3 - q, q * 2, q * 2, q * 0.5); ctx.stroke(); } },
   next(x, y, r) { ctx.beginPath(); ctx.moveTo(x - r * 0.5, y); ctx.lineTo(x + r * 0.42, y); ctx.moveTo(x + r * 0.05, y - r * 0.4); ctx.lineTo(x + r * 0.46, y); ctx.lineTo(x + r * 0.05, y + r * 0.4); ctx.stroke(); },
@@ -69,7 +71,7 @@ function drawWin() { const wv = UI.win, p = easeOut(clamp((now - wv.t0) / 320, 0
 function drawCard() { const cd = UI.card, wd = WORLDS[cd.w - 1], p = easeOut(clamp((now - cd.t0) / 260, 0, 1)); ctx.fillStyle = `rgba(4,5,16,${0.72 * p})`; ctx.fillRect(0, 0, VW, VH); const w = 310, h = 300, x = (VW - w) / 2, y = (VH - h) / 2 + (1 - p) * 30; ctx.globalAlpha = p;
   const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#2a3163'); g.addColorStop(1, '#171c3d'); ctx.fillStyle = g; rr(ctx, x, y, w, h, 26); ctx.fill(); ctx.strokeStyle = '#525d9c'; ctx.lineWidth = 1.5; rr(ctx, x + 0.75, y + 0.75, w - 1.5, h - 1.5, 26); ctx.stroke();
   text(`${T('world')} ${cd.w}`, VW / 2, y + 30, 13, PAL.dim, 800); text(tr(wd.name), VW / 2, y + 56, 24, PAL.text, 800);
-  ctx.fillStyle = '#10142e'; ctx.beginPath(); ctx.arc(VW / 2, y + 128, 46, 0, 7); ctx.fill(); if (wd.icon === 'flame') { ctx.globalCompositeOperation = 'lighter'; glow(VW / 2, y + 122, 60, '255,150,60', 0.4 * p); ctx.globalCompositeOperation = 'source-over'; flameShape(VW / 2, y + 150, 1, 1, 86); } else { if (wd.icon === 'lamp_on') { ctx.globalCompositeOperation = 'lighter'; glow(VW / 2, y + 118, 64, '255,200,110', 0.4 * p); ctx.globalCompositeOperation = 'source-over'; } spr(ctx, wd.icon, VW / 2 - 40, y + 86, 80, 80); }
+  ctx.fillStyle = wd.icon === 'flame' || wd.icon === 'lamp_on' || wd.icon === 'door_open' ? '#10142e' : '#3b4563'; ctx.beginPath(); ctx.arc(VW / 2, y + 128, 46, 0, 7); ctx.fill(); ctx.strokeStyle = '#11142a'; ctx.lineWidth = 3; ctx.stroke(); if (wd.icon === 'flame') { ctx.globalCompositeOperation = 'lighter'; glow(VW / 2, y + 122, 60, '255,150,60', 0.4 * p); ctx.globalCompositeOperation = 'source-over'; flameShape(VW / 2, y + 150, 1, 1, 86); } else { if (wd.icon === 'lamp_on') { ctx.globalCompositeOperation = 'lighter'; glow(VW / 2, y + 118, 64, '255,200,110', 0.4 * p); ctx.globalCompositeOperation = 'source-over'; } spr(ctx, wd.icon, VW / 2 - 40, y + 86, 80, 80); }
   wrap(tr(wd.card), VW / 2, y + 204, w - 44, 15, '#d5dbf7', 21); text(T('tapNew'), VW / 2, y + h - 22, 12, PAL.dim, 700); ctx.globalAlpha = 1;
   btn(0, 0, VW, VH, () => { save.seenWorld[cd.w] = 1; persist(); UI.card = null; SND.play('click'); }, 'card'); }
 
@@ -115,7 +117,7 @@ function drawStats() { bg(); const rows = statsRows(), top = 104, rowH = 26, vie
   ctx.restore(); const by = VH - 104;
   pillBtn('sall', 20, by, VW - 40, 40, (save.openAll ? '✓ ' : '') + T('openAll'), () => { save.openAll = !save.openAll; persist(); SND.play('click'); }, { size: 14 });
   pillBtn('scopy', 20, by + 48, (VW - 50) / 2, 40, now - UI.copiedAt < 1500 ? T('copied') : T('copy'), () => { const data = JSON.stringify(stats()); try { navigator.clipboard.writeText(data); } catch (e) { /* нет доступа к буферу */ } UI.copiedAt = now; }, { size: 13 });
-  pillBtn('sreset', 30 + (VW - 50) / 2, by + 48, (VW - 50) / 2, 40, now - UI.resetArm < 2500 ? T('resetAsk') : T('reset'), () => { if (now - UI.resetArm < 2500) { save.done = {}; save.stats = {}; save.seenWorld = {}; persist(); UI.resetArm = 0; } else UI.resetArm = now; }, { size: 13 }); }
+  pillBtn('sreset', 30 + (VW - 50) / 2, by + 48, (VW - 50) / 2, 40, now - UI.resetArm < 2500 ? T('resetAsk') : T('reset'), () => { if (now - UI.resetArm < 2500) { save.done = {}; save.stats = {}; save.seenWorld = {}; save.openAll = false; persist(); UI.resetArm = 0; } else UI.resetArm = now; }, { size: 13 }); }
 function stats() { return statsRows().map(r => Object.assign({ level: r.i + 1, id: r.id, stars: r.stars }, r.st, { ms: Math.round(r.st.ms) })); }
 
 // ---------- ввод ----------
@@ -141,7 +143,7 @@ window.addEventListener('keydown', e => { SND.unlock(); if (UI.card) { if (e.cod
     else if (e.code === 'Enter' && UI.win) { if (M.idx < LEVELS.length - 1) startLevel(M.idx + 1); else goMap(); } else if (e.code === 'Escape') goMap(); }
   else if (UI.screen === 'map') { if (e.code === 'ArrowLeft') UI.mapW = Math.max(0, UI.mapW - 1); else if (e.code === 'ArrowRight') UI.mapW = Math.min(WORLDS.length - 1, UI.mapW + 1); else if (e.code === 'Enter' || e.code === 'Escape') { UI.screen = 'play'; } }
   else if (UI.screen === 'stats' && e.code === 'Escape') UI.screen = 'map'; });
-M.listeners.push((type, d) => { if (type === 'win') after(520, () => { UI.win = { t0: now, stars: d.stars, moves: d.moves, par: d.par, rang: [] }; SND.play('win'); }); if (type === 'load' || type === 'restart') UI.win = null; });
+M.listeners.push((type, d) => { if (type === 'win') after(520, () => { UI.win = { t0: now, stars: d.stars, moves: d.moves, par: d.par, rang: [] }; SND.play('win'); }); if (type === 'load' || type === 'restart') UI.win = null; if (type === 'load') UI.fadeT = now; if (type === 'fail' && navigator.vibrate) { try { navigator.vibrate(18); } catch (e) { /* не везде есть */ } } });
 
 // ---------- главный цикл ----------
 let lastT = 0;
@@ -150,12 +152,15 @@ function frame(ts) { requestAnimationFrame(frame); dtMs = Math.min(50, ts - last
   if (UI.screen === 'play' && !M.S.won && !UI.card && document.visibilityState === 'visible') stat(M.idx).ms += dtMs;
   ctx.setTransform(SC * DPR, 0, 0, SC * DPR, 0, 0); UI.btns = [];
   if (UI.screen === 'play') drawPlay(); else if (UI.screen === 'map') drawMap(); else drawStats();
+  if (UI.shownScreen !== UI.screen) { UI.shownScreen = UI.screen; UI.fadeT = now; } const fd = (now - UI.fadeT) / 220; if (fd < 1) { ctx.fillStyle = `rgba(4,5,12,${(1 - fd) * 0.9})`; ctx.fillRect(0, 0, VW, VH); }      // мягкая смена экрана и уровня
   const d = performance.now() - p0; perf.n++; perf.sum += d; if (d > perf.max) perf.max = d; }
 setInterval(persist, 15000); window.addEventListener('pagehide', persist);
 window.addEventListener('resize', resize); window.addEventListener('orientationchange', resize);
 
 // ---------- запуск ----------
 window.FUSE = { CONFIG, LEVELS, WORLDS, load: n => { UI.win = null; UI.card = null; UI.screen = 'play'; return load(n); }, state, legal: legalDirs, step, undo, restart, preview, solve, hint, stats, log, core: C, ui: UI, view: V, perf,
+  cellXY: c => { const r = cv.getBoundingClientRect(); return [r.left + cellX(c) * SC, r.top + cellY(c) * SC]; }, btnXY: id => { const b = UI.btns.find(q => q.id === id), r = cv.getBoundingClientRect(); return b ? [r.left + (b.x + b.w / 2) * SC, r.top + (b.y + b.h / 2) * SC] : null; },
+  reset: () => { save.done = {}; save.stats = {}; save.seenWorld = {}; save.last = 0; save.openAll = false; persist(); },
   light: () => Array.from(V.lightI), settle: () => { flushTimers(); V.failUntil = 0; if (V.shown !== M.S) snap(); for (let i = 0; i < M.L.n; i++) V.lightI[i] = M.S.lit[i]; } };
 const startAt = +qs.get('level') || 0; load(startAt || Math.min(LEVELS.length, (save.last === undefined ? firstUnsolved() : save.last) + 1)); resize(); loadAtlas();
 if (!startAt) { const w = wOf(M.idx); save.seenWorld = save.seenWorld || {}; if (WORLDS[w - 1].card && !save.seenWorld[w] && numInWorld(M.idx) === 1) UI.card = { w, t0: 0 }; }

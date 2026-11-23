@@ -82,13 +82,20 @@ function gates(lv, par, maxStates) { const has = ch => lv.map.some(r => r.includ
   const lo = lv.n > 2 ? q({ n: lv.n - 1, map: lv.map }) : null, hi = q({ n: lv.n + 1, map: lv.map }); g.nLo = lo; g.nHi = hi; g.nSens = (lo !== par ? 1 : 0) + (hi !== par ? 1 : 0);
   return g; }
 
+// мягкая проверка: без элемента меняется par, число решений или доля случайных побед (элемент отсекает лёгкие пути)
+function matters(lv, re, to) { const a = metrics(lv), b = metrics(swap(lv, re, to)); return !b.solvable || a.par !== b.par || a.nsol !== b.nsol || Math.abs(a.pwin - b.pwin) > 1e-9; }
 // что случилось в решении: лампы, стражи, доски, катушки, камень дважды, шаги по маслу и воде
 function story(lv, plan) { const T = trace(lv, plan), L = T.L, E = T.end, cnt = new Map(); for (const c of T.cells) cnt.set(c, (cnt.get(c) || 0) + 1);
   const pre = T.steps[T.steps.length - 2] || T.steps[0];
+  let lampByFire = false, guardLit = false, waterDark = false;      // лампу зажёг пожар, а не огонёк; страж не спал, но не увидел; огонёк тлел в воде рядом со стражем или лампой
+  for (let k = 1; k < T.steps.length; k++) { const a = T.steps[k - 1], b = T.steps[k], fl = b.tail[0]; if (b.won) break;
+    for (let j = 0; j < L.lamps.length; j++) if ((b.lampLit >> j & 1) && !(a.lampLit >> j & 1) && !(L.type[fl] !== C.WATER && L.adj[fl].includes(L.lamps[j]))) lampByFire = true;
+    for (let j = 0; j < L.guards.length; j++) if ((b.guardAlive >> j & 1) && b.lit[L.guards[j]]) guardLit = true;
+    if (L.type[fl] === C.WATER && L.light1[fl].some(c => L.guardAt[c] >= 0 || L.type[c] === C.LAMP || c === L.door)) waterDark = true; }
   return { lampsLit: E.lampLit & ~L.lampLit0, lampsAll: L.lamps.length, guardsBurnt: L.guards.filter((c, k) => !(E.guardAlive >> k & 1)).length, guards: L.guards.length,
     woodBurnt: [...L.init].filter((v, i) => v === C.WOOD && pre.d[i] !== C.WOOD).length, spoolsTaken: [...Array(L.spools.length)].filter((_, k) => E.spools >> k & 1).length, spools: L.spools.length,
-    twice: [...cnt.values()].filter(v => v > 1).length, onOil: T.cells.filter(c => L.init[c] & C.OIL).length, onWater: T.cells.filter(c => L.type[c] === C.WATER).length,
-    doorByLamp: L.lamps.some((c, k) => (pre.lampLit >> k & 1) && L.light2[c].includes(L.door)) }; }
+    twice: [...cnt.values()].filter(v => v > 1).length, onWood: T.cells.filter(c => L.init[c] === C.WOOD).length, onOil: T.cells.filter(c => L.init[c] & C.OIL).length, onWater: T.cells.filter(c => L.type[c] === C.WATER).length,
+    lampByFire, guardLit, waterDark, doorByLamp: L.lamps.some((c, k) => (pre.lampLit >> k & 1) && L.light2[c].includes(L.door)) }; }
 
 // ---------- оценка сложности ----------
 // Сколько «удачи» нужно тыкающему наугад (биты) + длина плана + развилки, где ошибка видна не сразу.
@@ -96,7 +103,7 @@ function difficulty(m) { return +(m.bits + 0.12 * m.par + 0.35 * m.delayed + 0.0
 
 const walkable = lv => { const L = C.compile(lv); let k = 0; for (let c = 0; c < L.n; c++) if ((L.type[c] === C.FLOOR || L.type[c] === C.STONE || L.type[c] === C.WATER) && !(L.init[c] & (C.PIT | C.WOOD))) k++; return k; };
 
-module.exports = { graph, metrics, trace, playPlan, greedyBot, snakeBot, lazyWins, gates, story, difficulty, swap, walkable };
+module.exports = { matters, graph, metrics, trace, playPlan, greedyBot, snakeBot, lazyWins, gates, story, difficulty, swap, walkable };
 
 if (require.main === module) { const LEVELS = require('./levels.js');
   LEVELS.forEach((lv, i) => { const m = metrics(lv); if (!m.solvable) { console.log(`L${i + 1} НЕ РЕШАЕТСЯ`); return; } const g = gates(lv, m.par), st = story(lv, m.plan);

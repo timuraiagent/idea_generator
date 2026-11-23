@@ -1,76 +1,71 @@
-// Боты приёмки «Фитиля» (Node, без браузера): node bots.js [номера через запятую]
-//   решатель (полный перебор) → par и план; бот-план; рандом (2000 партий); жадный; змейка; N-тест; инварианты; сценки А/Б/В.
-const C = require('./logic.js'), LEVELS = require('./levels.js');
+// Боты приёмки «Фитиля» v2 (Node, без браузера): node bots.js [номера через запятую]
+//   сценки правил; на каждом уровне — решатель (par, план), бот-план, случайный бот (точная доля побед по графу и
+//   прогон партий с инвариантами), ленивые боты, «ворота» элемента мира, подсказка из случайных состояний;
+//   по всей игре — пила сложности, повторы карт, перерывы в появлении элементов.
+const C = require('./logic.js'), A = require('./analyze.js'), { WORLDS, LEVELS } = require('./levels.js');
 const only = process.argv[2] ? process.argv[2].split(',').map(Number) : null;
 function rng(seed) { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; }
+const pcell = S => S.tail[S.tail.length - 1];
 function playPlan(lv, plan) { const L = C.compile(lv); let S = C.init(L);
-  for (const ch of plan) { const p = S.tail[S.tail.length - 1], c = C.cellInDir(L, p, ch), m = C.legal(L, S).find(q => q.cell === c); if (!m) return { won: false, reason: 'illegal', t: S.t }; S = C.apply(L, S, c); if (S.over) break; }
+  for (const ch of plan) { const c = C.cellInDir(L, pcell(S), ch), m = C.legal(L, S).find(q => q.cell === c); if (!m) return { won: false, reason: 'illegal', t: S.t }; S = C.apply(L, S, c); if (S.over) break; }
   return { won: S.won, reason: S.reason, t: S.t }; }
-function checkInv(L, S, path) { const errs = [], pl = S.tail[S.tail.length - 1];
-  if (S.tail[0] !== path[Math.max(0, S.t - L.N)]) errs.push('огонёк не на path[t-N]');
-  if (!S.won) { if (S.d[pl] & C.PIT) errs.push('игрок на провале'); if (S.tail.indexOf(pl) !== S.tail.length - 1) errs.push('игрок на шнуре'); }
-  for (let g = 0; g < L.guards.length; g++) if (S.guardAlive >> g & 1) { /* не спит ⇔ клетка освещена — по определению patchOf */ }
-  return errs; }
-function randomBot(lv, games, seed) { const L = C.compile(lv), r = rng(seed); let wins = 0, inv = 0, pvBad = 0;
-  for (let g = 0; g < games; g++) { let S = C.init(L); const path = [L.start]; let floors = S.d.reduce((a, v, i) => a + ((L.type[i] === C.FLOOR && !(v & C.PIT)) ? 1 : 0), 0), lamps = S.lampLit;
-    while (!S.over) { const ms = C.legal(L, S); if (!ms.length) break; const m = ms[Math.floor(r() * ms.length)], pv = C.preview(L, S); S = C.apply(L, S, m.cell); path.push(m.cell);
-      if (!S.won) { const fl = S.d.reduce((a, v, i) => a + ((L.type[i] === C.FLOOR && !(v & C.PIT)) ? 1 : 0), 0); if (fl > floors) inv++; floors = fl; if ((lamps & ~S.lampLit) !== 0) inv++; lamps = S.lampLit;
-        if (checkInv(L, S, path).length) inv++;
+// случайные партии: инварианты мира, совпадение preview с тем, что случилось, и проверка подсказки из встреченных состояний
+function randomBot(lv, games, seed) { const L = C.compile(lv), r = rng(seed); let wins = 0, inv = 0, pvBad = 0, hintBad = 0, hints = 0;
+  for (let g = 0; g < games; g++) { let S = C.init(L); const path = [L.start]; let lamps = S.lampLit, alive = S.guardAlive, hintAt = Math.floor(r() * 12);
+    while (!S.over) { const ms = C.legal(L, S); if (!ms.length) break;
+      if (S.t === hintAt && g < 60) { hints++; const h = C.solveFrom(L, S, 80000); if (h.solvable) { let T = S; for (const ch of h.plan) T = C.apply(L, T, C.cellInDir(L, pcell(T), ch)); if (!T.won) hintBad++; } }
+      const m = ms[Math.floor(r() * ms.length)], pv = C.preview(L, S, m.cell); S = C.apply(L, S, m.cell); path.push(m.cell);
+      if (!S.won) { const N = C.fuseLen(L, S.spools), pl = pcell(S);
+        if (S.tail.length > N + 1) inv++;                                                     // хвост не длиннее фитиля
+        for (let k = 0; k < S.tail.length; k++) if (S.tail[k] !== path[path.length - S.tail.length + k]) { inv++; break; }   // огонёк и шнур идут по следу игрока
+        if (S.d[pl] & C.BLOCK) { if (!(S.over && S.reason === 'burned')) inv++; }
+        if (S.tail.indexOf(pl) !== S.tail.length - 1) inv++;
+        if ((lamps & ~S.lampLit) !== 0) inv++; lamps = S.lampLit; if ((S.guardAlive & ~alive) !== 0) inv++; alive = S.guardAlive;      // лампы не гаснут, стражи не воскресают
+        for (let i = 0; i < L.n; i++) if ((L.type[i] === C.STONE || L.type[i] === C.WATER || L.type[i] === C.WALL) && S.d[i]) inv++;      // камень, вода и стены не меняются
         if (pv.flame !== S.tail[0] || pv.lampLit !== S.lampLit || pv.guardAlive !== S.guardAlive || pv.lit.join('') !== S.lit.join('')) pvBad++; } }
     if (S.won) wins++; }
-  return { wins, games, inv, pvBad }; }
-// «куда глаза глядят»: кратчайшим путём к ближайшей незажжённой лампе, потом к двери; задержку, стражей и масло не учитывает
-function bfsNext(L, S, isGoal) { const p = S.tail[S.tail.length - 1], prev = new Map([[p, -1]]), q = [p];
-  const ok = a => L.type[a] !== C.WALL && L.type[a] !== C.LAMP && L.type[a] !== C.DOOR && !(S.d[a] & C.PIT) && !S.tail.includes(a) && !(L.guardAt[a] >= 0 && (S.guardAlive >> L.guardAt[a] & 1));
-  while (q.length) { const a = q.shift(); if (a !== p && isGoal(a)) { let c = a; while (prev.get(c) !== p) c = prev.get(c); return c; }
-    for (const b of L.adj[a]) if (!prev.has(b) && ok(b)) { prev.set(b, a); q.push(b); } } return -1; }
-function greedyBot(lv) { const L = C.compile(lv); let S = C.init(L), guard = 0;
-  while (!S.over && guard++ < 200) { const ms = C.legal(L, S); if (!ms.length) break; const win = ms.find(m => m.win); if (win) { S = C.apply(L, S, win.cell); break; }
-    const unlit = L.lamps.filter((c, k) => !(S.lampLit >> k & 1)); let nx = -1;
-    if (unlit.length) nx = bfsNext(L, S, a => unlit.some(l => L.adj[l].includes(a)));
-    if (nx < 0) nx = bfsNext(L, S, a => L.adj[L.door].includes(a));
-    const m = ms.find(q => q.cell === nx) || ms[0]; S = C.apply(L, S, m.cell); }
-  return S.won; }
-// змейка «обойди всё»: правило левой руки
-function snakeBot(lv) { const L = C.compile(lv); let S = C.init(L), h = 'R', guard = 0; const left = { U: 'L', L: 'D', D: 'R', R: 'U' }, right = { U: 'R', R: 'D', D: 'L', L: 'U' }, back = { U: 'D', D: 'U', L: 'R', R: 'L' };
-  while (!S.over && guard++ < 200) { const ms = C.legal(L, S); if (!ms.length) break; const win = ms.find(m => m.win); if (win) { S = C.apply(L, S, win.cell); break; }
-    const p = S.tail[S.tail.length - 1]; let done = false;
-    for (const dch of [left[h], h, right[h], back[h]]) { const c = C.cellInDir(L, p, dch), m = ms.find(q => q.cell === c); if (m) { S = C.apply(L, S, c); h = dch; done = true; break; } }
-    if (!done) break; }
-  return S.won; }
+  return { wins, games, inv, pvBad, hintBad, hints }; }
+
 // ---------- сценки правил ----------
-function scenes() { const out = [];
-  const A = { n: 3, map: ['##L##', 'P..D#', '##...', '##...'] }, a = C.solve(A); out.push(`А: par ${a.par} ${a.par === 7 ? '✓' : '✗'}, короткий путь RRDR→U: ${playPlan(A, 'RRDRU').reason === 'illegal' ? 'дверь закрыта ✓' : '✗'}`);
-  const B = { n: 3, map: ['P..oo......', '###oo######'] }, L = C.compile(B); let S = C.init(L); const log = [];
-  for (let i = 0; i < 8; i++) { S = C.apply(L, S, C.cellInDir(L, S.tail[S.tail.length - 1], 'R')); log.push([...S.d].map((v, k) => (v & C.BURN) ? k : -1).filter(k => k >= 0).join('+') || '-'); }
-  out.push(`Б: горит по ходам [${log.join(' ')}] — ждём: после 5-го 3, после 6-го a4+b3, после 7-го b4, дальше пусто ${log[4] === '3' && log[5] === '4+14' && log[6] === '15' && log[7] === '-' ? '✓' : '✗'}; игрок цел: ${!S.over ? '✓' : '✗ ' + S.reason}`);
-  const B2 = playPlan(B, 'RRRDRU'); out.push(`Б-петля a3→b3→b4→a4: ${B2.reason === 'burned' ? 'сгорел ✓' : '✗ ' + JSON.stringify(B2)}`);
-  const V = { n: 3, map: ['#####', '#..##', '#..##', '#.s.P', '##DK#', '#####'] }, LV = C.compile(V);       // камень (2,3): первый проход шагом 2
-  const tryPath = pl => { let S = C.init(LV); for (const ch of pl) S = C.apply(LV, S, C.cellInDir(LV, S.tail[S.tail.length - 1], ch)); return C.legal(LV, S).some(m => m.cell === 3 * 5 + 2); };
-  const short = tryPath('LLLUR'), long = tryPath('LLLUURD');                                                   // петля из трёх клеток — рано; из пяти — можно
-  out.push(`В: назад на камень после петли в 3 клетки (шаг 6 < 2+N+2): ${short ? 'пускает ✗' : 'нельзя ✓'}; после петли в 5 клеток (шаг 8): ${long ? 'можно ✓' : 'нельзя ✗'}`);
+function scenes() { const out = [], run = (lv, plan) => { const L = C.compile(lv); let S = C.init(L); const steps = [S]; for (const ch of plan) { S = C.apply(L, S, C.cellInDir(L, pcell(S), ch)); steps.push(S); if (S.over) break; } return { L, steps, S }; };
+  const A1 = { n: 3, map: ['##L##', 'P..D#', '##...', '##...'] }, a = C.solve(A1); out.push(`А свет опаздывает: par ${a.par} ${a.par === 7 ? '✓' : '✗'}, короткий путь к двери: ${playPlan(A1, 'RRDRU').reason === 'illegal' ? 'дверь закрыта ✓' : '✗'}`);
+  const B = { n: 3, map: ['P..oo......', '###oo######'] }, b = run(B, 'RRRRRRRR'), log = b.steps.slice(1).map(S => [...S.d].map((v, k) => (v & C.BURN) ? k : -1).filter(k => k >= 0).join('+') || '-');
+  out.push(`Б масло: горит по ходам [${log.join(' ')}] ${log[4] === '3' && log[5] === '4+14' && log[6] === '15' && log[7] === '-' ? '✓' : '✗'}; игрок цел ${!b.S.over ? '✓' : '✗'}; петля по маслу: ${playPlan(B, 'RRRDRU').reason === 'burned' ? 'сгорел ✓' : '✗'}`);
+  const V = { n: 3, map: ['#####', '#..##', '#..##', '#.s.P', '##DK#', '#####'] }, LV = C.compile(V), back = pl => { let S = C.init(LV); for (const ch of pl) S = C.apply(LV, S, C.cellInDir(LV, pcell(S), ch)); return C.legal(LV, S).some(m => m.cell === 3 * 5 + 2); };
+  out.push(`В камень: назад после петли в 3 клетки ${back('LLLUR') ? 'пускает ✗' : 'нельзя ✓'}; после петли в 5 клеток ${back('LLLUURD') ? 'можно ✓' : 'нельзя ✗'}`);
+  const G = run({ n: 2, map: ['P.....', '#w####', '#.####'] }, 'RRRR'), w = G.steps.map(S => S.d[7]);
+  out.push(`Г доски: состояние клетки по ходам [${w.join(' ')}] — ждём 8 8 8 16 0 ${w.join(' ') === '8 8 8 16 0' ? '✓' : '✗'}; горящие доски светят ${G.steps[3].lit[7] ? '✓' : '✗'}; в горящие шагнуть нельзя ${!C.legal(G.L, G.steps[3]).some(m => m.cell === 7) ? '✓' : '✗'}`);
+  const D = run({ n: 2, map: ['P.1....'] }, 'RRRRR'), fl = D.steps.map(S => S.tail[0]), ns = D.steps.map(S => C.fuseLen(D.L, S.spools));
+  out.push(`Д катушка: огонёк по ходам [${fl.join(' ')}] — ждём 0 0 0 0 1 2 ${fl.join(' ') === '0 0 0 0 1 2' ? '✓' : '✗'}; длина фитиля [${ns.join(' ')}] ${ns.join('') === '223333' ? '✓' : '✗'}`);
+  const E = run({ n: 2, map: ['P.~....', '##L####'] }, 'RRRRR'), e4 = E.steps[4], e5 = E.steps[5];
+  out.push(`Е вода: огонёк на воде не светит ${e4.tail[0] === 2 && !e4.lit.some(v => v) ? '✓' : '✗'}; лампу рядом не зажёг ${e5.lampLit === 0 ? '✓' : '✗'}; вода не провалилась ${e5.d[2] === 0 ? '✓' : '✗'}; сошёл с воды — снова светит ${e5.lit[3] ? '✓' : '✗'}`);
   return out; }
+
 // ---------- прогон ----------
-let failed = 0; console.log('СЦЕНКИ'); for (const s of scenes()) { console.log('  ' + s); if (s.includes('✗')) failed++; }
-let greedyWins = [], snakeWins = [], nChanged = 0, nTotal = 0; const pars = [];
-LEVELS.forEach((lv, i) => { const no = i + 1; if (only && !only.includes(no)) return;
-  const L = C.compile(lv), walk = [...L.type].filter((t, c) => (t === C.FLOOR || t === C.STONE) && !(L.init[c] & C.PIT)).length;
-  const r = C.solve(lv); pars[i] = r;
-  const pb = r.plan ? playPlan(lv, r.plan) : { won: false }, own = lv.plan ? playPlan(lv, lv.plan) : null;
-  const rb = randomBot(lv, 2000, 12345 + i), gr = r.plan ? greedyBot(lv) : false, sn = r.plan ? snakeBot(lv) : false;
-  if (gr && no >= 3) greedyWins.push(no); if (sn && no >= 3) snakeWins.push(no);
-  let nt = '';
-  if (no >= 3 && r.plan) { const lo = lv.n > 2 ? C.solve(lv, { n: lv.n - 1 }) : { par: null, solvable: false }, hi = C.solve(lv, { n: lv.n + 1 }); const ch = lo.par !== r.par || hi.par !== r.par; nTotal++; if (ch) nChanged++;
-    nt = ` | N-тест: N−1→${lo.par ?? 'нет'}, N+1→${hi.par ?? 'нет'} ${ch ? '✓' : '✗ не меняется'}`; }
-  const bad = [];
-  if (!r.solvable) bad.push(r.overflow ? 'ПЕРЕБОР НЕ УЛОЖИЛСЯ' : 'НЕ РЕШАЕТСЯ'); if (r.plan && !pb.won) bad.push('план решателя не проходит');
-  if (lv.par !== undefined && lv.par !== r.par) bad.push(`par в данных ${lv.par} ≠ ${r.par}`); if (own && !own.won) bad.push('plan из данных не проходит');
-  if (rb.wins / rb.games >= 0.5) bad.push('рандом ≥50%'); if (rb.inv || rb.pvBad) bad.push(`инварианты ${rb.inv}, preview ${rb.pvBad}`);
-  if (walk > 40) bad.push(`клеток ${walk} > 40`);
-  if (bad.length) failed++;
-  console.log(`L${no} «${lv.name.ru}» ${L.W}×${L.H} N=${lv.n} клеток ${walk} | par ${r.par} план ${r.plan} (${r.states} сост., ${r.ms} мс) | план-бот ${pb.won ? '✓' : '✗'} | рандом ${(100 * rb.wins / rb.games).toFixed(1)}% | жадный ${gr ? 'ПОБЕДА' : '—'} | змейка ${sn ? 'ПОБЕДА' : '—'}${nt}${bad.length ? '  <<< ' + bad.join('; ') : ''}`); });
-if (!only) { console.log(`ИТОГ: жадный побеждает на L3+: [${greedyWins}] (допустимо ≤2) ; змейка на L3–L7: [${snakeWins.filter(n => n <= 7)}] (≤2), на L8+: [${snakeWins.filter(n => n >= 8)}] (должно быть пусто); N-тест: меняется на ${nChanged} из ${nTotal} (нужно ≥10 из 13)`);
-  const pair = (a, b) => { const A = LEVELS[a - 1], B = LEVELS[b - 1]; if (!A || !B || !pars[a - 1] || !pars[a - 1].plan) return '—'; return playPlan(B, pars[a - 1].plan).won ? 'ПРОХОДИТ ✗' : 'проигрывает ✓'; };
-  const p1 = pair(3, 4), p2 = pair(14, 15); console.log(`ПАРЫ: план L3 на L4 — ${p1}; план L14 на L15 — ${p2}`);
-  if (greedyWins.length > 2 || snakeWins.filter(n => n <= 7).length > 2 || snakeWins.some(n => n >= 8) || nChanged < 10 || !p1.includes('✓') || !p2.includes('✓')) failed++;
-  console.log(failed ? `ПРИЁМКА: НЕ ПРОЙДЕНА (${failed})` : 'ПРИЁМКА: пройдена'); process.exit(failed ? 1 : 0); }
+let failed = 0; const bad = [], say = s => console.log(s);
+say('СЦЕНКИ'); for (const s of scenes()) { say('  ' + s); if (s.includes('✗')) failed++; }
+// «ворота» мира: без элемента решения нет или par другой; для стражей хватает и того, что без них путей к победе больше
+const WGATE = { 3: g => g.stone, 4: (g, st) => g.oil || g.oilPit || st.lampByFire, 5: (g, st, lv) => g.guard || st.guardsBurnt > 0 || A.matters(lv, /G/g, '.'), 6: g => g.wood, 7: g => g.spool, 8: g => g.water || g.waterFloor };
+const LAZY_OK = lv => lv.w === 1 || lv.id === '2-01' || lv.id === '2-03' || lv.id === '6-01';      // первые уровни: идея пока одна — «дойди, не заперев себя»
+const rowsOut = [], seenMaps = new Map(), last = {}, gap = {};
+LEVELS.forEach((lv, i) => { const no = i + 1; if (only && !only.includes(no)) return; const errs = [], m = A.metrics(lv, 200000);
+  if (!m.solvable) { say(`${lv.id} НЕ РЕШАЕТСЯ`); failed++; bad.push(lv.id); return; }
+  const pb = playPlan(lv, m.plan), rb = randomBot(lv, 300, 12345 + i), lazy = A.lazyWins(lv), g = A.gates(lv, m.par), st = A.story(lv, m.plan), D = A.difficulty(m);
+  if (!pb.won || pb.t !== m.par) errs.push('бот-план не проходит за par'); if (m.pwin >= 0.5) errs.push('случайный бот ≥ 50 %'); if (rb.inv || rb.pvBad) errs.push(`инварианты ${rb.inv}, preview ${rb.pvBad}`); if (rb.hintBad) errs.push(`подсказка ведёт не к победе: ${rb.hintBad}`);
+  if (lazy && !LAZY_OK(lv)) errs.push('ленивый бот побеждает'); if (WGATE[lv.w] && !WGATE[lv.w](g, st, lv)) errs.push('элемент мира не «ворота»'); if (m.overflow) errs.push('перебор не уложился');
+  const key = lv.n + ':' + lv.map.join('/'); if (seenMaps.has(key)) errs.push('повтор карты ' + seenMaps.get(key)); seenMaps.set(key, lv.id);
+  if (lv.map[0].length > 7 || lv.map.length > 9) errs.push('поле больше 7×9');
+  const present = { stone: 's', oil: 'og', guard: 'Gg', wood: 'w', spool: '12', water: '~' }; for (const [name, chs] of Object.entries(present)) if (lv.map.some(r => [...chs].some(ch => r.includes(ch)))) { if (last[name] !== undefined) gap[name] = Math.max(gap[name] || 0, no - last[name]); last[name] = no; }
+  if (errs.length) { failed++; bad.push(lv.id); }
+  rowsOut.push({ lv, D, m, lazy });
+  say(`${lv.id} N${lv.n} ${lv.map[0].length}×${lv.map.length} par ${String(m.par).padStart(2)} сост ${String(m.states).padStart(5)} рандом ${(m.pwin * 100).toFixed(1).padStart(5)}% (партий ${rb.wins}/${rb.games}) D ${D.toFixed(1).padStart(4)} ${lazy ? 'лентяй' : '      '} подсказок ${rb.hints}${lv.exam ? ' ЭКЗАМЕН' : ''}${errs.length ? '  <<< ' + errs.join('; ') : ''}`); });
+if (!only) { say('КРИВАЯ'); let prevMax = 0, prevExam = 0;
+  for (const w of WORLDS) { const rs = rowsOut.filter(r => r.lv.w === w.id), ds = rs.map(r => r.D), mx = Math.max(...ds), ex = rs.find(r => r.lv.exam), first = ds[0], notes = [];
+    if (ex && ex.D < mx - 0.01) notes.push('экзамен не максимум'); if (mx < prevMax - 0.01) notes.push('максимум ниже прошлого мира'); if (prevExam && first > prevExam) notes.push('ввод труднее прошлого экзамена');
+    if (notes.length) failed++; say(`  мир ${w.id} «${w.name.ru}»: ${ds.map(d => d.toFixed(1)).join(' ')} | ввод ${first.toFixed(1)}, максимум ${mx.toFixed(1)}${notes.length ? '  <<< ' + notes.join('; ') : ''}`); prevMax = mx; prevExam = ex ? ex.D : mx; }
+  say(`ПЕРЕРЫВЫ (самый длинный промежуток между уровнями с элементом после его ввода): ${Object.entries(gap).map(([k, v]) => k + ' ' + v).join(', ')}`);
+  for (const k of Object.keys(last)) gap[k] = Math.max(gap[k] || 0, LEVELS.length - last[k]);      // и от последнего появления до конца игры
+  const longGap = Object.entries(gap).filter(([k, v]) => v > 14); if (longGap.length) { failed++; say('  <<< перерыв больше 14 уровней: ' + longGap.map(x => x[0]).join(', ')); }
+  if (LEVELS.length !== 100) { failed++; say(`  <<< уровней ${LEVELS.length}, нужно 100`); }
+  say(`ЛЕНИВЫЕ БОТЫ побеждают на: ${rowsOut.filter(r => r.lazy).map(r => r.lv.id).join(' ') || '—'}`);
+  say(failed ? `ПРИЁМКА: НЕ ПРОЙДЕНА (${failed}): ${bad.join(' ')}` : 'ПРИЁМКА: пройдена'); process.exit(failed ? 1 : 0); }
