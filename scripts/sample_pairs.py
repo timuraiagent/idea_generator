@@ -86,7 +86,9 @@ DIM_SHORT = ("очк", "ечк", "ньк", "еньк", "онк", "анк", "уш
 
 def _is_diminutive(lemma):
     n = len(lemma)
-    if lemma.endswith(("ик", "ец", "ушка", "юшка", "очка", "ечка",
+    if lemma.endswith("ик") and n >= 5:
+        return True
+    if lemma.endswith(("ец", "ушка", "юшка", "очка", "ечка",
                        "ичко", "ишок", "ечок", "ачок",
                        "лька", "тка", "цка", "ечка")) and n >= 4:
         return True
