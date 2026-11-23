@@ -50,7 +50,7 @@ SCORES = {
     "choke": 16, "gnoinik": 16, "ether": 15, "likho": 16, "zazhigala": 16, "measureback": 16, "limp": 16, "otkat": 15,
     "otsev": 15, "nosilshchik": 16, "sinfurnace": 16, "osada": 16, "dissolve-mine": 15, "otbiv": 15, "venets": 15,
     "proglot": 15, "mera": 15, "peregib": 15, "dissolve-veteran": 15, "usmirenie": 15, "snos": 15, "sgon": 15,
-    "mahovye": 15, "rosa": 15,
+    "mahovye": 15, "rosa": 15, "ugol": 15,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
