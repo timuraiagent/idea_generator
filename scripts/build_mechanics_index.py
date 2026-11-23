@@ -39,6 +39,7 @@ SCORES = {
     "burden-count": 16, "haulaway": 15,
     "notice-period": 15, "equipdark": 15, "longbox": 15, "subordination": 15, "seance": 16,
     "townclock": 15, "rehouse": 15, "stake-steppe": 15, "puntout": 15, "hushmark": 16,
+    "densify": 15,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
