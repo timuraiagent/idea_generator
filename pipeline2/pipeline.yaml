@@ -1,0 +1,217 @@
+# pipeline2 — декларация: этапы, исполнители, входы и выходы, гейты, статусы.
+# Источник истины по СТРУКТУРЕ. Числа и пороги — только в config.yaml (здесь на них ссылки вида cfg:ключ).
+# Подробности каждого этапа — в stages/<файл>. Если описание этапа расходится с этим файлом, верен этот файл.
+
+version: 2
+entry: README.md
+
+# ---------------------------------------------------------------- где что лежит
+paths:
+  mechanic_dir:    "mechanics/{slug}"                      # slug: латиница, строчные, дефис
+  sketch:          "mechanics/{slug}/sketch.md"            # эскиз-карточка (этап 2)
+  skeleton:        "mechanics/{slug}/skeleton.js"          # логика без экрана (этап 3)
+  skeleton_report: "mechanics/{slug}/skeleton.json"        # числа ботов (этап 3, пишет инструмент)
+  probes_public:   "mechanics/{slug}/probes.md"            # вопросы судье понятности (этап 4, пишет инструмент)
+  probes_key:      "mechanics/{slug}/probes.key.json"      # ответы на них; судьям не показывать
+  frame:           "mechanics/{slug}/frame.json"           # каркас из пяти полей (этап 4)
+  verdict:         "mechanics/{slug}/verdict.json"         # статус, история, оценки (все этапы)
+  spec:            "mechanics/{slug}/spec.md"              # спека (этап 6)
+  reference:       "mechanics/{slug}/reference.html"       # визреференс (этап 7)
+  prototype:       "prototypes/{slug}/index.html"          # прототип (этап 7)
+  waves:           "pipeline2/state/waves/w{nnn}.json"     # волны пар (этапы 0–1)
+  library_map:     "pipeline2/state/library_map.json"      # каркасы всей библиотеки
+  queue:           "pipeline2/state/queue.json"            # очередь на прототип
+  queue_view:      "pipeline2/state/queue.md"              # она же для чтения человеком
+  outcomes:        "pipeline2/state/outcomes.md"           # исходы прототипов и плейтестов
+  calibration:     "pipeline2/state/calibration-{date}.md" # отчёты калибровки
+  tools_dir:       "pipeline2/tools"                       # инструменты (собираются на этапе bootstrap)
+
+# ---------------------------------------------------------------- статусы механики
+# Статус хранится в verdict.json (поле status) вместе с историей переходов. Другого места для статуса нет.
+statuses:
+  sketched:         "есть эскиз-карточка, скелета ещё нет"
+  skeleton_return:  "скелет не прошёл гейты один раз; идёт единственная правка"
+  skeleton_ok:      "скелет и боты пройдены"
+  parked:           "отложена: проверка слишком дорога (не пошаговая, не уложилась в размер скелета)"
+  check_return:     "слепая проверка вернула автору один раз"
+  checked:          "слепые проверки пройдены, балл очереди посчитан"
+  queued:           "в очереди на прототип"
+  library:          "прошла проверки, но в очередь не попала"
+  displaced:        "была в очереди и вытеснена"
+  spec:             "спека написана"
+  reference:        "визреференс и ассеты готовы"
+  prototype:        "прототип собран, приёмка ботами пройдена"
+  awaiting_playtest: "ждёт плейтеста людьми"
+  playable:         "плейтест пройден"
+  rework:           "плейтест не пройден один раз; идёт переделка правила"
+  withdrawn:        "снята после плейтеста или приёмки"
+  rejected:         "отказ на гейте; причина — в verdict.json"
+
+terminal_statuses: [playable, withdrawn, rejected, parked, library, displaced]
+# library, displaced и parked могут вернуться в работу только по слову пользователя или при пересчёте очереди.
+
+# ---------------------------------------------------------------- этапы
+stages:
+
+  - id: bootstrap
+    title: "Сборка инструментов (один раз)"
+    doc: tools.md
+    executor: lead
+    when: "если в pipeline2/tools нет инструментов или их приёмка не пройдена"
+    output: ["pipeline2/tools/*", "pipeline2/state/library_map.json"]
+    done_when: "все приёмочные проверки из tools.md пройдены и записаны в pipeline2/state/bootstrap.md"
+
+  - id: sample
+    n: 0
+    title: "Сэмплер с квотами"
+    doc: stages/0-sample.md
+    executor: "tool:wave"
+    precondition: "очередь не полна — см. cfg:queue.stop_sampling_at"
+    input: [".data/nlpl_model/model.txt", "MECHANICS.md (занятые слова)", paths.library_map]
+    output: [paths.waves]
+    gates:
+      - {id: pair_distance,   rule: "№1 близость",           cfg: sample.max_sim,       on_fail: drop_pair}
+      - {id: stop_list,       rule: "№2 стоп-лист глаголов", cfg: sample.stop_prefixes, on_fail: drop_pair}
+      - {id: embargo,         rule: "занятые слова",          on_fail: drop_pair}
+      - {id: archetype_quota, rule: "квота на архетип",       cfg: sample.arch_quota,    on_fail: drop_pair}
+      - {id: noun_freshness,  rule: "свежесть существительного", cfg: sample.noun_fresh_max_per_wave, on_fail: drop_pair}
+
+  - id: pair_gates
+    n: 1
+    title: "Гейты пары"
+    doc: stages/1-pair-gates.md
+    executor: "subagent:briefs/pair-gates.md"
+    input: [paths.waves]
+    output: ["решение и причина по каждой паре — в файле волны"]
+    gates:
+      - {id: gap,       rule: "№3 разрыв",        on_fail: reject_pair}
+      - {id: hand_law,  rule: "№5 рука и закон",  on_fail: reject_pair}
+      - {id: two_laws,  rule: "№6 два закона",    on_fail: reject_pair}
+      - {id: formula,   rule: "№7 формула",       on_fail: reject_pair}
+      - {id: archetype, rule: "№8 архетип по формуле", cfg: pair.good_archetypes, on_fail: reject_pair}
+    notes: "№4 «мост» записывается пометкой 0–2, в балл не идёт"
+
+  - id: sketch
+    n: 2
+    title: "Эскиз-карточка"
+    doc: stages/2-sketch.md
+    executor: "subagent:briefs/sketch-author.md"
+    input: ["запись выжившей пары из файла волны", paths.library_map]
+    output: [paths.sketch, paths.verdict]
+    sets_status: sketched
+    limits: {cfg: sketch.max_lines}
+
+  - id: skeleton
+    n: 3
+    title: "Скелет и боты"
+    doc: stages/3-skeleton-bots.md
+    executor: ["subagent:briefs/skeleton-builder.md", "tool:skeleton_check"]
+    input: [paths.sketch, templates/skeleton.js]
+    output: [paths.skeleton, paths.skeleton_report]
+    gates:
+      - {id: solvable,        cfg: bots.levels,                 on_fail: return_once}
+      - {id: random_bot,      cfg: bots.random_max,             on_fail: return_once}
+      - {id: lazy_bots,       cfg: bots.lazy_strategies,        on_fail: return_once}
+      - {id: attentive_bot,   cfg: bots.attentive_all_max,      on_fail: return_once}
+      - {id: param_sensitive, cfg: bots.param_min_sensitive_levels, on_fail: return_once}
+      - {id: state_space,     cfg: [bots.states_min, bots.states_cap], on_fail: return_once}
+      - {id: distinct_plans,  rule: "план одного уровня не проходит другой", on_fail: return_once}
+      - {id: fits_contract,   cfg: skeleton.max_lines,          on_fail: park}
+    on_pass: skeleton_ok
+    on_return: skeleton_return       # одна правка; второй провал любого гейта — rejected
+    on_park: parked
+
+  - id: blind_checks
+    n: 4
+    title: "Слепые проверки"
+    doc: stages/4-blind-checks.md
+    executor:
+      - "tool:skeleton_probe"
+      - "subagent:briefs/judge-clarity.md (два независимых)"
+      - "subagent:briefs/judge-audience.md"
+      - "subagent:briefs/judge-score.md"
+      - "subagent:briefs/judge-novelty.md"
+      - "subagent:briefs/frame-extractor.md"
+      - "tool:library_map"
+    input: [paths.sketch, paths.skeleton_report, paths.probes_public, paths.library_map]
+    output: [paths.probes_public, paths.probes_key, paths.frame, paths.verdict]
+    gates:
+      - {id: clarity,        cfg: clarity.min_correct_predictions, on_fail: return_once}
+      - {id: audience,       cfg: audience.min_yes,                on_fail: library_seed}
+      - {id: two_sided,      rule: "№10 двусторонний спрос",       on_fail: return_once}
+      - {id: depth,          cfg: depth.min_gate_elements,         on_fail: return_once}
+      - {id: novelty_web,    rule: "№16 прямой аналог найден",     on_fail: reject}
+      - {id: novelty_library, cfg: library.cell_max,               on_fail: must_displace}
+    on_pass: checked
+    on_return: check_return          # одна правка на весь этап; второй провал — rejected
+    score: {cfg: score}
+
+  - id: queue
+    n: 5
+    title: "Очередь"
+    doc: stages/5-queue.md
+    executor: "tool:build_queue"
+    input: ["все mechanics/*/verdict.json"]
+    output: [paths.queue, paths.queue_view]
+    rules: {cfg: queue}
+    sets_status: [queued, library, displaced]
+
+  - id: spec
+    n: 6
+    title: "Спека"
+    doc: stages/6-spec.md
+    executor: "subagent:briefs/spec-author.md"
+    precondition: "статус queued"
+    input: [paths.sketch, paths.skeleton, paths.skeleton_report, paths.verdict, templates/spec.md]
+    output: [paths.spec]
+    limits: {cfg: spec.max_lines}
+    sets_status: spec
+
+  - id: prototype
+    n: 7
+    title: "Визреференс, прототип, плейтест"
+    doc: stages/7-prototype-playtest.md
+    executor: ["Codex (визреференс и ассеты)", "Claude (прототип)", "human (плейтест)"]
+    precondition: "статус spec; порядок — по cfg:queue.build_order"
+    input: [paths.spec, paths.skeleton, paths.skeleton_report]
+    output: [paths.reference, paths.prototype, paths.outcomes]
+    gates:
+      - {id: bot_acceptance, rule: "критерии приёмки из спеки", on_fail: fix_or_withdraw}
+      - {id: playtest,       cfg: playtest,                     on_fail: rework_once}
+    sets_status: [reference, prototype, awaiting_playtest, playable, rework, withdrawn]
+
+  - id: calibration
+    n: 8
+    title: "Калибровка"
+    doc: stages/8-calibration.md
+    executor: lead
+    when: {cfg: calibration.every_outcomes}
+    input: [paths.outcomes, "все verdict.json"]
+    output: [paths.calibration]
+    rule: "config.yaml меняется только после слова пользователя"
+
+# ---------------------------------------------------------------- что делать при провале гейта
+on_fail_actions:
+  drop_pair:      "пара не попадает в волну; причина — в файле волны"
+  reject_pair:    "пара отклонена; причина одной строкой — в файле волны"
+  return_once:    "единственный возврат автору или сборщику; повторный провал того же этапа — rejected"
+  park:           "статус parked с причиной; в очередь не идёт"
+  reject:         "статус rejected с причиной"
+  library_seed:   "статус library с пометкой «семя»: идея сохраняется, в очередь не идёт"
+  must_displace:  "входит, только если её балл выше слабейшей в той же ячейке каркаса; иначе library"
+  fix_or_withdraw: "сборщик чинит прототип; если приёмка не проходит из-за правил — withdrawn"
+  rework_once:    "одна переделка правила и повторный плейтест; второй провал — withdrawn"
+
+# ---------------------------------------------------------------- порядок работы ведущего
+# Тянуть справа: сначала доделывается то, что ближе к игре. Новые волны — в последнюю очередь.
+pull_order: [calibration, prototype, spec, queue, blind_checks, skeleton, sketch, pair_gates, sample]
+
+# ---------------------------------------------------------------- неизменяемые правила
+invariants:
+  - "Автор эскиза не судит свою механику. Судья ничего не чинит и не пишет в файлы механики."
+  - "Числа в verdict.json и в спеке берутся только из файлов, написанных инструментами."
+  - "На каждом этапе один возврат. Счёт возвратов ведётся в verdict.json."
+  - "Балл очереди считается по сырому эскизу: до правок и без подсказок автору, как его поднять."
+  - "config.yaml и этот файл меняет пользователь или ведущий по его слову."
+  - "Push — только когда пользователь просит (AGENTS.md)."
+  - "Игровые решения сверяются с конспектами ~/books; в записях называется источник."
