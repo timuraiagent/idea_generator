@@ -46,7 +46,7 @@ SCORES = {
     "haze-repeat": 15, "radiant-crown": 15, "dive-threat": 16, "shadowcast": 16, "mournwatch": 15,
     "sublaw": 16, "reface": 16, "privyaz": 16, "cursebearer": 16, "stalelaw": 16, "spur": 15,
     "edict-reign": 15, "foundling": 15, "pokrov": 16, "contactka": 16, "lattice": 16, "pinch": 16, "suture": 16,
-    "steep": 15, "unglue": 16,
+    "steep": 15, "unglue": 16, "prosvet": 16,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
