@@ -6,7 +6,7 @@ function btn(x, y, w, h, fn, id) { UI.btns.push({ x, y, w, h, fn, id }); return 
 
 // ---------- значки (кодом) ----------
 const ICON = {
-  undo(x, y, r) { ctx.beginPath(); ctx.moveTo(x + r * 0.5, y); ctx.lineTo(x - r * 0.44, y); ctx.moveTo(x - r * 0.06, y - r * 0.4); ctx.lineTo(x - r * 0.48, y); ctx.lineTo(x - r * 0.06, y + r * 0.4); ctx.stroke(); },      // отмена — прямая стрелка назад, «заново» — круговая: не спутать
+  undo(x, y, r) { ctx.beginPath(); ctx.moveTo(x + r * 0.46, y + r * 0.38); ctx.quadraticCurveTo(x + r * 0.5, y - r * 0.22, x - r * 0.38, y - r * 0.2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(x - r * 0.12, y - r * 0.48); ctx.lineTo(x - r * 0.42, y - r * 0.2); ctx.lineTo(x - r * 0.12, y + r * 0.08); ctx.stroke(); },      // отмена — крюк назад (↶), «заново» — круг: формы разные
   restart(x, y, r) { const q = r * 0.48, a1 = Math.PI * 1.42, ex = x + Math.cos(a1) * q, ey = y + Math.sin(a1) * q, tx = -Math.sin(a1), ty = Math.cos(a1), h = r * 0.34;      // почти полный круг по часовой и стрелка на конце
     ctx.beginPath(); ctx.arc(x, y, q, -Math.PI * 0.18, a1); ctx.stroke(); const rot = (a) => [tx * Math.cos(a) - ty * Math.sin(a), tx * Math.sin(a) + ty * Math.cos(a)], tipx = ex + tx * h * 0.45, tipy = ey + ty * h * 0.45, [ax, ay] = rot(2.5), [bx, by] = rot(-2.5);
     ctx.beginPath(); ctx.moveTo(tipx + ax * h, tipy + ay * h); ctx.lineTo(tipx, tipy); ctx.lineTo(tipx + bx * h, tipy + by * h); ctx.stroke(); },
@@ -68,7 +68,7 @@ function drawPlay() { const lv = LEVELS[M.idx], S = M.S, L = M.L, wd = WORLDS[lv
   // шапка
   roundBtn('map', 36, 30, 24, ICON.grid, goMap);
   plate(VW / 2 - 92, 8, 184, 46); text(`${lv.w} · ${numInWorld(M.idx)}`, VW / 2, 23, 19, '#f6dfae', 800); text(lv.exam ? T('hard') : tr(wd.name), VW / 2, 41, lv.exam ? 12 : 11.5, lv.exam ? '#ffc94d' : '#b9a9d6', lv.exam ? 800 : 700);      // трудный уровень подписан заранее, без сюрприза
-  if (!UI.win) { const st = starsOf(M.idx); for (let k = 0; k < 3; k++) star(VW - 64 + k * 18, 21, 7.5, k < st); text(`${T('moves')} ${V.shown.t}`, VW - 46, 43, 12.5, '#a3acd4', 700); }
+  if (!UI.win) { const pot = 1 + (M.usedShow ? 0 : 1) + (!M.usedShow && V.shown.t <= lv.par ? 1 : 0); for (let k = 0; k < 3; k++) star(VW - 64 + k * 18, 21, 7.5, k < pot); text(`${T('moves')} ${V.shown.t} / ${lv.par}`, VW - 46, 43, 12.5, '#d9c7a0', 700); }      // звёзды, которые ещё можно взять: гаснут по одной
   if (!UI.win) { drawFuse(CONFIG.top + 18); text(T('behind')(C.fuseLen(L, V.shown.spools)), VW / 2, CONFIG.top + 42, 13, '#a3acd4', 700); }      // после победы полоска фитиля не нужна — место отдано полю
   if (lv.hint && !UI.win && !UI.card) wrap(tr(lv.hint), VW / 2, VH - CONFIG.bottom - 34, VW - 56, 13.5, '#aab3da', 18);
   // нижняя панель: отмена, заново, подсказка — всегда на одних местах
@@ -81,19 +81,21 @@ function drawPlay() { const lv = LEVELS[M.idx], S = M.S, L = M.L, wd = WORLDS[lv
 // тёмная панель с золотым кантом (окно победы, карточка мира)
 function goldPanel(x, y, w, h, r) { ctx.fillStyle = 'rgba(4,3,14,0.6)'; rr(ctx, x - 2, y + 2, w + 4, h + 4, r + 2); ctx.fill(); const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, '#ffe39a'); g.addColorStop(0.4, '#d99c45'); g.addColorStop(1, '#8a5220'); ctx.fillStyle = g; rr(ctx, x, y, w, h, r); ctx.fill();
   const m = ctx.createLinearGradient(0, y, 0, y + h); m.addColorStop(0, '#2e2862'); m.addColorStop(1, '#17153a'); ctx.fillStyle = m; rr(ctx, x + 3.5, y + 3.5, w - 7, h - 7, r - 3); ctx.fill(); ctx.strokeStyle = 'rgba(240,192,96,0.35)'; ctx.lineWidth = 1; rr(ctx, x + 9, y + 9, w - 18, h - 18, r - 7); ctx.stroke(); }
-function drawWin() { const wv = UI.win, p = easeOut(clamp((now - wv.t0) / 320, 0, 1)), h = 196, y = VH - h * p, last = M.idx === LEVELS.length - 1;
-  goldPanel(8, y, VW - 16, h + 30, 26);
+function laurel(cx, cy, side, sc) { ctx.save(); ctx.translate(cx, cy); ctx.scale(side * sc, sc); ctx.strokeStyle = '#c8873a'; ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(26, 2, 26, Math.PI * 0.62, Math.PI * 1.18); ctx.stroke();
+  for (let k = 0; k < 6; k++) { const a = Math.PI * (0.66 + k * 0.095), lx = 26 + Math.cos(a) * 26, ly = 2 + Math.sin(a) * 26; ctx.save(); ctx.translate(lx, ly); ctx.rotate(a + Math.PI * 0.35); const g = ctx.createLinearGradient(0, -7, 0, 7); g.addColorStop(0, '#ffe39a'); g.addColorStop(1, '#b8732e'); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, 3.4, 8, 0, 0, 7); ctx.fill(); ctx.restore(); } ctx.restore(); }
+function drawWin() { const wv = UI.win, p = easeOut(clamp((now - wv.t0) / 320, 0, 1)), h = 208, y = VH - (h + 12) * p, last = M.idx === LEVELS.length - 1;
+  goldPanel(10, y, VW - 20, h, 26); laurel(VW / 2 - 92, y + 46, 1, 1.25); laurel(VW / 2 + 92, y + 46, -1, 1.25);
   for (let k = 0; k < 3; k++) { const t0 = wv.t0 + 260 + k * 170, q = clamp((now - t0) / 260, 0, 1), on = k < wv.stars, s = on ? (q <= 0 ? 0 : 1 + Math.sin(q * Math.PI) * 0.35) : 1; if (on && q > 0 && !wv.rang[k]) { wv.rang[k] = 1; SND.play('star'); }
     star(VW / 2 + (k - 1) * 58, y + 46 + (k === 1 ? -6 : 0), (k === 1 ? 25 : 21) * (on ? s : 1), on && q > 0); }
   text(wv.moves <= wv.par ? `${T('moves')} ${wv.moves} · ${T('best')}` : `${T('moves')} ${wv.moves} · ★ ${wv.par}`, VW / 2, y + 92, 13.5, '#d9c7a0', 700);
-  roundBtn('wagain', 56, y + 144, 27, ICON.restart, () => { UI.win = null; restart(); }); roundBtn('wmap', 124, y + 144, 27, ICON.grid, goMap);
-  pillBtn('wnext', 168, y + 116, VW - 168 - 28, 56, last ? T('map') : T('next') + '  →', () => { if (last) goMap(); else { let n = M.idx + 1; startLevel(n); } SND.play('click'); }, { primary: true, size: 19 }); }
-function drawCard() { const cd = UI.card, wd = WORLDS[cd.w - 1], p = easeOut(clamp((now - cd.t0) / 260, 0, 1)); ctx.fillStyle = `rgba(4,5,16,${0.9 * p})`; ctx.fillRect(0, 0, VW, VH); const w = 310, h = 300, x = (VW - w) / 2, y = (VH - h) / 2 + (1 - p) * 30; ctx.globalAlpha = p;
+  roundBtn('wagain', 56, y + 150, 27, ICON.restart, () => { UI.win = null; restart(); }); roundBtn('wmap', 124, y + 150, 27, ICON.grid, goMap);
+  pillBtn('wnext', 168, y + 122, VW - 168 - 28, 56, last ? T('map') : T('next') + '  →', () => { if (last) goMap(); else { let n = M.idx + 1; startLevel(n); } SND.play('click'); }, { primary: true, size: 19 }); }
+function drawCard() { const cd = UI.card, wd = WORLDS[cd.w - 1], p = easeOut(clamp((now - cd.t0) / 260, 0, 1)); ctx.fillStyle = `rgba(4,5,16,${0.9 * p})`; ctx.fillRect(0, 0, VW, VH); const w = 310, h = 300, x = (VW - w) / 2, y = (VH - h) / 2 - 24 + (1 - p) * 30; ctx.globalAlpha = p;
   goldPanel(x, y, w, h, 26);
   text(`${T('world')} ${cd.w}`, VW / 2, y + 30, 13, PAL.dim, 800); text(tr(wd.name), VW / 2, y + 56, 24, '#f6dfae', 800);
   ctx.save(); ctx.translate(VW / 2, y + 128); goldRing(ctx, 48, 5); ctx.restore(); if (wd.icon === 'flame') { ctx.globalCompositeOperation = 'lighter'; glow(VW / 2, y + 122, 60, '255,150,60', 0.4 * p); ctx.globalCompositeOperation = 'source-over'; flameShape(VW / 2, y + 150, 1, 1, 86); } else { if (wd.icon === 'lamp_on') { ctx.globalCompositeOperation = 'lighter'; glow(VW / 2, y + 118, 64, '255,200,110', 0.4 * p); ctx.globalCompositeOperation = 'source-over'; } spr(ctx, wd.icon, VW / 2 - 40, y + 86, 80, 80); }
-  wrap(tr(wd.card), VW / 2, y + 204, w - 44, 15, '#d5dbf7', 21); text(T('tapNew'), VW / 2, y + h - 22, 12, PAL.dim, 700); ctx.globalAlpha = 1;
-  btn(0, 0, VW, VH, () => { save.seenWorld[cd.w] = 1; persist(); UI.card = null; SND.play('click'); }, 'card'); }
+  wrap(tr(wd.card), VW / 2, y + 204, w - 44, 15, '#d5dbf7', 21); ctx.globalAlpha = 1;
+  const close = () => { save.seenWorld[cd.w] = 1; persist(); UI.card = null; SND.play('click'); }; btn(0, 0, VW, VH, close, 'card'); pillBtn('cardgo', VW / 2 - 90, y + h - 2, 180, 52, T('start'), close, { primary: true, size: 18 }); }
 
 // ---------- карта миров ----------
 function nodePos(k, n) { const cols = 3, row = Math.floor(k / cols), col = row % 2 ? cols - 1 - (k % cols) : k % cols; return [VW / 2 + (col - 1) * 104, 212 + row * clamp((VH - 380) / 3.3, 98, 132)]; }
@@ -110,15 +112,16 @@ function drawMap() { bg(); const w = UI.mapW + 1, wd = WORLDS[UI.mapW], ids = wo
   // шнур между уровнями: пройденная часть «горит»
   const pos = ids.map((i, k) => nodePos(k, ids.length)); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   const path = (col, wdt, upto) => { ctx.strokeStyle = col; ctx.lineWidth = wdt; ctx.beginPath(); pos.forEach(([x, y], k) => { if (k > upto) return; if (k) ctx.lineTo(x, y); else ctx.moveTo(x, y); }); ctx.stroke(); };
-  path(PAL.ink, 9, 99); path('#59618f', 4, 99); let litUpto = -1; ids.forEach((i, k) => { if (starsOf(i)) litUpto = k; }); if (litUpto > 0) path('#ffb347', 4, litUpto);
+  path('rgba(30,18,10,0.6)', 10, 99); path(PAL.rope2, 6.5, 99); ctx.setLineDash([3.5, 4]); path(PAL.rope, 4.5, 99); ctx.setLineDash([]); let litUpto = -1; ids.forEach((i, k) => { if (starsOf(i)) litUpto = k; }); if (litUpto > 0) { ctx.globalAlpha = 0.55; path('#ffb347', 6, litUpto); ctx.globalAlpha = 1; }
+  for (let k = 1; k < pos.length; k++) bead(ctx, (pos[k - 1][0] + pos[k][0]) / 2, (pos[k - 1][1] + pos[k][1]) / 2, 15);      // узлы верёвки между уровнями
   ids.forEach((i, k) => { const [x, y] = pos[k], st = starsOf(i), open = isOpen(i), isCur = i === cur, r = 29, down = btn(x - r - 6, y - r - 6, r * 2 + 12, r * 2 + 30, () => { if (!isOpen(i)) { UI.toast = { text: T('locked'), until: now + 1500 }; SND.play('nope'); return; } SND.play('click'); startLevel(i); }, 'lv' + i);
     ctx.save(); ctx.translate(x, y); if (down) ctx.scale(0.94, 0.94);
     if (st) { ctx.globalCompositeOperation = 'lighter'; glow(0, 0, r * 1.9, '255,170,70', 0.2); ctx.globalCompositeOperation = 'source-over'; }
     ctx.fillStyle = 'rgba(4,5,16,0.55)'; ctx.beginPath(); ctx.arc(0, 3, r, 0, 7); ctx.fill(); const g = ctx.createLinearGradient(0, -r, 0, r); if (st) { g.addColorStop(0, '#ffd27a'); g.addColorStop(1, '#f09a2c'); } else if (open) { g.addColorStop(0, '#343d77'); g.addColorStop(1, '#222956'); } else { g.addColorStop(0, '#1a1f40'); g.addColorStop(1, '#12162f'); }
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = st ? '#fff0c2' : open ? '#5a66a8' : '#2a305c'; ctx.beginPath(); ctx.arc(0, 0, r - 1, 0, 7); ctx.stroke();
-    if (isCur && open) { const q = (Math.sin(now / 260) + 1) / 2; ctx.strokeStyle = `rgba(53,201,179,${0.45 + q * 0.5})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r + 4 + q * 3, 0, 7); ctx.stroke(); }
-    if (open) { text(String(k + 1), 0, -6, 21, st ? PAL.ink : PAL.text, 800); for (let q = 0; q < 3; q++) star((q - 1) * 13, 14, 5.2, q < st); } else { ctx.strokeStyle = '#4a548f'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ICON.lock(0, 0, 26); }
-    ctx.restore(); if (LEVELS[i].exam) { ctx.save(); ctx.translate(x + r * 0.74, y - r * 0.74); ctx.rotate(Math.PI / 4); ctx.fillStyle = PAL.ink; ctx.fillRect(-8, -8, 16, 16); ctx.fillStyle = open ? '#ffc94d' : '#5a6196'; ctx.fillRect(-5.5, -5.5, 11, 11); ctx.restore(); }      // ромб — трудный уровень
+    if (isCur && open) { const q = (Math.sin(now / 260) + 1) / 2; ctx.strokeStyle = `rgba(255,214,120,${0.5 + q * 0.5})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r + 4 + q * 3, 0, 7); ctx.stroke(); }
+    if (open) { text(String(k + 1), 0, -6, 21, st ? '#3a2210' : '#f6dfae', 800); for (let q = 0; q < 3; q++) { if (st) { ctx.fillStyle = q < st ? '#fff6d8' : 'rgba(110,60,20,0.55)'; ctx.beginPath(); for (let j = 0; j < 10; j++) { const a = -Math.PI / 2 + j * Math.PI / 5, rr2 = j % 2 ? 2.3 : 5.2; ctx.lineTo((q - 1) * 13 + Math.cos(a) * rr2, 14 + Math.sin(a) * rr2); } ctx.closePath(); ctx.fill(); } else star((q - 1) * 13, 14, 5.2, false); } } else { ctx.strokeStyle = '#c8873a'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ICON.lock(0, 0, 26); }
+    ctx.restore(); if (LEVELS[i].exam) { const bx = x + r * 0.74, by = y - r * 0.74; ctx.fillStyle = PAL.ink; ctx.beginPath(); ctx.arc(bx, by, 10, 0, 7); ctx.fill(); ctx.fillStyle = open ? '#e05a3a' : '#5a3a4a'; ctx.beginPath(); ctx.arc(bx, by, 8, 0, 7); ctx.fill(); text('!', bx, by + 0.5, 12, '#fff1d8', 900); }      // «!» — трудный уровень (так же подписан в шапке)
     if (isCur && open) prop(ctx, 'hero_a', x, y - r + 9 - Math.abs(Math.sin(now / 320)) * 4, 40); });
   // точки миров и нижний ряд
   const dy = VH - 116; WORLDS.forEach((q, k) => { ctx.fillStyle = k === UI.mapW ? '#ffd98a' : '#4a5490'; ctx.beginPath(); ctx.arc(VW / 2 + (k - (WORLDS.length - 1) / 2) * 18, dy, k === UI.mapW ? 5.5 : 4, 0, 7); ctx.fill(); });

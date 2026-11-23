@@ -31,38 +31,42 @@ function prop(c, name, cxp, bottom, size, flip, sx, sy, light) { const w = size 
   spr(c, name, x, y, w, h, flip, 1, atlas.dk); if (light > 0.02) { const a = c.globalAlpha; c.globalAlpha = a * light; spr(c, name, x, y, w, h, flip); c.globalAlpha = a; } return true; }
 
 // ---------- экран и поле ----------
-const F = { cell: 48, x: 0, y: 0 };
+const F = { cell: 48, x: 0, y: 0 }, BAND = 0.9;      // BAND — высота задней стены над полем в клетках (украшение, не часть поля)
 const V = { base: null, baseDirty: true, lc: document.createElement('canvas'), wc: document.createElement('canvas'), lightI: null, shown: null,
   hero: { x: 0, y: 0, fx: 0, fy: 0, t0: -1e9, face: 1, hop: 0 }, flame: { x: 0, y: 0, fx: 0, fy: 0, t0: -1e9, wet: false },
   falls: new Map(), ash: new Set(), flash: new Map(), guideCell: -1, hatch: null, parts: [], timers: [], failUntil: 0, failInfo: null, bubble: null, idea: null, move: null, winAt: 0, shakeUntil: 0, lampOn: new Map(), guardPop: new Map(), nPop: 0, lastStepAt: 0 };
 function resize() { const w = window.innerWidth, h = window.innerHeight; SC = Math.min(w / CONFIG.VW, h / CONFIG.VHmin); VW = CONFIG.VW; VH = Math.min(h / SC, CONFIG.VHmax); DPR = Math.min(window.devicePixelRatio || 1, 3);
   cv.style.width = Math.round(VW * SC) + 'px'; cv.style.height = Math.round(VH * SC) + 'px'; cv.width = Math.round(VW * SC * DPR); cv.height = Math.round(VH * SC * DPR); V.hatch = null; layout(); if (V.shown && now >= V.failUntil) snap(); }      // после смены размера герой и огонёк встают на свои клетки заново
-function layout() { const L = M.L; if (!L) return; const lv = LEVELS[M.idx], top = CONFIG.top + 56, bot = VH - CONFIG.bottom - (lv.hint ? 46 : 16);
-  F.cell = clamp(Math.floor(Math.min((VW - 16) / (L.W + 0.7), (bot - top) / (L.H + 0.9))), CONFIG.cellMin, CONFIG.cellMax);
-  F.x = Math.round((VW - L.W * F.cell) / 2); F.y = Math.round(top + (bot - top - L.H * F.cell) * 0.32 + F.cell * 0.3); rasterAtlas(); V.baseDirty = true; }      // поле ближе к шапке, как в референсах
+function layout() { const L = M.L; if (!L) return; const lv = LEVELS[M.idx], top = CONFIG.top + 50, bot = VH - CONFIG.bottom - (lv.hint ? 44 : 12);
+  F.cell = clamp(Math.floor(Math.min((VW - 14) / (L.W + 0.72), (bot - top) / (L.H + BAND + 0.75))), CONFIG.cellMin, CONFIG.cellMax);
+  const fullH = (L.H + BAND) * F.cell; F.x = Math.round((VW - L.W * F.cell) / 2); F.y = Math.round(top + (bot - top - fullH) / 2 + BAND * F.cell); rasterAtlas(); V.baseDirty = true; }      // поле с задней стеной — по центру между шапкой и кнопками
 const cellX = c => F.x + (c % M.L.W + 0.5) * F.cell, cellY = c => F.y + (Math.floor(c / M.L.W) + 0.5) * F.cell;
 function cellAt(px, py) { const L = M.L, x = Math.floor((px - F.x) / F.cell), y = Math.floor((py - F.y) / F.cell); return (x < 0 || y < 0 || x >= L.W || y >= L.H) ? -1 : y * L.W + x; }
 const isWall = (x, y) => { const L = M.L; return x < 0 || y < 0 || x >= L.W || y >= L.H || L.type[y * L.W + x] === C.WALL; };
 
 // неподвижный слой: пол со швами, тёмный верх стен, передние грани, контур комнаты, оттенок мира, затухание края
 const FLOORS = ['floor_a', 'floor_b', 'floor_c'];
-const WORLD_HUE = [null, '#2c8596', '#6d6890', '#3f8058', '#8f4f72', '#8c6c46', '#4b6fa3', '#2f8f85', '#6c3fa0'];      // как в референсах: индиго, бирюза, сиреневый камень, зелёное масло, розовые сторожа, дерево, сталь, вода, фиолетовая глубина
+const WORLD_HUE = [null, '#2c8596', '#6d6890', '#3f8058', '#8f4f72', '#7a5a8c', '#4b6fa3', '#2f8f85', '#6c3fa0'];      // как в референсах: индиго, бирюза, сиреневый камень, зелёное масло, розовые сторожа, дерево, сталь, вода, фиолетовая глубина
 const hash = (x, y, k) => { let h = (x * 374761393 + y * 668265263 + (k || 0) * 2147483647 + LEVELS[M.idx].id.length * 97) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
 // неподвижный слой: рамка погреба, пол, кирпичные стены, ниши с утварью у задней стены, плющ, оттенок мира
-function buildBase() { const L = M.L, px = Math.round(F.cell * SC * DPR), b = V.base || (V.base = document.createElement('canvas')); b.width = (L.W + 2) * px; b.height = (L.H + 2) * px; const c = b.getContext('2d'), W = b.width, H = b.height;
-  c.clearRect(0, 0, W, H); const fr = Math.round(px * 0.36), x0 = px - fr, y0 = px - fr, rw = L.W * px + fr * 2, rh = L.H * px + fr * 2, rad = fr * 1.7;
+function buildBase() { const L = M.L, px = Math.round(F.cell * SC * DPR), bp = Math.round(BAND * px), b = V.base || (V.base = document.createElement('canvas')); b.width = (L.W + 2) * px; b.height = (L.H + 2) * px + bp; const c = b.getContext('2d'), W = b.width, H = b.height;
+  c.clearRect(0, 0, W, H); c.save(); c.translate(0, bp); const fr = Math.round(px * 0.36), x0 = px - fr, y0 = px - fr - bp, rw = L.W * px + fr * 2, rh = L.H * px + fr * 2 + bp, rad = fr * 1.7;
   const seg = (a, b2, c2, d) => { c.beginPath(); c.moveTo(a, b2); c.lineTo(c2, d); c.stroke(); };
   // рамка: тень, кирпич, светлая кромка снаружи и тёмная внутри
   c.save(); c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = px * 0.45; c.shadowOffsetY = px * 0.12; rr(c, x0, y0, rw, rh, rad); c.fillStyle = PAL.brick; c.fill(); c.restore();
   c.save(); rr(c, x0, y0, rw, rh, rad); c.clip(); for (let yy = 0; yy < H; yy += px / 2) for (let xx = 0; xx < W; xx += px / 2) spr(c, 'wall_top', xx, yy, px / 2, px / 2); c.fillStyle = 'rgba(74,59,94,0.35)'; c.fillRect(0, 0, W, H); c.restore();
   c.lineWidth = Math.max(1.5, px * 0.035); c.strokeStyle = 'rgba(176,150,196,0.55)'; rr(c, x0 + c.lineWidth / 2, y0 + c.lineWidth / 2, rw - c.lineWidth, rh - c.lineWidth, rad); c.stroke();
-  c.strokeStyle = 'rgba(12,10,28,0.85)'; c.lineWidth = Math.max(2, px * 0.05); c.strokeRect(px - c.lineWidth / 2, px - c.lineWidth / 2, L.W * px + c.lineWidth, L.H * px + c.lineWidth);
+  // задняя стена над полем: кирпич, ниши с утварью, плющ — как в референсах
+  for (let x = 0; x < L.W; x++) { const dx = (x + 1) * px, dy = px - bp, r = hash(x, -1, 4); if (r < 0.42 && has('niche_barrel')) spr(c, NICHES[Math.floor(hash(x, -1, 5) * NICHES.length)], dx, dy - (px - bp), px, px, false);
+    else { for (let k = 0; k < 2; k++) spr(c, 'wall_front', dx, dy + k * bp / 2, px, bp / 2, false, 56 / 128); } if (r > 0.82) spr(c, 'ivy', dx, dy, px, px * 0.9); }
+  c.fillStyle = 'rgba(14,10,30,0.28)'; c.fillRect(px, px - bp, L.W * px, bp); const g0 = c.createLinearGradient(0, px - px * 0.12, 0, px + px * 0.22); g0.addColorStop(0, 'rgba(6,5,18,0)'); g0.addColorStop(0.35, 'rgba(6,5,18,0.5)'); g0.addColorStop(1, 'rgba(6,5,18,0)'); c.fillStyle = g0; c.fillRect(px, px - px * 0.12, L.W * px, px * 0.34);
+  c.strokeStyle = 'rgba(12,10,28,0.85)'; c.lineWidth = Math.max(2, px * 0.05); c.strokeRect(px - c.lineWidth / 2, px - bp - c.lineWidth / 2, L.W * px + c.lineWidth, L.H * px + bp + c.lineWidth);
   // клетки
   for (let y = 0; y < L.H; y++) for (let x = 0; x < L.W; x++) { const dx = (x + 1) * px, dy = (y + 1) * px;
     if (!isWall(x, y)) { if (!spr(c, FLOORS[(x * 7 + y * 13 + x * y * 3) % 3], dx, dy, px, px)) { c.fillStyle = '#2e3052'; c.fillRect(dx, dy, px, px); } continue; }
     const back = !isWall(x, y + 1) && (y === 0 || isWall(x, y - 1)), niche = back && has('niche_barrel') && hash(x, y, 1) < 0.5;
     if (niche) { spr(c, NICHES[Math.floor(hash(x, y, 2) * NICHES.length)], dx, dy, px, px); continue; }
-    if (!spr(c, 'wall_top', dx, dy, px, px)) { c.fillStyle = '#655065'; c.fillRect(dx, dy, px, px); } }
+    if (!spr(c, 'wall_top', dx, dy, px, px)) { c.fillStyle = '#655065'; c.fillRect(dx, dy, px, px); } c.fillStyle = 'rgba(20,14,38,0.42)'; c.fillRect(dx, dy, px, px); }      // стены приглушены: глаз идёт на пол, а не на кирпич
   for (let y = 0; y < L.H; y++) for (let x = 0; x < L.W; x++) if (isWall(x, y) && !isWall(x, y + 1)) { const dx = (x + 1) * px, dy = (y + 1) * px, fh = Math.round(px * 0.42), back = (y === 0 || isWall(x, y - 1)) && has('niche_barrel') && hash(x, y, 1) < 0.5;
     if (!back) { if (!spr(c, 'wall_front', dx, dy + px - fh, px, fh, false, 56 / 128)) { c.fillStyle = '#27223d'; c.fillRect(dx, dy + px - fh, px, fh); } }
     const g = c.createLinearGradient(0, dy + px, 0, dy + px + px * 0.28); g.addColorStop(0, 'rgba(6,5,18,0.42)'); g.addColorStop(1, 'rgba(6,5,18,0)'); c.fillStyle = g; c.fillRect(dx, dy + px, px, px * 0.28);
@@ -72,7 +76,7 @@ function buildBase() { const L = M.L, px = Math.round(F.cell * SC * DPR), b = V.
   for (let y = 0; y < L.H; y++) for (let x = 0; x < L.W; x++) if (!isWall(x, y)) { const dx = (x + 1) * px, dy = (y + 1) * px; if (isWall(x - 1, y)) seg(dx, dy, dx, dy + px); if (isWall(x + 1, y)) seg(dx + px, dy, dx + px, dy + px); if (isWall(x, y + 1)) seg(dx, dy + px, dx + px, dy + px); }
   const hue = WORLD_HUE[LEVELS[M.idx].w - 1]; if (hue) { c.globalCompositeOperation = 'color'; c.fillStyle = hue; c.globalAlpha = 0.6;      // цвет мира: пол перекрашен, яркость плит сохранена; стены, рамка и предметы прежние
     for (let y = 0; y < L.H; y++) for (let x = 0; x < L.W; x++) if (!isWall(x, y)) c.fillRect((x + 1) * px, (y + 1) * px, px, px); c.globalAlpha = 1; c.globalCompositeOperation = 'source-over'; }
-  V.baseDirty = false; }
+  c.restore(); V.baseDirty = false; }
 
 // ---------- события модели → анимации ----------
 const after = (ms, fn) => V.timers.push({ at: now + ms, fn });
@@ -121,29 +125,30 @@ const FIRE1 = [PAL.hot, '#ffab36', PAL.core], FIRE2 = ['#c9361a', '#f0762a', '#f
 function flameShape(x, y, s, phase, u, pal, wide) { const t = now / 1000, w = (u || F.cell) * 0.2 * s * (wide || 1), h = (u || F.cell) * 0.56 * s / (wide || 1), P = pal || FIRE1;
   const lay = (col, k, ph, edge) => { const sway = Math.sin(t * 8.5 + phase + ph) * w * 0.34 * k, hh = h * k * (1 + Math.sin(t * 15 + phase * 1.7 + ph) * 0.09), ww = w * k; ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x - ww, y);
     ctx.bezierCurveTo(x - ww * 1.25, y - hh * 0.45, x - ww * 0.2 + sway, y - hh * 0.7, x + sway, y - hh); ctx.bezierCurveTo(x + ww * 0.3 + sway * 0.4, y - hh * 0.66, x + ww * 1.25, y - hh * 0.45, x + ww, y); ctx.bezierCurveTo(x + ww * 0.8, y + ww * 0.75, x - ww * 0.8, y + ww * 0.75, x - ww, y); if (edge) { ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(2.5, (u || F.cell) * 0.075); ctx.strokeStyle = PAL.ink; ctx.stroke(); } ctx.fill(); };
-  lay(P[0], 1, 0, true); lay(P[1], 0.74, 1.3); lay(P[2], 0.42, 2.1); }
+  lay(P[0], 1, 0, false); lay(P[1], 0.74, 1.3); lay(P[2], 0.42, 2.1); }
 // стрелка «иди сюда»: одна на всю игру — и для руководства на вводных уровнях, и для подсказки-шага
-function goArrow(from, to) { const cs = F.cell, t = now / 1000, x0 = cellX(from), y0 = cellY(from), x1 = cellX(to), y1 = cellY(to), k = (Math.sin(t * 5) + 1) / 2, ax = lerp(x0, x1, 0.86 + k * 0.12), ay = lerp(y0, y1, 0.86 + k * 0.12);
-  ctx.save(); ctx.translate(ax, ay); ctx.rotate(Math.atan2(y1 - y0, x1 - x0)); const tri = (s, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(cs * 0.3 * s, 0); ctx.lineTo(-cs * 0.16 * s, -cs * 0.27 * s); ctx.lineTo(-cs * 0.05 * s, 0); ctx.lineTo(-cs * 0.16 * s, cs * 0.27 * s); ctx.closePath(); ctx.fill(); }; tri(1.3, PAL.ink); tri(1, '#ffffff'); ctx.restore(); }
-function hatchPattern() { if (V.hatch) return V.hatch; const c = document.createElement('canvas'), n = Math.max(8, Math.round(9 * SC * DPR)); c.width = c.height = n; const x = c.getContext('2d'); x.strokeStyle = 'rgba(255,77,94,0.62)'; x.lineWidth = n * 0.2; x.lineCap = 'square';
+function goArrow(from, to) { const cs = F.cell, t = now / 1000, x1 = cellX(to), y1 = cellY(to), dx = Math.sign(x1 - cellX(from)), dy = Math.sign(y1 - cellY(from)), k = (Math.sin(t * 5) + 1) / 2;      // стрелка «иди сюда»: кремовая, в центре клетки, покачивается по направлению хода
+  ctx.save(); ctx.translate(x1 + dx * k * cs * 0.06, y1 + dy * k * cs * 0.06); ctx.rotate(Math.atan2(dy, dx)); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; const draw = (col, w) => { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(-cs * 0.2, 0); ctx.lineTo(cs * 0.17, 0); ctx.moveTo(cs * 0.03, -cs * 0.14); ctx.lineTo(cs * 0.18, 0); ctx.lineTo(cs * 0.03, cs * 0.14); ctx.stroke(); };
+  draw('rgba(40,22,8,0.45)', cs * 0.12); draw('#fff2cf', cs * 0.075); ctx.restore(); }
+function hatchPattern() { if (V.hatch) return V.hatch; const c = document.createElement('canvas'), n = Math.max(8, Math.round(9 * SC * DPR)); c.width = c.height = n; const x = c.getContext('2d'); x.strokeStyle = 'rgba(224,48,58,0.85)'; x.lineWidth = n * 0.2; x.lineCap = 'square';
   for (const o of [-n, 0, n]) { x.beginPath(); x.moveTo(o, n); x.lineTo(o + n, 0); x.stroke(); } V.hatch = ctx.createPattern(c, 'repeat'); V.hatchScale = 1 / (SC * DPR); return V.hatch; }
 function drawField() { const L = M.L, S = V.shown, cs = F.cell, lit = S.lit, t = now / 1000; if (V.baseDirty || !V.base) buildBase();
   if (V.cacheS !== S) { V.cacheS = S; V.pv = C.preview(L, S, -1); V.legal = C.legal(L, S); V.seenNow = C.seenCells(L, lit, S.guardAlive); V.patches = L.guards.map((c, g) => (S.guardAlive >> g & 1) ? C.patchOf(L, lit, g) : null); V.spv = new Map(); for (const m of V.legal) if (L.spoolAt[m.cell] >= 0) V.spv.set(m.cell, C.preview(L, S, m.cell)); }      // расчёты хода — один раз на состояние, не на кадр
   let ox = 0, oy = 0; if (now < V.shakeUntil) { const p = (V.shakeUntil - now) / 260; ox = Math.sin(now * 0.09) * 4 * p; oy = Math.cos(now * 0.11) * 3 * p; }
   ctx.save(); ctx.translate(ox, oy);
-  ctx.drawImage(V.base, F.x - cs, F.y - cs, (L.W + 2) * cs, (L.H + 2) * cs);
+  ctx.drawImage(V.base, F.x - cs, F.y - cs - BAND * cs, (L.W + 2) * cs, (L.H + 2 + BAND) * cs);
   const LI = V.lightI, kf = 1 - Math.exp(-dtMs / 80); for (let i = 0; i < L.n; i++) LI[i] += (lit[i] - LI[i]) * kf;                       // свет плавно догоняет логику
   const flameCell = S.tail[0], N = C.fuseLen(L, S.spools), willFall = !S.over && S.tail.length === N + 1 && L.type[flameCell] === C.FLOOR, cellPx = i => [F.x + (i % L.W) * cs, F.y + Math.floor(i / L.W) * cs];
   // пол: тьма и свет ложатся на плитку строго по клеткам (тёплый тон один на всю игру); лужи, камень и зола — поверх, со своим тёмным и светлым видом
   const flick = 0.97 + Math.sin(t * 11) * 0.03, sprL = (name, x, y, w, h, I, flip) => { spr(ctx, name, x, y, w, h, flip, 1, atlas.dk); if (I > 0.02) { ctx.globalAlpha = I; spr(ctx, name, x, y, w, h, flip); ctx.globalAlpha = 1; } };
   const shade = (i, x, y, warm) => { const I = LI[i]; if (I < 0.99) { ctx.fillStyle = `rgba(${PAL.dark},${CONFIG.dark * (1 - I)})`; ctx.fillRect(x, y, cs, cs); }
-    if (I > 0.01) { ctx.fillStyle = `rgba(242,156,50,${warm * I * flick})`; ctx.fillRect(x, y, cs, cs); ctx.fillStyle = `rgba(255,214,140,${0.12 * I})`; ctx.fillRect(x + cs * 0.12, y + cs * 0.1, cs * 0.76, cs * 0.76); const f0 = V.flash.get(i); if (f0 !== undefined) { const p = (now - f0) / 380; if (p >= 1) V.flash.delete(i); else if (p >= 0) { ctx.fillStyle = `rgba(255,236,170,${0.4 * (1 - p)})`; ctx.fillRect(x, y, cs, cs); } } } };
+    if (I > 0.01) { ctx.fillStyle = `rgba(246,176,70,${warm * I * flick})`; ctx.fillRect(x, y, cs, cs); const gl = ctx.createRadialGradient(x + cs / 2, y + cs / 2, cs * 0.08, x + cs / 2, y + cs / 2, cs * 0.62); gl.addColorStop(0, `rgba(255,226,150,${0.32 * I})`); gl.addColorStop(1, 'rgba(255,226,150,0)'); ctx.fillStyle = gl; ctx.fillRect(x, y, cs, cs); const f0 = V.flash.get(i); if (f0 !== undefined) { const p = (now - f0) / 380; if (p >= 1) V.flash.delete(i); else if (p >= 0) { ctx.fillStyle = `rgba(255,236,170,${0.4 * (1 - p)})`; ctx.fillRect(x, y, cs, cs); } } } };
   for (let i = 0; i < L.n; i++) { const ty = L.type[i], [x, y] = cellPx(i), d = S.d[i], I = LI[i];
     if (ty === C.WALL) { const b = i + L.W; if (b < L.n && L.type[b] !== C.WALL) { const fh = Math.round(cs * 0.46); ctx.fillStyle = `rgba(${PAL.dark},${0.5 * (1 - LI[b] * 0.8)})`; ctx.fillRect(x, y + cs - fh, cs, fh); } continue; }
     if (d & C.PIT) { const flip = (i * 7 + 3) % 5 < 2; spr(ctx, 'pit', x, y, cs, cs, flip); const hue = WORLD_HUE[LEVELS[M.idx].w - 1]; if (hue) { ctx.globalCompositeOperation = 'color'; ctx.globalAlpha = 0.6; ctx.fillStyle = hue; ctx.fillRect(x, y, cs, cs); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; } shade(i, x, y, 0.4);                                       // яма: свет виден на кромке, нутро всегда чёрное
       ctx.save(); ctx.beginPath(); PITPOLY.forEach(([px, py], k) => { const X = x + (flip ? 128 - px : px) / 128 * cs, Y = y + py / 128 * cs; if (k) ctx.lineTo(X, Y); else ctx.moveTo(X, Y); }); ctx.closePath(); ctx.clip(); spr(ctx, 'pit', x, y, cs, cs, flip); ctx.restore();
       const f0 = V.falls.get(i); if (f0 !== undefined) { const p = (now - f0) / 340; if (p >= 1) V.falls.delete(i); else { ctx.save(); ctx.globalAlpha = 1 - p; ctx.translate(x + cs / 2, y + cs / 2 + p * cs * 0.18); ctx.rotate(p * 0.5); const s2 = cs * (1 - p * 0.85); spr(ctx, 'floor_a', -s2 / 2, -s2 / 2, s2, s2); ctx.restore(); } } continue; }
-    shade(i, x, y, 0.72);
+    shade(i, x, y, 0.86);
     if (ty === C.STONE) sprL('stone', x + cs * 0.05, y + cs * 0.04, cs * 0.9, cs * 0.9, I);
     else if (ty === C.WATER) sprL('water', x + cs * 0.02, y + cs * 0.04, cs * 0.96, cs * 0.96, Math.max(I, 0.25));
     if (d & (C.OIL | C.BURN)) sprL('oil', x, y, cs, cs, Math.max(I, 0.25));
@@ -151,11 +156,12 @@ function drawField() { const L = M.L, S = V.shown, cs = F.cell, lit = S.lit, t =
     if (i === flameCell && willFall) { ctx.globalAlpha = 0.75 + Math.sin(t * 7) * 0.25; spr(ctx, 'crack', x, y, cs, cs); ctx.globalAlpha = 1; } }
   // стражи: штриховка — клетки, где героя увидят после этого хода (шаг туда = провал); тонкий контур — пятно, которое страж видит сейчас
   const danger = (S === M.S && !S.over) ? V.pv.seen : V.seenNow; let anyD = false; for (let i = 0; i < L.n; i++) if (danger[i]) { anyD = true; break; }
-  if (anyD) { const pat = hatchPattern(), k = V.hatchScale; ctx.save(); ctx.scale(k, k); ctx.fillStyle = pat; ctx.globalAlpha = 0.62 + Math.sin(t * 4) * 0.16; for (let i = 0; i < L.n; i++) if (danger[i]) { const [x, y] = cellPx(i); ctx.fillRect(x / k, y / k, cs / k, cs / k); } ctx.restore(); }
+  if (anyD) { const pat = hatchPattern(), k = V.hatchScale; ctx.save(); ctx.scale(k, k); ctx.fillStyle = pat; ctx.globalAlpha = 0.62 + Math.sin(t * 4) * 0.16; for (let i = 0; i < L.n; i++) if (danger[i] && !(S.d[i] & C.PIT)) { const [x, y] = cellPx(i); ctx.fillRect(x / k, y / k, cs / k, cs / k); } ctx.restore(); }
+  const dz = c => danger[c] && !(S.d[c] & C.PIT);
   const outline = (inSet, wd, col) => { ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.lineCap = 'round'; ctx.beginPath(); for (let c = 0; c < L.n; c++) if (inSet(c)) { const [x, y] = cellPx(c), cx0 = c % L.W, cy0 = Math.floor(c / L.W), q = wd / 2;
       if (cy0 === 0 || !inSet(c - L.W)) { ctx.moveTo(x + q, y + q); ctx.lineTo(x + cs - q, y + q); } if (cy0 === L.H - 1 || !inSet(c + L.W)) { ctx.moveTo(x + q, y + cs - q); ctx.lineTo(x + cs - q, y + cs - q); }
       if (cx0 === 0 || !inSet(c - 1)) { ctx.moveTo(x + q, y + q); ctx.lineTo(x + q, y + cs - q); } if (cx0 === L.W - 1 || !inSet(c + 1)) { ctx.moveTo(x + cs - q, y + q); ctx.lineTo(x + cs - q, y + cs - q); } } ctx.stroke(); };
-  if (anyD) { outline(c => danger[c], 5, 'rgba(17,20,42,0.8)'); outline(c => danger[c], 3, PAL.red); }
+  if (anyD) { outline(dz, 5, 'rgba(17,20,42,0.8)'); outline(dz, 3, PAL.red); }
   for (let g = 0; g < L.guards.length; g++) { const p = V.patches[g]; if (!p) continue; const inP = new Set(p); if (p.every(c => danger[c])) continue; outline(c => inP.has(c), 2, 'rgba(255,120,134,0.6)'); }
   // предметы по рядам сверху вниз; у каждого тёмный и светлый вид, по свету своей клетки — в темноте видны, но приглушены и без тёплых тонов
   for (let i = 0; i < L.n; i++) { const ty = L.type[i], x = cellX(i), yb = F.y + (Math.floor(i / L.W) + 1) * cs, d = S.d[i], I = LI[i];
@@ -164,7 +170,7 @@ function drawField() { const L = M.L, S = V.shown, cs = F.cell, lit = S.lit, t =
     if (d & (C.WOOD | C.BURNW)) prop(ctx, 'wood', x, yb - cs * 0.02, cs * 0.96, false, 1, 1, (d & C.BURNW) ? 1 : I);
     const sp = L.spoolAt[i]; if (sp >= 0 && !(S.spools >> sp & 1)) { prop(ctx, 'spool', x, yb - cs * 0.1 + Math.sin(t * 2.4 + i) * cs * 0.03, cs * 0.8, false, 1, 1, Math.max(I, 0.35)); text2('+' + L.spoolAdd[sp], x + cs * 0.3, yb - cs * 0.72, cs * 0.3); }
     const g = L.guardAt[i]; if (g >= 0 && (S.guardAlive >> g & 1)) { const awake = lit[i], t0 = V.guardPop.get(i), up = awake && (t0 === undefined || now >= t0), pop = t0 !== undefined ? clamp((now - t0) / 300, 0, 1) : 1, s = 1 + Math.sin(pop * Math.PI) * 0.2;
-      if (up) { ctx.fillStyle = `rgba(255,60,84,${0.3 + Math.sin(t * 6) * 0.12})`; ctx.beginPath(); ctx.ellipse(x, yb - cs * 0.1, cs * 0.42, cs * 0.14, 0, 0, 7); ctx.fill(); prop(ctx, 'guard_awake', x, yb - cs * 0.02, cs * 1.04 * s); }
+      if (up) { ctx.fillStyle = `rgba(255,60,84,${0.3 + Math.sin(t * 6) * 0.12})`; ctx.beginPath(); ctx.ellipse(x, yb - cs * 0.1, cs * 0.42, cs * 0.14, 0, 0, 7); ctx.fill(); prop(ctx, 'guard_awake', x, yb - cs * 0.02, cs * 1.04 * s); const bx = x + cs * 0.3, by = yb - cs * 1.02; ctx.fillStyle = PAL.red; ctx.beginPath(); ctx.arc(bx, by, cs * 0.14, 0, 7); ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke(); text2('!', bx, by + 1, cs * 0.22, '#fff'); }      // «!» над проснувшимся сторожем
       else { ctx.save(); ctx.translate(x, yb); ctx.rotate(-0.13); prop(ctx, 'guard_sleep', cs * 0.02, -cs * 0.01, cs * 0.94, false, 1, 1 + Math.sin(t * 1.6 + i) * 0.015, Math.max(I, 0.3)); ctx.restore(); } } }
   // свечение — только там, где по правилам светло: обрезано по освещённым клеткам
   const hp = clamp((now - V.hero.t0) / CONFIG.stepMs, 0, 1), fp = clamp((now - V.flame.t0) / (CONFIG.stepMs * 1.15), 0, 1), same = S.tail.length === 1 && fp >= 1;
@@ -173,7 +179,7 @@ function drawField() { const L = M.L, S = V.shown, cs = F.cell, lit = S.lit, t =
   ctx.save(); ctx.beginPath(); for (let i = 0; i < L.n; i++) if (LI[i] > 0.4) { const [x, y] = cellPx(i); ctx.rect(x, y, cs, cs); } ctx.clip(); ctx.globalCompositeOperation = 'lighter';
   if (!wet && !S.won) glow(fx, fy - cs * 0.05, cs * 1.2 * flick, '255,150,60', 0.3);
   for (let i = 0; i < L.n; i++) { if (S.d[i] & C.FIRE) glow(cellX(i), cellY(i), cs * 1.2 * flick, '255,120,40', 0.3);
-    if (L.type[i] === C.LAMP && (S.lampLit >> L.lampAt[i] & 1) && (V.lampOn.get(i) === undefined || now >= V.lampOn.get(i))) glow(cellX(i), cellY(i) - cs * 0.26, cs * 0.95, '255,200,110', 0.32); }
+    if (L.type[i] === C.LAMP && (S.lampLit >> L.lampAt[i] & 1) && (V.lampOn.get(i) === undefined || now >= V.lampOn.get(i))) glow(cellX(i), cellY(i) - cs * 0.3, cs * 1.1, '255,200,110', 0.5); }
   if (lit[L.door] || S.won) glow(cellX(L.door), cellY(L.door) - cs * 0.1, cs * (1.0 + Math.sin(t * 3) * 0.06), '255,225,150', 0.3);
   ctx.restore(); ctx.globalCompositeOperation = 'source-over';
   // шнур: от огонька через клетки следа к герою; узел на каждой клетке — по узлам видно N
@@ -185,7 +191,7 @@ function drawField() { const L = M.L, S = V.shown, cs = F.cell, lit = S.lit, t =
   // пожар на клетках (ниже и темнее) и сам огонёк
   for (let i = 0; i < L.n; i++) if (S.d[i] & C.FIRE) { const x = cellX(i), y = cellY(i) + cs * 0.3; flameShape(x - cs * 0.24, y, 0.62, i, 0, FIRE2, 1.25); flameShape(x + cs * 0.22, y - cs * 0.03, 0.7, i + 2, 0, FIRE2, 1.25); flameShape(x, y + cs * 0.05, 0.86, i + 4, 0, FIRE2, 1.25); if (Math.random() < 0.25) part({ kind: 'ember', x: x + (Math.random() - 0.5) * cs * 0.6, y: y - cs * 0.2, vx: (Math.random() - 0.5) * 20, vy: -40 - Math.random() * 30, life: 600, size: 2.2, col: '#ff9a4a' }); }
   if (!S.won) { if (wet) { ctx.fillStyle = PAL.ink; ctx.beginPath(); ctx.arc(fx, fy + cs * 0.12, cs * 0.13, 0, 7); ctx.fill(); ctx.fillStyle = `rgba(214,96,52,${0.75 + Math.sin(t * 6) * 0.2})`; ctx.beginPath(); ctx.arc(fx, fy + cs * 0.12, cs * 0.08, 0, 7); ctx.fill(); if (Math.random() < 0.12) part({ kind: 'smoke', col: '#aab4d8', x: fx, y: fy, vx: (Math.random() - 0.5) * 10, vy: -26, life: 900, size: 4 }); }
-    else { flameShape(fx, fy + cs * 0.2, same ? 0.95 : 1.25, 0); if (Math.random() < 0.2) part({ kind: 'ember', x: fx + (Math.random() - 0.5) * cs * 0.3, y: fy - cs * 0.2, vx: (Math.random() - 0.5) * 16, vy: -40 - Math.random() * 30, life: 800, size: 2.2 }); } }
+    else { flameShape(fx, fy + cs * 0.24, same ? 0.8 : 0.95, 0); if (Math.random() < 0.2) part({ kind: 'ember', x: fx + (Math.random() - 0.5) * cs * 0.3, y: fy - cs * 0.2, vx: (Math.random() - 0.5) * 16, vy: -40 - Math.random() * 30, life: 800, size: 2.2 }); } }
   // знаки: куда можно шагнуть (кольцо); что загорится и где увидят следующим ходом (пунктир)
   const pointed = V.move && !S.over ? V.move.cell : V.guideCell;
   if (!S.over && now >= V.failUntil && S === M.S) { const pv = V.pv, a = 0.55 + Math.sin(t * 6) * 0.3;
@@ -194,7 +200,7 @@ function drawField() { const L = M.L, S = V.shown, cs = F.cell, lit = S.lit, t =
     for (const m of V.legal) { if (m.cell === pointed) continue; const x = cellX(m.cell), y = cellY(m.cell), sp = V.spv.get(m.cell) || pv, bad = sp.burn[m.cell] || sp.seen[m.cell];
       if (m.win) { ctx.strokeStyle = `rgba(255,243,196,${a})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y - cs * 0.05, cs * 0.5, 0, 7); ctx.stroke(); continue; }
       if (bad) { ctx.lineCap = 'round'; const r = cs * 0.1, cross = (col, wd) => { ctx.strokeStyle = col; ctx.lineWidth = wd; ctx.beginPath(); ctx.moveTo(x - r, y - r); ctx.lineTo(x + r, y + r); ctx.moveTo(x + r, y - r); ctx.lineTo(x - r, y + r); ctx.stroke(); }; cross(PAL.ink, 6); cross(`rgba(255,77,94,${0.7 + a * 0.3})`, 3); }
-      else { ctx.strokeStyle = 'rgba(11,14,34,0.6)'; ctx.lineWidth = 4.4; ctx.beginPath(); ctx.arc(x, y, cs * 0.115, 0, 7); ctx.stroke(); ctx.strokeStyle = `rgba(238,241,255,${0.55 + a * 0.3})`; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(x, y, cs * 0.115, 0, 7); ctx.stroke(); } } }
+      else { ctx.strokeStyle = 'rgba(40,22,8,0.5)'; ctx.lineWidth = 4.4; ctx.beginPath(); ctx.arc(x, y, cs * 0.115, 0, 7); ctx.stroke(); ctx.strokeStyle = `rgba(246,196,100,${0.65 + a * 0.3})`; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(x, y, cs * 0.115, 0, 7); ctx.stroke(); } } }
   // спящие стражи: крупное «z z z» над головой
   for (let g = 0; g < L.guards.length; g++) if ((S.guardAlive >> g & 1) && !lit[L.guards[g]]) { const c = L.guards[g]; for (let k = 0; k < 3; k++) { const ph = (t * 0.7 + k * 0.33) % 1, x = cellX(c) + cs * (0.1 + k * 0.11) * (c % L.W === L.W - 1 ? -1 : 1), y = cellY(c) - cs * (0.34 + k * 0.16) - ph * cs * 0.05; ctx.globalAlpha = 0.55 + Math.sin((t * 0.7 + k * 0.33) * Math.PI * 2) * 0.35; text2('z', x, y, cs * (0.17 + k * 0.055), '#c8d2ff'); } ctx.globalAlpha = 1; }
   // герой
@@ -207,7 +213,7 @@ function drawField() { const L = M.L, S = V.shown, cs = F.cell, lit = S.lit, t =
     if (fi && fi.reason === 'burned') { ctx.globalCompositeOperation = 'lighter'; glow(hx, hy, cs * 0.9, '255,120,40', 0.7 * (1 - fpz)); ctx.globalCompositeOperation = 'source-over'; flameShape(hx, hy + cs * 0.3, 1.5, 3); }
     if (fi && fi.reason === 'seen') { const seenBy = L.guards.filter((c, k) => (fi.to.guardAlive >> k & 1) && (C.patchOf(L, fi.to.lit, k) || []).includes(fi.cell)); ctx.strokeStyle = `rgba(255,77,94,${0.9 - fpz * 0.5})`; ctx.lineWidth = 3; ctx.setLineDash([2, 7]); ctx.lineCap = 'round';
       for (const c of seenBy) { ctx.beginPath(); ctx.moveTo(cellX(c), cellY(c) - cs * 0.3); ctx.lineTo(hx, hy - cs * 0.1); ctx.stroke(); } ctx.setLineDash([]); } }
-  if (same && !S.won && !wet) flameShape(fx, fy + cs * 0.2, 0.95, 0);                                       // на старте огонёк виден целиком рядом с героем
+  if (same && !S.won && !wet) flameShape(fx, fy + cs * 0.24, 0.8, 0);                                       // на старте огонёк виден целиком рядом с героем
   // подсказки и руководство
   if (V.idea) drawIdea(V.idea);
   if (pointed !== undefined && pointed >= 0 && !S.over && now >= V.failUntil) goArrow(pcell(S), pointed);
