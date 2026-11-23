@@ -77,7 +77,7 @@ const F = (key, o) => Object.assign({ fix: key }, o || {}), P = (kind, D, o) => 
 
 // ---------- план: 8 миров по 12 мест и финал из 4 ----------
 const WORLDS = [
-  { id: 1, pool: 'w1', name: { ru: 'Первый свет', en: 'First Light' }, tint: '#e9ecff', icon: 'flame', card: { ru: 'Огонёк идёт по твоему следу. Пол за ним падает. Дверь открыта только на свету.', en: 'The flame follows your trail. The floor falls behind it. The door opens only in the light.' },
+  { id: 1, pool: 'w1', name: { ru: 'Первый свет', en: 'First Light' }, tint: '#e9ecff', icon: 'flame', card: { ru: 'Огонёк идёт по твоему следу. Дверь открыта только на свету.', en: 'The flame follows your trail. The door opens only in the light.' },
     slots: [F('L1', { hint: 'L1', guide: true }), P('kOnly', 3.2, { lazyOk: 1 }), P('kOnly', 3.7, { lazyOk: 1 }), P('kOnly', 4.3, { lazyOk: 1 }), F('L2', { hint: 'L2', guide: true }), P('lamp', 4.0, { lazyOk: 1 }), P('lamp', 4.6, { lazyOk: 1 }), F('L3', { hint: 'L3' }), P('late', 4.9), P('late', 5.4), P('late', 6.0, { exam: 1 }), P('lamp', 3.6, { lazyOk: 1 })] },
   { id: 2, pool: 'w2', also: ['w1'], name: { ru: 'Живой свет', en: 'Living Light' }, tint: '#dcefff', icon: 'door_open', card: { ru: 'Свет бывает и без лампы: дверь осветит сам огонёк. А длина фитиля в каждом подвале своя.', en: 'Light without a lamp: the flame itself can light the door. And every cellar has its own fuse length.' },
     slots: [F('L4', { hint: 'L4' }), P('lateN', 4.5), F('L5'), P('lateN', 5.4), I('flameDoor', 4.3, 'flame'), P('flameDoor', 4.7), P('flameDoor', 5.3), P('flameDoor', 5.7, { need: r => has(r, '_') }), P('flameDoor', 6.1), P('twoLamps', 6.4), P('w2any', 6.9, { exam: 1 }), P('flameDoor', 4.4)] },

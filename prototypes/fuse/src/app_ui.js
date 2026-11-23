@@ -6,7 +6,7 @@ function btn(x, y, w, h, fn, id) { UI.btns.push({ x, y, w, h, fn, id }); return 
 
 // ---------- значки (кодом) ----------
 const ICON = {
-  undo(x, y, r) { const cx0 = x + r * 0.06, cy0 = y + r * 0.1, q = r * 0.48; ctx.beginPath(); ctx.arc(cx0, cy0, q, Math.PI, Math.PI * 0.52); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx0 - q - r * 0.27, cy0 - r * 0.28); ctx.lineTo(cx0 - q, cy0 + r * 0.04); ctx.lineTo(cx0 - q + r * 0.3, cy0 - r * 0.24); ctx.stroke(); },
+  undo(x, y, r) { ctx.beginPath(); ctx.moveTo(x + r * 0.5, y); ctx.lineTo(x - r * 0.44, y); ctx.moveTo(x - r * 0.06, y - r * 0.4); ctx.lineTo(x - r * 0.48, y); ctx.lineTo(x - r * 0.06, y + r * 0.4); ctx.stroke(); },      // отмена — прямая стрелка назад, «заново» — круговая: не спутать
   restart(x, y, r) { const q = r * 0.48, a1 = Math.PI * 1.42, ex = x + Math.cos(a1) * q, ey = y + Math.sin(a1) * q, tx = -Math.sin(a1), ty = Math.cos(a1), h = r * 0.34;      // почти полный круг по часовой и стрелка на конце
     ctx.beginPath(); ctx.arc(x, y, q, -Math.PI * 0.18, a1); ctx.stroke(); const rot = (a) => [tx * Math.cos(a) - ty * Math.sin(a), tx * Math.sin(a) + ty * Math.cos(a)], tipx = ex + tx * h * 0.45, tipy = ey + ty * h * 0.45, [ax, ay] = rot(2.5), [bx, by] = rot(-2.5);
     ctx.beginPath(); ctx.moveTo(tipx + ax * h, tipy + ay * h); ctx.lineTo(tipx, tipy); ctx.lineTo(tipx + bx * h, tipy + by * h); ctx.stroke(); },
@@ -32,7 +32,7 @@ function pillBtn(id, x, y, w, h, label, fn, o) { o = o || {}; const down = btn(x
   ctx.fillStyle = 'rgba(4,5,16,0.5)'; rr(ctx, x, y + 3, w, h, h / 2); ctx.fill(); const g = ctx.createLinearGradient(0, y, 0, y + h); g.addColorStop(0, o.primary ? '#ffca62' : '#2c3466'); g.addColorStop(1, o.primary ? '#f09a2c' : '#1c2247'); ctx.fillStyle = g; rr(ctx, x, y, w, h, h / 2); ctx.fill();
   ctx.strokeStyle = o.primary ? '#ffe3a1' : '#46508a'; ctx.lineWidth = 1.5; rr(ctx, x + 0.75, y + 0.75, w - 1.5, h - 1.5, h / 2); ctx.stroke(); ctx.fillStyle = o.primary ? PAL.ink : PAL.text; ctx.font = font(o.size || 16, 800); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(label, x + w / 2, y + h / 2 + 1); ctx.restore(); }
 function text(s, x, y, px, col, w, align) { ctx.font = font(px, w || 700); ctx.fillStyle = col || PAL.text; ctx.textAlign = align || 'center'; ctx.textBaseline = 'middle'; ctx.fillText(s, x, y); }
-function wrap(s, x, y, maxW, px, col, lh) { ctx.font = font(px, 600); const words = s.split(' '), lines = []; let cur = ''; for (const wd of words) { const t = cur ? cur + ' ' + wd : wd; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = wd; } else cur = t; } if (cur) lines.push(cur);
+function wrap(s, x, y, maxW, px, col, lh) { ctx.font = font(px, 600); const words = s.replace(/ — /g, '\u00a0— ').split(' '), lines = []; let cur = ''; for (const wd of words) { const t = cur ? cur + ' ' + wd : wd; if (ctx.measureText(t).width > maxW && cur) { lines.push(cur); cur = wd; } else cur = t; } if (cur) lines.push(cur);
   lines.forEach((ln, k) => text(ln, x, y + k * (lh || px * 1.3), px, col, 600)); return lines.length; }
 function bg() { const g = ctx.createLinearGradient(0, 0, 0, VH); g.addColorStop(0, PAL.bg1); g.addColorStop(0.55, PAL.bg0); g.addColorStop(1, '#04050c'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, VH); }
 
@@ -45,16 +45,20 @@ function drawFuse(y) { const L = M.L, S = V.shown, N = C.fuseLen(L, S.spools), g
   for (let k = 1; k <= N; k++) { const r = 5.2 * (k === N && pop < 1 ? 1 + Math.sin(pop * Math.PI) * 0.9 : 1); ctx.fillStyle = PAL.ink; ctx.beginPath(); ctx.arc(x0 + gap * k - gap / 2, y, r + 2, 0, 7); ctx.fill(); ctx.fillStyle = PAL.cream; ctx.beginPath(); ctx.arc(x0 + gap * k - gap / 2, y, r, 0, 7); ctx.fill(); }
   ctx.globalCompositeOperation = 'lighter'; glow(x0 - 6, y - 6, 22, '255,150,60', 0.3); ctx.globalCompositeOperation = 'source-over'; flameShape(x0 - 6, y + 7, 1, 5, 34);
   prop(ctx, 'hero_a', x0 + w + 13, y + 15, 32); }
-function drawPlay() { const lv = LEVELS[M.idx], S = M.S, wd = WORLDS[lv.w - 1]; bg(); drawField();
+function drawPlay() { const lv = LEVELS[M.idx], S = M.S, L = M.L, wd = WORLDS[lv.w - 1]; bg();
+  // руководство на вводных уровнях: стрелка на следующий шаг плана, пока игрок идёт по плану
+  V.guideCell = -1; if (lv.guide && !S.over && !UI.card) { const pc = planCells(); if (S.t < lv.plan.length && pcell(S) === pc[S.t] && M.hist.every((h, k) => pcell(h) === pc[k])) V.guideCell = pc[S.t + 1]; }
+  // окно победы не закрывает поле: поле уезжает вверх
+  let shift = 0; if (UI.win) shift = Math.min(Math.max(0, F.y + L.H * F.cell + 10 - (VH - 204)), Math.max(0, F.y - CONFIG.top - 12)) * easeOut(clamp((now - UI.win.t0) / 320, 0, 1));
+  ctx.save(); ctx.translate(0, -shift); drawField(); ctx.restore();
+  if (shift > 1) { const g = ctx.createLinearGradient(0, CONFIG.top - 8, 0, CONFIG.top + 14); g.addColorStop(0, 'rgba(12,15,40,0.97)'); g.addColorStop(1, 'rgba(12,15,40,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, CONFIG.top + 14); }
   // шапка
   roundBtn('map', 34, 30, 20, ICON.grid, goMap);
   text(`${lv.w} · ${numInWorld(M.idx)}`, VW / 2, 24, 22, PAL.text, 800); text(tr(wd.name), VW / 2, 44, 11.5, PAL.dim, 700);
   const st = starsOf(M.idx); for (let k = 0; k < 3; k++) star(VW - 62 + k * 17, 21, 7, k < st);
   text(`${T('moves')} ${V.shown.t}`, VW - 45, 43, 11.5, PAL.dim, 700);
-  drawFuse(CONFIG.top + 22);
+  if (!UI.win) { drawFuse(CONFIG.top + 18); text(T('behind')(C.fuseLen(L, V.shown.spools)), VW / 2, CONFIG.top + 41, 11, PAL.dim, 700); }      // после победы полоска фитиля не нужна — место отдано полю
   if (lv.hint && !UI.win) wrap(tr(lv.hint), VW / 2, VH - CONFIG.bottom - 34, VW - 56, 13.5, '#aab3da', 18);
-  // руководящая рука на вводных уровнях: показывает следующий шаг плана, пока игрок идёт по плану
-  if (lv.guide && !S.over && now >= V.failUntil && !UI.card) { const pc = planCells(); if (S.t < lv.plan.length && pcell(S) === pc[S.t] && M.hist.every((h, k) => pcell(h) === pc[k])) { const c = pc[S.t + 1], k = (Math.sin(now / 260) + 1) / 2, x = cellX(c) + F.cell * 0.34 + k * 5, y = cellY(c) - F.cell * 0.3 - k * 5; spr(ctx, 'hand', x - F.cell * 0.35, y - F.cell * 0.4, F.cell * 0.9, F.cell * 0.9); } }
   // нижняя панель: отмена, заново, подсказка — всегда на одних местах
   const by = VH - 50;
   if (!UI.win) { roundBtn('undo', VW / 2 - 98, by, 31, ICON.undo, () => { if (now < V.failUntil) return; undo(); }, { dim: !M.hist.length });
@@ -82,7 +86,10 @@ function drawMap() { bg(); const w = UI.mapW + 1, wd = WORLDS[UI.mapW], ids = wo
   text(tr({ ru: 'Фитиль', en: 'The Fuse' }), VW / 2, 34, 26, PAL.text, 800); star(VW / 2 - 34, 62, 8, true); text(`${totalStars()} / ${LEVELS.length * 3}`, VW / 2 + 8, 63, 13, '#ffd98a', 800);
   // заголовок мира
   const hy = 104; ctx.fillStyle = wd.tint; ctx.globalAlpha = 0.16; rr(ctx, 58, hy - 28, VW - 116, 60, 18); ctx.fill(); ctx.globalAlpha = 1; ctx.strokeStyle = '#3b4478'; ctx.lineWidth = 1.5; rr(ctx, 58.75, hy - 27.25, VW - 117.5, 58.5, 18); ctx.stroke();
-  text(`${T('world')} ${w}`, VW / 2, hy - 12, 12, PAL.dim, 800); text(tr(wd.name), VW / 2, hy + 10, 20, PAL.text, 800); text(`★ ${got} / ${ids.length * 3}`, VW / 2, hy + 46, 12, '#ffd98a', 800);
+  text(`${T('world')} ${w}`, VW / 2 + 16, hy - 12, 12, PAL.dim, 800); text(tr(wd.name), VW / 2 + 16, hy + 10, 20, PAL.text, 800);
+  ctx.fillStyle = wd.icon === 'flame' || wd.icon === 'door_open' ? '#10142e' : '#3b4563'; ctx.beginPath(); ctx.arc(92, hy + 2, 21, 0, 7); ctx.fill(); ctx.strokeStyle = PAL.ink; ctx.lineWidth = 2.5; ctx.stroke();
+  if (wd.icon === 'flame') flameShape(92, hy + 14, 1, 2, 40); else spr(ctx, wd.icon, 92 - 19, hy + 2 - 19, 38, 38);
+  const allLocked = ids.every(i => !isOpen(i)); text(allLocked ? T('lockedWorld') : `★ ${got} / ${ids.length * 3}`, VW / 2, hy + 46, 12, allLocked ? PAL.dim : '#ffd98a', 800);
   roundBtn('wprev', 30, hy + 2, 19, ICON.prev, () => { UI.mapW = Math.max(0, UI.mapW - 1); SND.play('click'); }, { dim: UI.mapW === 0 }); roundBtn('wnext2', VW - 30, hy + 2, 19, ICON.fwd, () => { UI.mapW = Math.min(WORLDS.length - 1, UI.mapW + 1); SND.play('click'); }, { dim: UI.mapW === WORLDS.length - 1 });
   // шнур между уровнями: пройденная часть «горит»
   const pos = ids.map((i, k) => nodePos(k, ids.length)); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -95,7 +102,8 @@ function drawMap() { bg(); const w = UI.mapW + 1, wd = WORLDS[UI.mapW], ids = wo
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = st ? '#fff0c2' : open ? '#5a66a8' : '#2a305c'; ctx.beginPath(); ctx.arc(0, 0, r - 1, 0, 7); ctx.stroke();
     if (isCur && open) { const q = (Math.sin(now / 260) + 1) / 2; ctx.strokeStyle = `rgba(53,201,179,${0.45 + q * 0.5})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r + 4 + q * 3, 0, 7); ctx.stroke(); }
     if (open) text(String(k + 1), 0, 1, 22, st ? PAL.ink : PAL.text, 800); else { ctx.strokeStyle = '#4a548f'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ICON.lock(0, 0, 26); }
-    ctx.restore(); for (let s = 0; s < 3; s++) star(x + (s - 1) * 15, y + r + 13, 6, s < st); });
+    ctx.restore(); if (isCur && open) prop(ctx, 'hero_a', x - r - 4, y + r * 0.72, 40);
+    ctx.fillStyle = '#080a18'; rr(ctx, x - 27, y + r + 4, 54, 18, 9); ctx.fill(); for (let s = 0; s < 3; s++) star(x + (s - 1) * 15, y + r + 13, 6, s < st); });
   // точки миров и нижний ряд
   const dy = VH - 108; WORLDS.forEach((q, k) => { ctx.fillStyle = k === UI.mapW ? '#ffd98a' : '#353d70'; ctx.beginPath(); ctx.arc(VW / 2 + (k - (WORLDS.length - 1) / 2) * 16, dy, k === UI.mapW ? 4.5 : 3.2, 0, 7); ctx.fill(); });
   const by = VH - 54; roundBtn('snd', VW / 2 - 96, by, 25, ICON.sound, () => { SND.setOn(!save.sound); SND.play('click'); }, { arg: save.sound });
@@ -108,11 +116,11 @@ const fmtMs = ms => { const s = Math.round(ms / 1000); return s >= 60 ? Math.flo
 function statsRows() { return LEVELS.map((l, i) => ({ i, id: l.id, st: save.stats[l.id], stars: starsOf(i) })).filter(r => r.st && (r.st.moves || r.st.wins)); }
 function drawStats() { bg(); const rows = statsRows(), top = 104, rowH = 26, viewH = VH - top - 132, maxScroll = Math.max(0, rows.length * rowH - viewH); UI.statScroll = clamp(UI.statScroll, 0, maxScroll);
   text(T('stats'), VW / 2, 34, 22, PAL.text, 800); roundBtn('sclose', VW - 32, 32, 19, ICON.close, () => { UI.screen = 'map'; SND.play('click'); });
-  const cols = [34, 92, 148, 198, 250, 304, 358], hd = T('statHead'); hd.forEach((h, k) => text(h, cols[k], 78, 10.5, PAL.dim, 800));
+  const cols = [18, 118, 170, 216, 264, 314, 360], hd = T('statHead'); hd.forEach((h, k) => text(h, cols[k], 78, 10.5, PAL.dim, 800, k ? 'center' : 'left'));
   ctx.save(); ctx.beginPath(); ctx.rect(0, top - 12, VW, viewH + 12); ctx.clip();
   rows.forEach((r, k) => { const y = top + k * rowH - UI.statScroll + 6; if (y < top - 30 || y > top + viewH + 20) return; if (k % 2 === 0) { ctx.fillStyle = 'rgba(255,255,255,0.035)'; ctx.fillRect(10, y - rowH / 2, VW - 20, rowH); }
     const s = r.st, vals = [r.id + (r.stars ? ' ' + '★'.repeat(r.stars) : ''), fmtMs(s.wins ? s.firstMs : s.ms), s.wins ? s.firstMoves : s.moves, s.undos, s.restarts, s.fails, (s.ideas || 0) + '+' + (s.shows || 0)];
-    vals.forEach((v, c) => text(String(v), cols[c], y, 12, c === 0 ? (r.stars ? '#ffd98a' : PAL.text) : '#c9d0f2', 700)); });
+    vals.forEach((v, c) => text(String(v), cols[c], y, 12, c === 0 ? (r.stars ? '#ffd98a' : PAL.text) : '#c9d0f2', 700, c ? 'center' : 'left')); });
   if (!rows.length) text('—', VW / 2, top + 30, 16, PAL.dim);
   ctx.restore(); const by = VH - 104;
   pillBtn('sall', 20, by, VW - 40, 40, (save.openAll ? '✓ ' : '') + T('openAll'), () => { save.openAll = !save.openAll; persist(); SND.play('click'); }, { size: 14 });
