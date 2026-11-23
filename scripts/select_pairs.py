@@ -158,7 +158,7 @@ def main():
                      "солдат_NOUN", "моряк_NOUN", "лётчик_NOUN", "врач_NOUN",
                      "учитель_NOUN", "рабочий_NOUN", "крестьянин_NOUN",
                      "музыкант_NOUN"]
-    HUMAN_COS = 0.50
+    HUMAN_COS = 0.45
     anchors = [index[a] for a in HUMAN_ANCHORS if a in index]
     human_mask = np.zeros(len(words), dtype=bool)
     if anchors:
