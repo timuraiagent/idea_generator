@@ -44,7 +44,7 @@ SCORES = {
     "tightreins": 16, "molvoprovod": 15, "tolkuchka": 15, "lotdrop": 16, "molchkom": 16,
     "inface": 16, "cautery": 16, "remind": 16, "sleepwall": 16, "billeting": 16, "phase-throne": 15,
     "haze-repeat": 15, "radiant-crown": 15, "dive-threat": 16, "shadowcast": 16, "mournwatch": 15,
-    "edict-reign": 15,
+    "edict-reign": 15, "foundling": 15,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
