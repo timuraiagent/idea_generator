@@ -54,13 +54,14 @@ function drawPlay() { const lv = LEVELS[M.idx], S = M.S, L = M.L, wd = WORLDS[lv
   if (shift > 1) { const g = ctx.createLinearGradient(0, CONFIG.top - 8, 0, CONFIG.top + 14); g.addColorStop(0, 'rgba(12,15,40,0.97)'); g.addColorStop(1, 'rgba(12,15,40,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, CONFIG.top + 14); }
   // шапка
   roundBtn('map', 36, 30, 24, ICON.grid, goMap);
-  text(`${lv.w} · ${numInWorld(M.idx)}`, VW / 2, 24, 22, PAL.text, 800); text(tr(wd.name), VW / 2, 44, 11.5, PAL.dim, 700);
+  text(`${lv.w} · ${numInWorld(M.idx)}`, VW / 2, 24, 22, PAL.text, 800); text(lv.exam ? T('hard') : tr(wd.name), VW / 2, 44, lv.exam ? 12.5 : 11.5, lv.exam ? '#ffc94d' : PAL.dim, lv.exam ? 800 : 700);      // трудный уровень подписан заранее, без сюрприза
   if (!UI.win) { const st = starsOf(M.idx); for (let k = 0; k < 3; k++) star(VW - 64 + k * 18, 21, 7.5, k < st); text(`${T('moves')} ${V.shown.t}`, VW - 46, 43, 12.5, '#a3acd4', 700); }
   if (!UI.win) { drawFuse(CONFIG.top + 18); text(T('behind')(C.fuseLen(L, V.shown.spools)), VW / 2, CONFIG.top + 42, 13, '#a3acd4', 700); }      // после победы полоска фитиля не нужна — место отдано полю
   if (lv.hint && !UI.win && !UI.card) wrap(tr(lv.hint), VW / 2, VH - CONFIG.bottom - 34, VW - 56, 13.5, '#aab3da', 18);
   // нижняя панель: отмена, заново, подсказка — всегда на одних местах
-  const by = VH - 50;
-  if (!UI.win) { roundBtn('undo', VW / 2 - 98, by, 31, ICON.undo, () => { if (now < V.failUntil) return; undo(); }, { dim: !M.hist.length });
+  const by = VH - 60;
+  if (!UI.win) { [['bUndo', -98], ['bRestart', 0], ['bHint', 98]].forEach(([k, dx]) => text(T(k), VW / 2 + dx, VH - 15, 12, '#9aa3cc', 700));
+    roundBtn('undo', VW / 2 - 98, by, 31, ICON.undo, () => { if (now < V.failUntil) return; undo(); }, { dim: !M.hist.length });
     roundBtn('restart', VW / 2, by, 31, ICON.restart, () => { if (now < V.failUntil) return; restart(); }, { dim: !M.hist.length });
     roundBtn('hint', VW / 2 + 98, by, 31, ICON.hint, doHint, { pulse: M.trouble >= CONFIG.hintAfterFails && !V.move && !V.idea, col: '#ffd98a' }); }
   if (UI.win) drawWin(); if (UI.card) drawCard(); }
@@ -79,7 +80,7 @@ function drawCard() { const cd = UI.card, wd = WORLDS[cd.w - 1], p = easeOut(cla
   btn(0, 0, VW, VH, () => { save.seenWorld[cd.w] = 1; persist(); UI.card = null; SND.play('click'); }, 'card'); }
 
 // ---------- карта миров ----------
-function nodePos(k, n) { const cols = 3, row = Math.floor(k / cols), col = row % 2 ? cols - 1 - (k % cols) : k % cols; return [VW / 2 + (col - 1) * 104, 212 + row * clamp((VH - 368) / 3.3, 98, 132)]; }
+function nodePos(k, n) { const cols = 3, row = Math.floor(k / cols), col = row % 2 ? cols - 1 - (k % cols) : k % cols; return [VW / 2 + (col - 1) * 104, 212 + row * clamp((VH - 380) / 3.3, 98, 132)]; }
 function drawMap() { bg(); const w = UI.mapW + 1, wd = WORLDS[UI.mapW], ids = worldLevels(w), cur = firstUnsolved(), got = ids.reduce((a, i) => a + starsOf(i), 0);
   ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.restore();
   text(tr({ ru: 'Фитиль', en: 'The Fuse' }), VW / 2, 34, 26, PAL.text, 800); star(VW / 2 - 34, 62, 8, true); text(`${totalStars()} / ${LEVELS.length * 3}`, VW / 2 + 8, 63, 13, '#ffd98a', 800);
@@ -101,13 +102,14 @@ function drawMap() { bg(); const w = UI.mapW + 1, wd = WORLDS[UI.mapW], ids = wo
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = st ? '#fff0c2' : open ? '#5a66a8' : '#2a305c'; ctx.beginPath(); ctx.arc(0, 0, r - 1, 0, 7); ctx.stroke();
     if (isCur && open) { const q = (Math.sin(now / 260) + 1) / 2; ctx.strokeStyle = `rgba(53,201,179,${0.45 + q * 0.5})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r + 4 + q * 3, 0, 7); ctx.stroke(); }
     if (open) { text(String(k + 1), 0, -6, 21, st ? PAL.ink : PAL.text, 800); for (let q = 0; q < 3; q++) star((q - 1) * 13, 14, 5.2, q < st); } else { ctx.strokeStyle = '#4a548f'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ICON.lock(0, 0, 26); }
-    ctx.restore(); if (isCur && open) prop(ctx, 'hero_a', x, y - r + 9 - Math.abs(Math.sin(now / 320)) * 4, 40); });
+    ctx.restore(); if (LEVELS[i].exam) { ctx.save(); ctx.translate(x + r * 0.74, y - r * 0.74); ctx.rotate(Math.PI / 4); ctx.fillStyle = PAL.ink; ctx.fillRect(-8, -8, 16, 16); ctx.fillStyle = open ? '#ffc94d' : '#5a6196'; ctx.fillRect(-5.5, -5.5, 11, 11); ctx.restore(); }      // ромб — трудный уровень
+    if (isCur && open) prop(ctx, 'hero_a', x, y - r + 9 - Math.abs(Math.sin(now / 320)) * 4, 40); });
   // точки миров и нижний ряд
-  const dy = VH - 108; WORLDS.forEach((q, k) => { ctx.fillStyle = k === UI.mapW ? '#ffd98a' : '#4a5490'; ctx.beginPath(); ctx.arc(VW / 2 + (k - (WORLDS.length - 1) / 2) * 18, dy, k === UI.mapW ? 5.5 : 4, 0, 7); ctx.fill(); });
-  const by = VH - 54; roundBtn('snd', VW / 2 - 96, by, 25, ICON.sound, () => { SND.setOn(!save.sound); SND.play('click'); }, { arg: save.sound });
+  const dy = VH - 116; WORLDS.forEach((q, k) => { ctx.fillStyle = k === UI.mapW ? '#ffd98a' : '#4a5490'; ctx.beginPath(); ctx.arc(VW / 2 + (k - (WORLDS.length - 1) / 2) * 18, dy, k === UI.mapW ? 5.5 : 4, 0, 7); ctx.fill(); });
+  const by = VH - 62; [['bSound', -96], ['bLang', 0], ['bLog', 96]].forEach(([k, dx]) => text(T(k), VW / 2 + dx, VH - 22, 12, '#9aa3cc', 700)); roundBtn('snd', VW / 2 - 96, by, 25, ICON.sound, () => { SND.setOn(!save.sound); SND.play('click'); }, { arg: save.sound });
   pillBtn('lng', VW / 2 - 34, by - 25, 68, 50, T('lang'), () => { save.lang = save.lang === 'ru' ? 'en' : 'ru'; persist(); SND.play('click'); }, { size: 17 });
   roundBtn('sts', VW / 2 + 96, by, 25, ICON.list, () => { UI.screen = 'stats'; UI.statScroll = 0; SND.play('click'); });
-  if (UI.toast && now < UI.toast.until) { ctx.font = font(13, 700); const tw = ctx.measureText(UI.toast.text).width + 28; ctx.fillStyle = '#2b3364'; rr(ctx, VW / 2 - tw / 2, VH - 150, tw, 32, 16); ctx.fill(); text(UI.toast.text, VW / 2, VH - 133.5, 13, PAL.text, 700); } }
+  if (UI.toast && now < UI.toast.until) { ctx.font = font(13, 700); const tw = ctx.measureText(UI.toast.text).width + 28; ctx.fillStyle = '#2b3364'; rr(ctx, VW / 2 - tw / 2, VH - 160, tw, 32, 16); ctx.fill(); text(UI.toast.text, VW / 2, VH - 143.5, 13, PAL.text, 700); } }
 
 // ---------- журнал плейтеста ----------
 const fmtMs = ms => { const s = Math.round(ms / 1000); return s >= 60 ? Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') : s + 'с'; };

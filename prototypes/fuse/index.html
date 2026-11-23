@@ -134,25 +134,25 @@ const FUSE_CORE = (() => {
   return { WALL, FLOOR, STONE, DOOR, LAMP, WATER, PIT, OIL, BURN, WOOD, BURNW, FIRE, BLOCK, DIRS, compile, init, legal, apply, preview, solve, solveFrom, fuseLen, key, dirChar, cellInDir, seenCells, patchOf, computeLight };
 })();
 
-const FUSE_WORLDS = [{"id":1,"name":{"ru":"Первый свет","en":"First Light"},"tint":"#e9ecff","icon":"flame","card":{"ru":"Огонёк идёт по твоему следу. Дверь открыта только на свету.","en":"The flame follows your trail. The door opens only in the light."}},{"id":2,"name":{"ru":"Живой свет","en":"Living Light"},"tint":"#dcefff","icon":"door_open","card":{"ru":"Свет бывает и без лампы: дверь осветит сам огонёк. А длина фитиля в каждом подвале своя.","en":"Light without a lamp: the flame itself can light the door. And every cellar has its own fuse length."}},{"id":3,"name":{"ru":"Камень","en":"Stone"},"tint":"#ebe4ff","icon":"stone","card":{"ru":"Камень не проваливается. По нему можно пройти ещё раз, когда шнур с него сползёт.","en":"Stone never falls. You can cross it again once the cord has left it."}},{"id":4,"name":{"ru":"Масло","en":"Oil"},"tint":"#e2f0e2","icon":"oil","card":{"ru":"Масло вспыхивает рядом с огнём и горит один ход. Огонь бежит по луже сам — не стой на ней.","en":"Oil catches fire next to the flame and burns for one turn. Fire runs along the puddle by itself — do not stand on it."}},{"id":5,"name":{"ru":"Стражи","en":"Guards"},"tint":"#f3dfe8","icon":"guard_sleep","card":{"ru":"Страж спит в темноте. На свету он видит всё светлое пятно, в котором стоит.","en":"A guard sleeps in the dark. In the light he sees the whole lit patch he stands in."}},{"id":6,"name":{"ru":"Доски","en":"Planks"},"tint":"#efe6d8","icon":"wood","card":{"ru":"Доски не пройти. Но рядом с огнём они сгорят — и откроют проход.","en":"Planks block the way. Next to fire they burn down — and open the passage."}},{"id":7,"name":{"ru":"Катушка","en":"Spool"},"tint":"#e0eaf8","icon":"spool","card":{"ru":"Катушка удлиняет фитиль: огонёк отстаёт сильнее и один ход стоит на месте.","en":"A spool makes the fuse longer: the flame falls further behind and waits for a turn."}},{"id":8,"name":{"ru":"Вода","en":"Water"},"tint":"#d6edf3","icon":"water","card":{"ru":"На мокром полу огонёк только тлеет: не светит и ничего не поджигает. Вода не проваливается.","en":"On wet floor the flame only smoulders: no light and no fire. Water never falls."}},{"id":9,"name":{"ru":"Глубина","en":"The Deep"},"tint":"#e6dcf6","icon":"door_open","card":{"ru":"Последние подвалы. Здесь пригодится всё.","en":"The last cellars. You will need everything here."}}];
+const FUSE_WORLDS = [{"id":1,"name":{"ru":"Первый свет","en":"First Light"},"tint":"#e9ecff","icon":"flame","card":{"ru":"Огонёк идёт по вашему следу. Дверь открыта только на свету.","en":"The flame follows your trail. The door opens only in the light."}},{"id":2,"name":{"ru":"Живой свет","en":"Living Light"},"tint":"#dcefff","icon":"door_open","card":{"ru":"Свет бывает и без лампы: дверь осветит сам огонёк. А длина фитиля в каждом подвале своя.","en":"Light without a lamp: the flame itself can light the door. And every cellar has its own fuse length."}},{"id":3,"name":{"ru":"Камень","en":"Stone"},"tint":"#ebe4ff","icon":"stone","card":{"ru":"Камень не проваливается. По нему можно пройти ещё раз, когда шнур с него сползёт.","en":"Stone never falls. You can cross it again once the cord has left it."}},{"id":4,"name":{"ru":"Масло","en":"Oil"},"tint":"#e2f0e2","icon":"oil","card":{"ru":"Масло вспыхивает рядом с огнём и горит один ход. Огонь бежит по луже сам — не стой на ней.","en":"Oil catches fire next to the flame and burns for one turn. Fire runs along the puddle by itself — do not stand on it."}},{"id":5,"name":{"ru":"Сторожа","en":"Watchmen"},"tint":"#f3dfe8","icon":"guard_sleep","card":{"ru":"Сторож дремлет в темноте. На свету он просыпается и видит всё светлое пятно, в котором стоит.","en":"A watchman dozes in the dark. In the light he wakes and sees the whole lit patch he stands in."}},{"id":6,"name":{"ru":"Доски","en":"Planks"},"tint":"#efe6d8","icon":"wood","card":{"ru":"Доски не пройти. Но рядом с огнём они сгорят — и откроют проход.","en":"Planks block the way. Next to fire they burn down — and open the passage."}},{"id":7,"name":{"ru":"Катушка","en":"Spool"},"tint":"#e0eaf8","icon":"spool","card":{"ru":"Катушка удлиняет фитиль: огонёк отстаёт сильнее и один ход стоит на месте.","en":"A spool makes the fuse longer: the flame falls further behind and waits for a turn."}},{"id":8,"name":{"ru":"Вода","en":"Water"},"tint":"#d6edf3","icon":"water","card":{"ru":"На мокром полу огонёк только тлеет: не светит и ничего не поджигает. Вода не проваливается.","en":"On wet floor the flame only smoulders: no light and no fire. Water never falls."}},{"id":9,"name":{"ru":"Глубина","en":"The Deep"},"tint":"#e6dcf6","icon":"door_open","card":{"ru":"Последние подвалы. Здесь пригодится всё.","en":"The last cellars. You will need everything here."}}];
 const FUSE_LEVELS = [
-  {"id":"1-01","w":1,"n":3,"map":["#.##","P...","###.","#.#.","#...","#.#.","#DK#"],"d":4.28,"hint":{"ru":"Иди к светлой двери. Огонёк идёт за тобой, пол за ним падает.","en":"Walk to the lit door. The flame follows you and the floor falls behind it."},"guide":true,"par":10,"plan":"RRRDDDLLDD"},
-  {"id":"1-02","w":1,"n":4,"map":[".DK#",".###","..##",".#.#","....","###P"],"d":3.16,"par":9,"plan":"ULLLUUUUR"},
-  {"id":"1-03","w":1,"n":3,"map":["....","..#.","DK#.","###.","##..","...#","#P##"],"d":3.64,"par":13,"plan":"URURUUUULLDLD"},
-  {"id":"1-04","w":1,"n":4,"map":[".....","..#P#",".####","...K#",".#D##"],"d":4.28,"par":10,"plan":"ULLDLDDRRD"},
-  {"id":"1-05","w":1,"n":3,"map":["#.###","#...#","#.#.#","P.#.#","#L#.#","D...."],"d":3.52,"hint":{"ru":"В темноте дверь закрыта. Пройди мимо лампы — огонёк её зажжёт.","en":"The door is shut in the dark. Walk past the lamp — your flame will light it."},"guide":true,"par":12,"plan":"RUURRDDDDLLL"},
-  {"id":"1-06","w":1,"n":4,"map":["##P#","...#",".##D","..L.","...."],"d":4.07,"par":11,"plan":"DLLDDRDRRUU"},
-  {"id":"1-07","w":1,"n":3,"map":["#.P","..#","..#",".L#",".D#",".##"],"d":4.59,"par":7,"plan":"LDDLDDR"},
-  {"id":"1-08","w":1,"n":3,"map":["#.L##","P..D#","##...","##..."],"d":4.01,"hint":{"ru":"Свет приходит позже тебя. Погуляй, но не сожги дорогу к двери.","en":"The light arrives after you. Take a walk, but keep your way to the door."},"par":7,"plan":"RRDDRUU"},
-  {"id":"1-09","w":1,"n":4,"map":["P...#","##_..","....#","#..L#","##D##"],"d":4.87,"par":10,"plan":"RRRDDLLDRD"},
-  {"id":"1-10","w":1,"n":3,"map":["#D.##","#L.#P",".....","#.#.#","#...#","#.L##"],"d":5.35,"par":12,"plan":"DLDDLLUURUUL"},
-  {"id":"1-11","w":1,"n":4,"map":["###...","###.#.","###.#.","DL..#P","....##","..####"],"d":5.98,"exam":true,"par":15,"plan":"UUULLDDDLDLDLUU"},
-  {"id":"1-12","w":1,"n":3,"map":["..P","..#",".L#","..D"],"d":3.59,"par":7,"plan":"LDLDDRR"},
+  {"id":"1-01","w":1,"n":3,"map":["#.##","P...","###.","#.#.","#...","#.#.","#DK#"],"d":4.28,"hint":{"ru":"Идите к светлой двери. Огонёк идёт следом, пол за ним падает.","en":"Walk to the lit door. The flame follows you and the floor falls behind it."},"guide":true,"par":10,"plan":"RRRDDDLLDD"},
+  {"id":"1-02","w":1,"n":4,"map":["P..##","##...","###.#","#K...","#D##.","#...."],"d":3.64,"par":13,"plan":"RRDRDDRDDLLLU"},
+  {"id":"1-03","w":1,"n":3,"map":["#.###","#...#","#.#.#","P.#.#","#L#.#","D...."],"d":3.52,"hint":{"ru":"В темноте дверь закрыта. Пройдите мимо лампы — огонёк её зажжёт.","en":"The door is shut in the dark. Walk past the lamp — your flame will light it."},"guide":true,"par":12,"plan":"RUURRDDDDLLL"},
+  {"id":"1-04","w":1,"n":4,"map":["#L####","#.#.#.","P.....","###L#.","##D..."],"d":4.28,"par":10,"plan":"RRRRRDDLLL"},
+  {"id":"1-05","w":1,"n":3,"map":["#.L##","P..D#","##...","##..."],"d":4.01,"hint":{"ru":"Свет приходит позже вас. Сделайте крюк, но не сожгите дорогу к двери.","en":"The light arrives after you. Take a detour, but keep your way to the door."},"par":7,"plan":"RRDDRUU"},
+  {"id":"1-06","w":1,"n":4,"map":["#P##","....","#...","##L.","###D"],"d":4.64,"par":8,"plan":"DDRURDDD"},
+  {"id":"1-07","w":1,"n":3,"map":["#..P","..##","..L#","..D#"],"d":5.06,"par":8,"plan":"LLDDLDRR"},
+  {"id":"1-08","w":1,"n":4,"map":["PL#.","....","#...","#.#L","#..D"],"d":5.42,"par":11,"plan":"DRRRDLLDDRR"},
+  {"id":"1-09","w":1,"n":4,"map":["...P","...#","L..#","#D##"],"d":5.69,"par":9,"plan":"LLLDRRDLD"},
+  {"id":"1-10","w":1,"n":3,"map":["....P","#...#","#DL.#"],"d":6.02,"par":7,"plan":"LDLULDD"},
+  {"id":"1-11","w":1,"n":4,"map":["D..##","L...P","..#.#","....#"],"d":6.49,"exam":true,"par":13,"plan":"LDDLLLURURULL"},
+  {"id":"1-12","w":1,"n":3,"map":["D##P",".L..",".#..","...#"],"d":3.99,"par":9,"plan":"DLDDLLUUU"},
   {"id":"2-01","w":2,"n":5,"map":["#.L##","P..D#","##...","##..."],"d":5.18,"hint":{"ru":"Тот же подвал, но фитиль длиннее: ждать дольше.","en":"Same cellar, longer fuse: a longer wait."},"par":9,"plan":"RRDDRRULU"},
   {"id":"2-02","w":2,"n":4,"map":["D#####",".L####","..._##",".....P"],"d":4.3,"par":10,"plan":"LLLULDLUUU"},
   {"id":"2-03","w":2,"n":4,"map":["#D#...","#.L.#.","#.....","#####.","P....."],"d":4.95,"par":17,"plan":"RRRRRUUUULLDDLLUU"},
   {"id":"2-04","w":2,"n":5,"map":["###.","#D..","##L.","#...","P..."],"d":5.38,"par":10,"plan":"RURDRUUULL"},
-  {"id":"2-05","w":2,"n":2,"map":[".D._","....",".###","P###"],"d":2.8,"hint":{"ru":"Лампы нет. Дверь осветит сам огонёк — приведи его к ней.","en":"No lamp here. The flame itself will light the door — bring it close."},"par":6,"plan":"UURRUL"},
+  {"id":"2-05","w":2,"n":2,"map":[".D._","....",".###","P###"],"d":2.8,"hint":{"ru":"Лампы нет. Дверь осветит сам огонёк — приведите его к ней.","en":"No lamp here. The flame itself will light the door — bring it close."},"par":6,"plan":"UURRUL"},
   {"id":"2-06","w":2,"n":4,"map":["P...","##.D","##..","##..","##.#"],"d":4.63,"par":8,"plan":"RRDDDRUU"},
   {"id":"2-07","w":2,"n":2,"map":["#....#","..#.##","P##...","####..","####..","####.D"],"d":5.35,"par":14,"plan":"URURRDDRDRDLDR"},
   {"id":"2-08","w":2,"n":4,"map":["D..#","....","..##","P_##"],"d":5.6,"par":7,"plan":"UURRULL"},
@@ -164,7 +164,7 @@ const FUSE_LEVELS = [
   {"id":"3-02","w":3,"n":2,"map":["###P#.","###..s","L..##.","Dss..."],"d":4.35,"par":14,"plan":"DRRDDLLLLURDLL"},
   {"id":"3-03","w":3,"n":3,"map":["...##",".#.##","..s.P",".LD##",".####",".####"],"d":4.74,"par":11,"plan":"LLLLUURRDDD"},
   {"id":"3-04","w":3,"n":4,"map":["P#..","..s.","##s.","#L.L","##D#"],"d":5.2,"par":12,"plan":"DRRDRUULDDDD"},
-  {"id":"3-05","w":3,"n":2,"map":["###.","##.s",".Ps.","##sL","##DL"],"d":3.5,"hint":{"ru":"Свет опаздывает? Сделай круг и вернись через камень.","en":"Light running late? Walk a loop and come back across the stone."},"par":7,"plan":"RURDLDD"},
+  {"id":"3-05","w":3,"n":2,"map":["###.","##.s",".Ps.","##sL","##DL"],"d":3.5,"hint":{"ru":"Свет опаздывает? Сделайте круг и вернитесь через камень.","en":"Light running late? Walk a loop and come back across the stone."},"par":7,"plan":"RURDLDD"},
   {"id":"3-06","w":3,"n":4,"map":["##...","##...","P.s..","##.L#","##D##"],"d":5.82,"par":10,"plan":"RRRUULDDDD"},
   {"id":"3-07","w":3,"n":5,"map":["....","L.#s","Ls..","Ds.P"],"d":6.06,"par":13,"plan":"LLUUURRDDLLDL"},
   {"id":"3-08","w":3,"n":4,"map":["#.P#","..##",".ssD",".s.L","L###"],"d":6.51,"par":11,"plan":"LDDRDLLURRR"},
@@ -172,11 +172,11 @@ const FUSE_LEVELS = [
   {"id":"3-10","w":3,"n":5,"map":["P.sD","#.sL","#..s","...."],"d":7.11,"par":13,"plan":"RRDDRDLLUURUR"},
   {"id":"3-11","w":3,"n":4,"map":["##PL#","##.##","#..##","#s..D",".s.L#","...##"],"d":7.66,"exam":true,"par":15,"plan":"DDLDDLDRRULURRR"},
   {"id":"3-12","w":3,"n":2,"map":["...##","Ls.##","Ds.P.","###L#"],"d":4.83,"par":9,"plan":"LLUURDLDL"},
-  {"id":"4-01","w":4,"n":4,"map":["D.o..","Looo.","####P"],"d":2.15,"hint":{"ru":"Масло вспыхивает рядом с огнём. Не задерживайся на нём.","en":"Oil catches fire next to the flame. Do not linger on it."},"par":8,"plan":"UULDLULL"},
+  {"id":"4-01","w":4,"n":4,"map":["D.o..","Looo.","####P"],"d":2.15,"hint":{"ru":"Масло вспыхивает рядом с огнём. Не задерживайтесь на нём.","en":"Oil catches fire next to the flame. Do not linger on it."},"par":8,"plan":"UULDLULL"},
   {"id":"4-02","w":4,"n":3,"map":["D.Lo","#.oo","#.#.","P..."],"d":4.99,"par":9,"plan":"RRRUULLUL"},
   {"id":"4-03","w":4,"n":4,"map":["D###.","oL#.P","oo#..","oooo."],"d":5.24,"par":11,"plan":"LDRDLLLULUU"},
   {"id":"4-04","w":4,"n":5,"map":["###ooo","..ooLD","#..###","P..###"],"d":5.58,"par":11,"plan":"RRULURRURRD"},
-  {"id":"4-05","w":4,"n":4,"map":["###L","P#LD","..oo","...o"],"d":2.75,"hint":{"ru":"Огонь бежит по маслу сам — и зажжёт лампу, до которой ты не дойдёшь.","en":"Fire runs along the oil by itself — and lights a lamp you cannot reach."},"par":7,"plan":"DRDRURU"},
+  {"id":"4-05","w":4,"n":4,"map":["###L","P#LD","..oo","...o"],"d":2.75,"hint":{"ru":"Огонь бежит по маслу сам — и зажжёт лампу, до которой вам не дойти.","en":"Fire runs along the oil by itself — and lights a lamp you cannot reach."},"par":7,"plan":"DRDRURU"},
   {"id":"4-06","w":4,"n":3,"map":[".D_L","..oo","..o#","..o.","...#","P..#"],"d":5.92,"par":10,"plan":"UUURRULLUR"},
   {"id":"4-07","w":4,"n":5,"map":["#..D","P..L",".Loo","ooo."],"d":6.37,"par":12,"plan":"DDRRRULULURR"},
   {"id":"4-08","w":4,"n":3,"map":["..P#",".L.D","oooo","oooo"],"d":6.92,"par":8,"plan":"LLDDRRUR"},
@@ -184,11 +184,11 @@ const FUSE_LEVELS = [
   {"id":"4-10","w":4,"n":4,"map":["DL###","oo###","oo.#P","o.##.","o...."],"d":7.7,"par":12,"plan":"DDLLLULURULU"},
   {"id":"4-11","w":4,"n":5,"map":["#####P","D.o...","#Lo_..","##ooo.","####.#"],"d":8.29,"exam":true,"par":12,"plan":"DLDRDLLLUULL"},
   {"id":"4-12","w":4,"n":4,"map":["#oooD","..ooL",".#.##","..###","#P###"],"d":4.99,"par":11,"plan":"ULUURURDRUR"},
-  {"id":"5-01","w":5,"n":3,"map":["#.....","#.#...","P.L.D#","##G###"],"d":5.13,"hint":{"ru":"Страж спит в темноте. На свету он видит всё светлое пятно.","en":"The guard sleeps in the dark. In the light he sees the whole lit patch."},"par":8,"plan":"RUURRRDD"},
+  {"id":"5-01","w":5,"n":3,"map":["#.....","#.#...","P.L.D#","##G###"],"d":5.13,"hint":{"ru":"Сторож дремлет в темноте. На свету он видит всё светлое пятно.","en":"The watchman dozes in the dark. In the light he sees the whole lit patch."},"par":8,"plan":"RUURRRDD"},
   {"id":"5-02","w":5,"n":2,"map":["P#G.#",".....","#L...","#D...","####."],"d":5.36,"par":10,"plan":"DRRRRDDLLL"},
   {"id":"5-03","w":5,"n":3,"map":["P##D##","..L.##","#....#","LG..s."],"d":5.42,"par":11,"plan":"DRDRDRRULUU"},
   {"id":"5-04","w":5,"n":4,"map":["###D#","##..L","##...","P..G.","L...."],"d":5.86,"par":12,"plan":"RDRRRUULLURU"},
-  {"id":"5-05","w":5,"n":5,"map":["..P#",".oo#",".#og","DLgo"],"d":2.68,"hint":{"ru":"Страж стоит в масле. Огонь добежит до него сам.","en":"The guard stands in oil. The fire will get to him by itself."},"par":5,"plan":"LLDDD"},
+  {"id":"5-05","w":5,"n":5,"map":["..P#",".oo#",".#og","DLgo"],"d":2.68,"hint":{"ru":"Сторож стоит в луже масла. Огонь прогонит его сам.","en":"The watchman stands in an oil puddle. The fire will drive him off."},"par":5,"plan":"LLDDD"},
   {"id":"5-06","w":5,"n":4,"map":["P...",".##.",".LG.",".##.","....",".L#.","..D#"],"d":6.1,"par":14,"plan":"RRRDDDDLLLDDRR"},
   {"id":"5-07","w":5,"n":3,"map":["#..oog#","G..oo.#","#DL##.P"],"d":6.61,"par":9,"plan":"LULLLULDD"},
   {"id":"5-08","w":5,"n":4,"map":["#...LD#","#.G.#..","P.#....","#...##."],"d":7.06,"par":13,"plan":"RUURRDDRRRULU"},
@@ -196,7 +196,7 @@ const FUSE_LEVELS = [
   {"id":"5-10","w":5,"n":5,"map":["####.","##G#P",".....",".#.L.","#...D","....#"],"d":8.35,"par":11,"plan":"DLLDDLDRRUR"},
   {"id":"5-11","w":5,"n":4,"map":["#o...","oog..",".o.#.","L..#P","D...#"],"d":8.81,"exam":true,"par":15,"plan":"UUULLLDLDRDRDLL"},
   {"id":"5-12","w":5,"n":3,"map":["#....","...G.","..LLD","P####"],"d":5.76,"par":9,"plan":"UURRURRDD"},
-  {"id":"6-01","w":6,"n":2,"map":["P...","#w..","#.#.","#DK#"],"d":3.55,"hint":{"ru":"Доски не пройти. Но рядом с огнём они сгорят — и будет проход.","en":"Planks block the way. Next to fire they burn — and the way opens."},"guide":true,"par":8,"plan":"RRRDLLDD"},
+  {"id":"6-01","w":6,"n":2,"map":["P...","#w..","#.#.","#DK#"],"d":3.55,"hint":{"ru":"Доски не пройти. Но рядом с огнём они сгорят — и откроется проход.","en":"Planks block the way. Next to fire they burn — and the way opens."},"guide":true,"par":8,"plan":"RRRDLLDD"},
   {"id":"6-02","w":6,"n":3,"map":["#.####","P.##DK","#.#..#","..w.##","..s###","##.###"],"d":5.03,"par":12,"plan":"RDDLDRRURURU"},
   {"id":"6-03","w":6,"n":2,"map":["L.D##","sw###","...#.","....P"],"d":5.42,"par":11,"plan":"LLULDLUURUR"},
   {"id":"6-04","w":6,"n":3,"map":["....P","....L",".w#.#","#.D##","##K##"],"d":5.84,"par":11,"plan":"LDLLULDDRDR"},
@@ -245,7 +245,7 @@ const C = FUSE_CORE, LEVELS = FUSE_LEVELS, WORLDS = FUSE_WORLDS;
 // Все числа игры. Радиусы света (огонёк 1, горящая клетка 1, лампа 2) зашиты в логике: compile() → light1/light2.
 const CONFIG = {
   VW: 390, VHmin: 640, VHmax: 844,           // логический экран: ширина и пределы высоты
-  top: 56, bottom: 96,                       // шапка и нижняя панель
+  top: 56, bottom: 104,                      // шапка и нижняя панель
   cellMin: 34, cellMax: 72,                  // размер клетки
   stepMs: 130, chainMs: 110, failMs: 620,    // шаг героя, пауза между звеньями цепочки событий, показ провала
   dark: 0.26,                                // плотность тьмы на неосвещённых клетках
@@ -255,11 +255,11 @@ const CONFIG = {
   solveCap: 60000,                           // предел перебора для подсказки
 };
 const TXT = {
-  ru: { world: 'Мир', level: 'Уровень', moves: 'ходы', best: 'лучше нельзя', behind: n => `огонёк отстаёт на ${n} ${n === 1 ? 'шаг' : n < 5 ? 'шага' : 'шагов'}`, lockedWorld: 'сначала пройди уровни до этого мира', closed: 'в темноте дверь закрыта', stuck: 'тупик', burned: 'сгорел', seen: 'заметили',
-    next: 'дальше', again: 'ещё раз', map: 'уровни', dead: 'отсюда не пройти — возвращаю', nohint: 'подсказка думает слишком долго', tapNew: 'нажми, чтобы начать',
-    stats: 'Журнал', statHead: ['уровень', 'время', 'ходы', 'отм.', 'заново', 'провал', 'подск.'], openAll: 'открыть все уровни', sound: 'звук', lang: 'RU', close: 'закрыть', locked: 'сначала пройди предыдущие',
-    total: 'всего', reset: 'сбросить прогресс', resetAsk: 'нажми ещё раз, чтобы сбросить', copy: 'скопировать журнал', copied: 'скопировано', final: 'Все уровни пройдены!', hintIdea: 'что загорится', hintMove: 'следующий шаг' },
-  en: { world: 'World', level: 'Level', moves: 'moves', best: 'best possible', behind: n => `the flame is ${n} step${n === 1 ? '' : 's'} behind`, lockedWorld: 'finish the earlier levels first', closed: 'the door is shut in the dark', stuck: 'dead end', burned: 'burned', seen: 'spotted',
+  ru: { world: 'Мир', level: 'Уровень', moves: 'ходы', best: 'лучше нельзя', behind: n => `огонёк отстаёт на ${n} ${n === 1 ? 'шаг' : n < 5 ? 'шага' : 'шагов'}`, lockedWorld: 'сначала пройдите уровни до этого мира', closed: 'в темноте дверь закрыта', stuck: 'тупик', burned: 'слишком жарко', seen: 'сторож заметил', hard: 'трудный уровень', bUndo: 'отмена', bRestart: 'заново', bHint: 'подсказка', bSound: 'звук', bLang: 'язык', bLog: 'журнал',
+    next: 'дальше', again: 'ещё раз', map: 'уровни', dead: 'отсюда не пройти — возвращаю', nohint: 'подсказка думает слишком долго', tapNew: 'нажмите, чтобы начать',
+    stats: 'Журнал', statHead: ['уровень', 'время', 'ходы', 'отм.', 'заново', 'провал', 'подск.'], openAll: 'открыть все уровни', sound: 'звук', lang: 'RU', close: 'закрыть', locked: 'сначала пройдите предыдущие',
+    total: 'всего', reset: 'сбросить прогресс', resetAsk: 'нажмите ещё раз, чтобы сбросить', copy: 'скопировать журнал', copied: 'скопировано', final: 'Все уровни пройдены!', hintIdea: 'что загорится', hintMove: 'следующий шаг' },
+  en: { world: 'World', level: 'Level', moves: 'moves', best: 'best possible', behind: n => `the flame is ${n} step${n === 1 ? '' : 's'} behind`, lockedWorld: 'finish the earlier levels first', closed: 'the door is shut in the dark', stuck: 'dead end', burned: 'too hot', seen: 'the watchman saw you', hard: 'hard level', bUndo: 'undo', bRestart: 'restart', bHint: 'hint', bSound: 'sound', bLang: 'language', bLog: 'log',
     next: 'next', again: 'again', map: 'levels', dead: 'no way from here — going back', nohint: 'the hint is taking too long', tapNew: 'tap to start',
     stats: 'Playtest log', statHead: ['level', 'time', 'moves', 'undo', 'retry', 'fails', 'hints'], openAll: 'unlock all levels', sound: 'sound', lang: 'EN', close: 'close', locked: 'finish the earlier ones first',
     total: 'total', reset: 'reset progress', resetAsk: 'tap again to reset', copy: 'copy the log', copied: 'copied', final: 'All levels done!', hintIdea: 'what will burn', hintMove: 'next step' },
@@ -648,13 +648,14 @@ function drawPlay() { const lv = LEVELS[M.idx], S = M.S, L = M.L, wd = WORLDS[lv
   if (shift > 1) { const g = ctx.createLinearGradient(0, CONFIG.top - 8, 0, CONFIG.top + 14); g.addColorStop(0, 'rgba(12,15,40,0.97)'); g.addColorStop(1, 'rgba(12,15,40,0)'); ctx.fillStyle = g; ctx.fillRect(0, 0, VW, CONFIG.top + 14); }
   // шапка
   roundBtn('map', 36, 30, 24, ICON.grid, goMap);
-  text(`${lv.w} · ${numInWorld(M.idx)}`, VW / 2, 24, 22, PAL.text, 800); text(tr(wd.name), VW / 2, 44, 11.5, PAL.dim, 700);
+  text(`${lv.w} · ${numInWorld(M.idx)}`, VW / 2, 24, 22, PAL.text, 800); text(lv.exam ? T('hard') : tr(wd.name), VW / 2, 44, lv.exam ? 12.5 : 11.5, lv.exam ? '#ffc94d' : PAL.dim, lv.exam ? 800 : 700);      // трудный уровень подписан заранее, без сюрприза
   if (!UI.win) { const st = starsOf(M.idx); for (let k = 0; k < 3; k++) star(VW - 64 + k * 18, 21, 7.5, k < st); text(`${T('moves')} ${V.shown.t}`, VW - 46, 43, 12.5, '#a3acd4', 700); }
   if (!UI.win) { drawFuse(CONFIG.top + 18); text(T('behind')(C.fuseLen(L, V.shown.spools)), VW / 2, CONFIG.top + 42, 13, '#a3acd4', 700); }      // после победы полоска фитиля не нужна — место отдано полю
   if (lv.hint && !UI.win && !UI.card) wrap(tr(lv.hint), VW / 2, VH - CONFIG.bottom - 34, VW - 56, 13.5, '#aab3da', 18);
   // нижняя панель: отмена, заново, подсказка — всегда на одних местах
-  const by = VH - 50;
-  if (!UI.win) { roundBtn('undo', VW / 2 - 98, by, 31, ICON.undo, () => { if (now < V.failUntil) return; undo(); }, { dim: !M.hist.length });
+  const by = VH - 60;
+  if (!UI.win) { [['bUndo', -98], ['bRestart', 0], ['bHint', 98]].forEach(([k, dx]) => text(T(k), VW / 2 + dx, VH - 15, 12, '#9aa3cc', 700));
+    roundBtn('undo', VW / 2 - 98, by, 31, ICON.undo, () => { if (now < V.failUntil) return; undo(); }, { dim: !M.hist.length });
     roundBtn('restart', VW / 2, by, 31, ICON.restart, () => { if (now < V.failUntil) return; restart(); }, { dim: !M.hist.length });
     roundBtn('hint', VW / 2 + 98, by, 31, ICON.hint, doHint, { pulse: M.trouble >= CONFIG.hintAfterFails && !V.move && !V.idea, col: '#ffd98a' }); }
   if (UI.win) drawWin(); if (UI.card) drawCard(); }
@@ -673,7 +674,7 @@ function drawCard() { const cd = UI.card, wd = WORLDS[cd.w - 1], p = easeOut(cla
   btn(0, 0, VW, VH, () => { save.seenWorld[cd.w] = 1; persist(); UI.card = null; SND.play('click'); }, 'card'); }
 
 // ---------- карта миров ----------
-function nodePos(k, n) { const cols = 3, row = Math.floor(k / cols), col = row % 2 ? cols - 1 - (k % cols) : k % cols; return [VW / 2 + (col - 1) * 104, 212 + row * clamp((VH - 368) / 3.3, 98, 132)]; }
+function nodePos(k, n) { const cols = 3, row = Math.floor(k / cols), col = row % 2 ? cols - 1 - (k % cols) : k % cols; return [VW / 2 + (col - 1) * 104, 212 + row * clamp((VH - 380) / 3.3, 98, 132)]; }
 function drawMap() { bg(); const w = UI.mapW + 1, wd = WORLDS[UI.mapW], ids = worldLevels(w), cur = firstUnsolved(), got = ids.reduce((a, i) => a + starsOf(i), 0);
   ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.restore();
   text(tr({ ru: 'Фитиль', en: 'The Fuse' }), VW / 2, 34, 26, PAL.text, 800); star(VW / 2 - 34, 62, 8, true); text(`${totalStars()} / ${LEVELS.length * 3}`, VW / 2 + 8, 63, 13, '#ffd98a', 800);
@@ -695,13 +696,14 @@ function drawMap() { bg(); const w = UI.mapW + 1, wd = WORLDS[UI.mapW], ids = wo
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = st ? '#fff0c2' : open ? '#5a66a8' : '#2a305c'; ctx.beginPath(); ctx.arc(0, 0, r - 1, 0, 7); ctx.stroke();
     if (isCur && open) { const q = (Math.sin(now / 260) + 1) / 2; ctx.strokeStyle = `rgba(53,201,179,${0.45 + q * 0.5})`; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r + 4 + q * 3, 0, 7); ctx.stroke(); }
     if (open) { text(String(k + 1), 0, -6, 21, st ? PAL.ink : PAL.text, 800); for (let q = 0; q < 3; q++) star((q - 1) * 13, 14, 5.2, q < st); } else { ctx.strokeStyle = '#4a548f'; ctx.lineWidth = 2.4; ctx.lineCap = 'round'; ICON.lock(0, 0, 26); }
-    ctx.restore(); if (isCur && open) prop(ctx, 'hero_a', x, y - r + 9 - Math.abs(Math.sin(now / 320)) * 4, 40); });
+    ctx.restore(); if (LEVELS[i].exam) { ctx.save(); ctx.translate(x + r * 0.74, y - r * 0.74); ctx.rotate(Math.PI / 4); ctx.fillStyle = PAL.ink; ctx.fillRect(-8, -8, 16, 16); ctx.fillStyle = open ? '#ffc94d' : '#5a6196'; ctx.fillRect(-5.5, -5.5, 11, 11); ctx.restore(); }      // ромб — трудный уровень
+    if (isCur && open) prop(ctx, 'hero_a', x, y - r + 9 - Math.abs(Math.sin(now / 320)) * 4, 40); });
   // точки миров и нижний ряд
-  const dy = VH - 108; WORLDS.forEach((q, k) => { ctx.fillStyle = k === UI.mapW ? '#ffd98a' : '#4a5490'; ctx.beginPath(); ctx.arc(VW / 2 + (k - (WORLDS.length - 1) / 2) * 18, dy, k === UI.mapW ? 5.5 : 4, 0, 7); ctx.fill(); });
-  const by = VH - 54; roundBtn('snd', VW / 2 - 96, by, 25, ICON.sound, () => { SND.setOn(!save.sound); SND.play('click'); }, { arg: save.sound });
+  const dy = VH - 116; WORLDS.forEach((q, k) => { ctx.fillStyle = k === UI.mapW ? '#ffd98a' : '#4a5490'; ctx.beginPath(); ctx.arc(VW / 2 + (k - (WORLDS.length - 1) / 2) * 18, dy, k === UI.mapW ? 5.5 : 4, 0, 7); ctx.fill(); });
+  const by = VH - 62; [['bSound', -96], ['bLang', 0], ['bLog', 96]].forEach(([k, dx]) => text(T(k), VW / 2 + dx, VH - 22, 12, '#9aa3cc', 700)); roundBtn('snd', VW / 2 - 96, by, 25, ICON.sound, () => { SND.setOn(!save.sound); SND.play('click'); }, { arg: save.sound });
   pillBtn('lng', VW / 2 - 34, by - 25, 68, 50, T('lang'), () => { save.lang = save.lang === 'ru' ? 'en' : 'ru'; persist(); SND.play('click'); }, { size: 17 });
   roundBtn('sts', VW / 2 + 96, by, 25, ICON.list, () => { UI.screen = 'stats'; UI.statScroll = 0; SND.play('click'); });
-  if (UI.toast && now < UI.toast.until) { ctx.font = font(13, 700); const tw = ctx.measureText(UI.toast.text).width + 28; ctx.fillStyle = '#2b3364'; rr(ctx, VW / 2 - tw / 2, VH - 150, tw, 32, 16); ctx.fill(); text(UI.toast.text, VW / 2, VH - 133.5, 13, PAL.text, 700); } }
+  if (UI.toast && now < UI.toast.until) { ctx.font = font(13, 700); const tw = ctx.measureText(UI.toast.text).width + 28; ctx.fillStyle = '#2b3364'; rr(ctx, VW / 2 - tw / 2, VH - 160, tw, 32, 16); ctx.fill(); text(UI.toast.text, VW / 2, VH - 143.5, 13, PAL.text, 700); } }
 
 // ---------- журнал плейтеста ----------
 const fmtMs = ms => { const s = Math.round(ms / 1000); return s >= 60 ? Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') : s + 'с'; };
