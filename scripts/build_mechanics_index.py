@@ -37,7 +37,7 @@ SCORES = {
     "force-address": 16, "pool-tent": 16, "reloop": 15, "steal-youth": 16,
     "darkcraft": 15, "drawout": 16, "samotek": 16, "stretchout": 16, "zertsalo": 15,
     "burden-count": 16, "haulaway": 15,
-    "notice-period": 15,
+    "notice-period": 15, "equipdark": 15,
 }
 # Особые статусы поверх автоопределения
 NOTES = {
