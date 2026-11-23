@@ -152,8 +152,13 @@ def main():
     # человеко-носители (№5≤1: «существо, не закон») отсекаются семантически:
     # max cos к якорям людей > HUMAN_COS → noun не участвует (сигнал волн 39–48)
     HUMAN_ANCHORS = ["человек_NOUN", "мужчина_NOUN", "женщина_NOUN",
-                     "ребёнок_NOUN", "мальчик_NOUN", "девочка_NOUN"]
-    HUMAN_COS = 0.55
+                     "ребёнок_NOUN", "мальчик_NOUN", "девочка_NOUN",
+                     "мама_NOUN", "папа_NOUN", "отец_NOUN", "мать_NOUN",
+                     "сын_NOUN", "дочь_NOUN", "бабушка_NOUN", "дедушка_NOUN",
+                     "солдат_NOUN", "моряк_NOUN", "лётчик_NOUN", "врач_NOUN",
+                     "учитель_NOUN", "рабочий_NOUN", "крестьянин_NOUN",
+                     "музыкант_NOUN"]
+    HUMAN_COS = 0.50
     anchors = [index[a] for a in HUMAN_ANCHORS if a in index]
     human_mask = np.zeros(len(words), dtype=bool)
     if anchors:
