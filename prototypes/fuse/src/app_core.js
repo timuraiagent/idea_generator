@@ -4,22 +4,22 @@ const C = FUSE_CORE, LEVELS = FUSE_LEVELS, WORLDS = FUSE_WORLDS;
 const CONFIG = {
   VW: 390, VHmin: 640, VHmax: 844,           // логический экран: ширина и пределы высоты
   top: 56, bottom: 96,                       // шапка и нижняя панель
-  cellMin: 34, cellMax: 58,                  // размер клетки
+  cellMin: 34, cellMax: 72,                  // размер клетки
   stepMs: 130, chainMs: 110, failMs: 620,    // шаг героя, пауза между звеньями цепочки событий, показ провала
-  dark: 0.5,                                 // плотность тьмы на неосвещённых клетках
+  dark: 0.46,                                // плотность тьмы на неосвещённых клетках
   light: { flame: 1, burning: 1, lamp: 2 },
   hintAfterFails: 3,                         // после стольких провалов и рестартов кнопка подсказки начинает мигать
   openAhead: 3,                              // сколько первых непройденных уровней открыто (два можно обойти)
   solveCap: 60000,                           // предел перебора для подсказки
 };
 const TXT = {
-  ru: { world: 'Мир', level: 'Уровень', moves: 'ходы', best: 'лучше нельзя', closed: 'в темноте дверь закрыта', stuck: 'тупик', burned: 'сгорел', seen: 'заметили',
+  ru: { world: 'Мир', level: 'Уровень', moves: 'ходы', best: 'лучше нельзя', behind: n => `огонёк отстаёт на ${n} ${n === 1 ? 'шаг' : n < 5 ? 'шага' : 'шагов'}`, lockedWorld: 'сначала пройди уровни до этого мира', closed: 'в темноте дверь закрыта', stuck: 'тупик', burned: 'сгорел', seen: 'заметили',
     next: 'дальше', again: 'ещё раз', map: 'уровни', dead: 'отсюда не пройти — возвращаю', nohint: 'подсказка думает слишком долго', tapNew: 'нажми, чтобы начать',
-    stats: 'Журнал', statHead: ['ур.', 'время', 'ходы', 'отмены', 'заново', 'провалы', 'подсказки'], openAll: 'открыть все уровни', sound: 'звук', lang: 'RU', close: 'закрыть', locked: 'сначала пройди предыдущие',
+    stats: 'Журнал', statHead: ['уровень', 'время', 'ходы', 'отм.', 'заново', 'провал', 'подск.'], openAll: 'открыть все уровни', sound: 'звук', lang: 'RU', close: 'закрыть', locked: 'сначала пройди предыдущие',
     total: 'всего', reset: 'сбросить прогресс', resetAsk: 'нажми ещё раз, чтобы сбросить', copy: 'скопировать журнал', copied: 'скопировано', final: 'Все уровни пройдены!', hintIdea: 'что загорится', hintMove: 'следующий шаг' },
-  en: { world: 'World', level: 'Level', moves: 'moves', best: 'best possible', closed: 'the door is shut in the dark', stuck: 'dead end', burned: 'burned', seen: 'spotted',
+  en: { world: 'World', level: 'Level', moves: 'moves', best: 'best possible', behind: n => `the flame is ${n} step${n === 1 ? '' : 's'} behind`, lockedWorld: 'finish the earlier levels first', closed: 'the door is shut in the dark', stuck: 'dead end', burned: 'burned', seen: 'spotted',
     next: 'next', again: 'again', map: 'levels', dead: 'no way from here — going back', nohint: 'the hint is taking too long', tapNew: 'tap to start',
-    stats: 'Playtest log', statHead: ['lvl', 'time', 'moves', 'undo', 'restart', 'fails', 'hints'], openAll: 'unlock all levels', sound: 'sound', lang: 'EN', close: 'close', locked: 'finish the earlier ones first',
+    stats: 'Playtest log', statHead: ['level', 'time', 'moves', 'undo', 'retry', 'fails', 'hints'], openAll: 'unlock all levels', sound: 'sound', lang: 'EN', close: 'close', locked: 'finish the earlier ones first',
     total: 'total', reset: 'reset progress', resetAsk: 'tap again to reset', copy: 'copy the log', copied: 'copied', final: 'All levels done!', hintIdea: 'what will burn', hintMove: 'next step' },
 };
 // ---------- сохранение ----------

@@ -110,8 +110,9 @@ with sync_playwright() as p:
     # скриншоты миров в середине решения
     for n in (9, 20, 30, 40, 52, 62, 76, 90, 100):
         pg.evaluate('(n) => { FUSE.ui.card = null; FUSE.load(n); const p = FUSE.LEVELS[n - 1].plan; for (let k = 0; k < Math.ceil(p.length * 0.6); k++) FUSE.step(p[k]); }', n); pg.wait_for_timeout(900); shot(pg, f'p10_level{n:03d}')
-    pf = pg.evaluate('({ n: FUSE.perf.n, avg: FUSE.perf.sum / FUSE.perf.n, max: FUSE.perf.max })')
-    check(pf['avg'] < 16, f'кадр рисуется в среднем {pf["avg"]:.2f} мс (предел 16), худший {pf["max"]:.1f} мс, кадров {pf["n"]}')
+    pg.evaluate('(() => { FUSE.load(44); const p = FUSE.LEVELS[43].plan; let k = 0; FUSE.perf.frames = 0; FUSE.perf.gap = 0; FUSE.perf.slow = 0; const t = setInterval(() => { if (k < p.length - 1) FUSE.step(p[k++]); else clearInterval(t); }, 220); })()'); pg.wait_for_timeout(3200)
+    pf = pg.evaluate('({ n: FUSE.perf.n, avg: FUSE.perf.sum / FUSE.perf.n, max: FUSE.perf.max, frames: FUSE.perf.frames, gap: FUSE.perf.gap / FUSE.perf.frames, slow: FUSE.perf.slow })')
+    check(pf['avg'] < 8 and pf['slow'] / max(1, pf['frames']) < 0.05, f'три секунды игры с пожаром: кадров {pf["frames"]}, между кадрами в среднем {pf["gap"]:.1f} мс, дольше 25 мс — {pf["slow"]}; код отрисовки {pf["avg"]:.2f} мс на кадр (безголовый Chrome на Mac, не телефон)')
     ctx.close()
     # десктоп, английский
     ctx = b.new_context(viewport={'width': 1280, 'height': 800}); pg = ctx.new_page()

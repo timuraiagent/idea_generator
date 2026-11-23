@@ -575,7 +575,7 @@ function drawIdea(idea) { const cs = F.cell, st = idea.story, t = now / 1000, bo
 
 // ===== интерфейс: экраны, кнопки, ввод, главный цикл =====
 const UI = { screen: 'play', shownScreen: 'play', fadeT: -1e9, btns: [], mapW: 0, card: null, winAt: 0, win: null, statScroll: 0, resetArm: 0, copiedAt: 0, toast: null, press: null, mapSlide: 0 };
-const perf = { n: 0, sum: 0, max: 0 };
+const perf = { n: 0, sum: 0, max: 0, frames: 0, gap: 0, slow: 0 };      // sum/max — время кода отрисовки; gap/slow — промежутки между кадрами и сколько из них дольше 25 мс
 const wOf = i => LEVELS[i].w, numInWorld = i => worldLevels(wOf(i)).indexOf(i) + 1, totalStars = () => LEVELS.reduce((a, l, i) => a + starsOf(i), 0);
 function btn(x, y, w, h, fn, id) { UI.btns.push({ x, y, w, h, fn, id }); return UI.press && UI.press.id === id; }
 
@@ -722,7 +722,7 @@ M.listeners.push((type, d) => { if (type === 'win') after(520, () => { UI.win = 
 
 // ---------- главный цикл ----------
 let lastT = 0;
-function frame(ts) { requestAnimationFrame(frame); dtMs = Math.min(50, ts - lastT || 16); lastT = ts; now = ts; const p0 = performance.now();
+function frame(ts) { requestAnimationFrame(frame); const raw = ts - lastT; if (lastT && raw < 1000) { perf.frames++; perf.gap += raw; if (raw > 25) perf.slow++; } dtMs = Math.min(50, raw || 16); lastT = ts; now = ts; const p0 = performance.now();
   if (V.timers.length) { const due = V.timers.filter(t => t.at <= now); if (due.length) { V.timers = V.timers.filter(t => t.at > now); for (const t of due) t.fn(); } }
   if (UI.screen === 'play' && !M.S.won && !UI.card && document.visibilityState === 'visible') stat(M.idx).ms += dtMs;
   ctx.setTransform(SC * DPR, 0, 0, SC * DPR, 0, 0); UI.btns = [];

@@ -76,30 +76,35 @@ No cord, ambient darkness, glow or particles: the engine supplies these.
 <g id="pit" transform="translate(640,0)">
   <rect width="128" height="128" fill="#3b4563"/>
   <path d="M2 2H126V5H5V126H2Z" fill="#46527a"/>
-  <path d="M11 24L25 10 51 14 69 9 93 15 112 12 118 39 113 58 121 78 111 110 89 117 65 112 41 120 13 108 9 85 14 62 7 43Z" fill="#2c3550"/>
-  <path d="M11 34L25 20 51 24 69 19 93 25 112 22 118 39 113 58 121 78 111 110 89 117 65 112 41 120 13 108 9 85 14 62 7 43Z" fill="url(#v2-pit-depth)"/>
+  <path d="M11 24L25 10 51 14 69 9 93 15 112 12 118 39 113 58 121 78 111 110 89 117 65 112 41 120 13 108 9 85 14 62 7 43Z" fill="#252d4a"/>
+  <path d="M11 38L25 24 51 28 69 23 93 29 112 26 118 39 113 58 121 78 111 110 89 117 65 112 41 120 13 108 9 85 14 62 7 43Z" fill="#04050c"/>
+  <path d="M11 38L25 24 51 28 69 23 93 29 112 26" fill="none" stroke="#141a30" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M7 43L11 24 25 10 51 14 69 9 93 15 112 12 118 39" fill="none" stroke="#7483b8" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
 </g>
 <g id="stone" transform="translate(768,0)">
-  <path d="M33 20H95L116 41V97L95 118H33L12 97V41Z" fill="#5d6787"/>
-  <path d="M33 10H95L116 31V87L95 108H33L12 87V31Z" fill="#8892ad"/>
-  <path d="M16 85V33L35 14H94" fill="none" stroke="#a9b3cc" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M33 20H95L116 41V97L95 118H33L12 97V41Z" fill="#4a5374" stroke="#11142a" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M33 10H95L116 31V87L95 108H33L12 87V31Z" fill="#8892ad" stroke="#11142a" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M36 20H92L106 34V84L92 98H36L22 84V34Z" fill="#96a0ba"/>
+  <path d="M17 84V33L35 15H93" fill="none" stroke="#c3cbe0" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+  <path d="M52 44L61 53M70 70L82 76" fill="none" stroke="#7d88a8" stroke-width="3" stroke-linecap="round"/>
 </g>
 <g id="crack" transform="translate(896,0)">
   <path d="M64 65L53 46 62 32 50 18 54 2M64 65L85 74 100 64 115 70 126 65M64 65L47 78 32 72 17 88 2 91M53 46L35 42 29 31M85 74L90 96 104 105" fill="none" stroke="#141830" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
 </g>
 
 <g id="water" transform="translate(0,128)">
-  <path d="M14 57Q9 35 34 26Q49 15 69 23Q92 18 106 35Q123 49 112 69Q117 90 92 101Q76 113 54 104Q30 109 18 91Q7 77 14 57Z" fill="#2f6fb5"/>
-  <path d="M29 48Q43 32 62 36M78 39Q93 40 99 51M43 87Q62 96 80 86" fill="none" stroke="#6fb4e8" stroke-width="4" stroke-linecap="round"/>
-  <path d="M30 60L33 55 36 60 33 64Z" fill="#e8f4ff"/>
+  <path d="M14 57Q9 35 34 26Q49 15 69 23Q92 18 106 35Q123 49 112 69Q117 90 92 101Q76 113 54 104Q30 109 18 91Q7 77 14 57Z" fill="#2f6fb5" stroke="#7cc0f0" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M30 70Q48 58 66 68T100 66" fill="none" stroke="#6fb4e8" stroke-width="4" stroke-linecap="round"/>
+  <path d="M40 88Q56 80 72 88" fill="none" stroke="#4f93d4" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="42" cy="42" rx="11" ry="5" fill="#d6ecff" opacity="0.85" transform="rotate(-18 42 42)"/>
 </g>
 <g id="oil" transform="translate(128,128)">
-  <path d="M33 38Q23 22 38 22Q50 22 54 35Q61 40 72 28Q84 17 89 32L87 46Q87 52 104 53Q116 55 108 67L94 78Q91 83 96 95Q101 111 86 107L69 96Q63 91 52 102Q38 116 33 102L36 85Q36 78 23 77Q10 74 17 64L33 55Q39 49 33 38Z" fill="#1a1326"/>
-  <path d="M43 48Q55 40 66 44Q74 48 81 41" fill="none" stroke="#7a4bb5" stroke-width="4" stroke-linecap="round"/>
-  <path d="M67 83Q79 87 84 78" fill="none" stroke="#3fb8a8" stroke-width="4" stroke-linecap="round"/>
-  <ellipse cx="17" cy="98" rx="6" ry="5" fill="#1a1326"/>
-  <ellipse cx="107" cy="31" rx="5" ry="7" fill="#1a1326"/>
-  <circle cx="63" cy="114" r="4" fill="#1a1326"/>
+  <path d="M33 38Q23 22 38 22Q50 22 54 35Q61 40 72 28Q84 17 89 32L87 46Q87 52 104 53Q116 55 108 67L94 78Q91 83 96 95Q101 111 86 107L69 96Q63 91 52 102Q38 116 33 102L36 85Q36 78 23 77Q10 74 17 64L33 55Q39 49 33 38Z" fill="#2b1746" stroke="#8a5fd0" stroke-width="3" stroke-linejoin="round"/>
+  <ellipse cx="17" cy="98" rx="6" ry="5" fill="#2b1746" stroke="#8a5fd0" stroke-width="2.5"/>
+  <ellipse cx="107" cy="31" rx="5" ry="7" fill="#2b1746" stroke="#8a5fd0" stroke-width="2.5"/>
+  <circle cx="63" cy="114" r="4" fill="#2b1746" stroke="#8a5fd0" stroke-width="2.5"/>
+  <ellipse cx="50" cy="46" rx="13" ry="6" fill="#c9b2ff" opacity="0.8" transform="rotate(-24 50 46)"/>
+  <circle cx="80" cy="80" r="4" fill="#3fb8a8"/>
 </g>
 <g id="ash" transform="translate(256,128)">
   <ellipse cx="64" cy="83" rx="49" ry="24" fill="#1c1f30" fill-opacity="0.6"/>
@@ -158,12 +163,10 @@ No cord, ambient darkness, glow or particles: the engine supplies these.
 <g id="door_closed" transform="translate(0,256)" stroke="#11142a" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
   <path d="M12 120V54Q12 4 64 4Q116 4 116 54V120Z" fill="#5d6787"/>
   <path d="M14 54Q14 7 64 7Q93 7 107 27L96 37Q86 22 64 22Q29 22 28 55V118H14Z" fill="#8892ad" stroke="none"/>
-  <path d="M28 120V55Q28 22 64 22Q100 22 100 55V120Z" fill="#232a47"/>
-  <path d="M64 25V117M46 32V117M82 32V117" fill="none" stroke="#343d63"/>
-  <path d="M28 60H100V70H28ZM28 94H100V104H28Z" fill="#39426a"/>
-  <path d="M55 82V77Q55 67 64 67Q73 67 73 77V82" fill="none" stroke="#8892ad" stroke-width="5"/>
-  <rect x="51" y="80" width="26" height="25" rx="4" fill="#7d88a8"/>
-  <path d="M64 89V96" fill="none" stroke-width="5"/>
+  <path d="M28 120V55Q28 22 64 22Q100 22 100 55V120Z" fill="#0b0d1c"/>
+  <path d="M40 35V118M52 26V118M64 23V118M76 26V118M88 35V118" fill="none" stroke="#39426a" stroke-width="5"/>
+  <path d="M29 52H99M28 76H100M28 100H100" fill="none" stroke="#39426a" stroke-width="5"/>
+  <path d="M40 35V118M52 26V118M64 23V118M76 26V118M88 35V118" fill="none" stroke="#56618f" stroke-width="1.5"/>
   <path d="M15 57H26M16 88H26M102 57H113M102 88H113M32 19L41 30M64 7V19M96 19L87 30" fill="none" stroke="#39426a" stroke-width="3"/>
   <path d="M22 47Q25 21 48 15" fill="none" stroke="#a9b3cc" stroke-width="3"/>
 </g>
