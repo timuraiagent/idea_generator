@@ -579,7 +579,8 @@ function drawField() { const L = M.L, S = V.shown, cs = F.cell, lit = S.lit, t =
 function text2(s, x, y, px, col) { ctx.font = font(px, 800); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round'; ctx.lineWidth = Math.max(3, px * 0.24); ctx.strokeStyle = PAL.ink; ctx.strokeText(s, x, y); ctx.fillStyle = col || PAL.cream; ctx.fillText(s, x, y); }
 // ступень 1 подсказки: значок с указателем над тем, что в решении загорится (огонёк), останется тёмным (крестик) или пригодится (галочка); сам предмет обведён
 function drawIdea(idea) { const cs = F.cell, st = idea.story, t = now / 1000, bob = Math.sin(t * 4) * 2, a = clamp((now - idea.t0) / 250, 0, 1), r = cs * 0.2;
-  const badge = (c, kind) => { const x = cellX(c), y = cellY(c) - cs * 0.98 + bob, col = kind === 'fire' ? '#ffb347' : kind === 'ok' ? PAL.teal : '#56609a'; ctx.globalAlpha = a;
+  const badge = (c, kind) => { const hid = c - M.L.W === pcell(M.S), x = cellX(c) + (hid ? cs * 0.5 : 0), y = cellY(c) - cs * (hid ? 0.62 : 0.98) + bob,      // герой стоит над предметом — значок сдвигается вбок, а не ему на лицо
+    col = kind === 'fire' ? '#ffb347' : kind === 'ok' ? PAL.teal : '#56609a'; ctx.globalAlpha = a;
     ctx.strokeStyle = col; ctx.lineWidth = 2.6; ctx.setLineDash([6, 5]); ctx.lineDashOffset = -t * 12; rr(ctx, F.x + (c % M.L.W) * cs + 3, F.y + Math.floor(c / M.L.W) * cs + 3, cs - 6, cs - 6, 8); ctx.stroke(); ctx.setLineDash([]);
     const shape = (g, colr) => { ctx.fillStyle = colr; ctx.beginPath(); ctx.arc(x, y, r + g, 0, 7); ctx.fill(); ctx.beginPath(); ctx.moveTo(x - r * 0.5 - g, y + r * 0.7); ctx.lineTo(x, y + r * 1.75 + g * 1.4); ctx.lineTo(x + r * 0.5 + g, y + r * 0.7); ctx.closePath(); ctx.fill(); }; shape(2.6, PAL.ink); shape(0, col);
     ctx.strokeStyle = kind === 'no' ? PAL.text : PAL.ink; ctx.lineWidth = 2.8; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; const q = r * 0.42;
